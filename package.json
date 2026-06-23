@@ -1,6 +1,6 @@
 {
-	"name": "pptxgenjs",
-	"version": "4.0.1",
+	"name": "@neoma/pptxgenjs",
+	"version": "4.0.2",
 	"author": {
 		"name": "Brent Ely",
 		"url": "https://github.com/gitbrent/"
@@ -24,8 +24,12 @@
 		"build": "rollup -c --bundleConfigAsCjs",
 		"start": "gulp",
 		"ship": "gulp ship",
+		"prepublishOnly": "gulp ship",
 		"defs": "gulp reactTestDefs",
 		"watch": "rollup -cw"
+	},
+	"publishConfig": {
+		"access": "public"
 	},
 	"browser": {
 		"express": false,

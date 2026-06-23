@@ -15,3 +15,6 @@ demo
 build
 docs
 static
+
+### Build artifacts (regenerated at publish via prepublishOnly; shipped in npm tarball, not git)
+dist/
