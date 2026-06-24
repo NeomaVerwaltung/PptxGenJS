@@ -5,6 +5,12 @@
 		"name": "Brent Ely",
 		"url": "https://github.com/gitbrent/"
 	},
+	"contributors": [
+		{
+			"name": "NEOMA GmbH",
+			"url": "https://github.com/NeomaVerwaltung"
+		}
+	],
 	"description": "Create JavaScript PowerPoint Presentations",
 	"homepage": "https://github.com/NeomaVerwaltung/PptxGenJS#readme",
 	"license": "MIT",

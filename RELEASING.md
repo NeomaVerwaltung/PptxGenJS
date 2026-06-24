@@ -19,7 +19,7 @@
 5. Consolidate new changes from `src/bld/*.ts` into `types/index.d.ts` and update version in head comment
 6. Open `dist/*.js` and check headers
 7. Update version in: `demos/node/package.json`
-8. Update pptxgenjs dep version in: `demos/vite-demo/package.json`
+8. Update `@neoma/pptxgenjs` dep version in: `demos/vite-demo/package.json`
 
 ## 🧪 Run Tests Before Release
 
@@ -52,7 +52,7 @@ See [TESTING.md](./TESTING.md) for complete test instructions.
 
 1. Checkin all changes via GitHub Desktop
 2. Merge working branch into `main`
-3. Copy CHANGELOG entry and draft new release: [Releases](https://github.com/gitbrent/PptxGenJS/releases)
+3. Copy CHANGELOG entry and draft new release: [Releases](https://github.com/NeomaVerwaltung/PptxGenJS/releases)
 4. Use "Version x.x.x" as title and "vX.X.X" as tag
 5. Go back to Releases page, double-check title/tag, release when ready
 

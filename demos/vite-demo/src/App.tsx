@@ -1,8 +1,8 @@
 // NOTE: previous {create-react-app} is webpack-based and will use package.json `module: "dist/pptxgen.es.js"` value
 // NOTE: this Vite+React demo is using `main: "dist/pptxgen.cjs.js"` value, so we hard-code below to TEST
 /* // @ts-expect-error (manually import the es module for TESTING!) */
-//import pptxgen from "pptxgenjs/dist/pptxgen.cjs.js";
-import pptxgen from "pptxgenjs";
+//import pptxgen from "@neoma/pptxgenjs/dist/pptxgen.cjs.js";
+import pptxgen from "@neoma/pptxgenjs";
 import { testMainMethods, testTableMethod } from "./tstest/Test";
 import { demoCode } from "./enums";
 import logo from "./assets/logo.png";
@@ -77,7 +77,7 @@ function App() {
 						</li>
 					</ul>
 					<div className="hstack gap-1">
-						<button type="button" className="btn btn-primary" title="Releases" onClick={() => "window.open('https://github.com/gitbrent/PptxGenJS/releases')"}>
+						<button type="button" className="btn btn-primary" title="Releases" onClick={() => "window.open('https://github.com/NeomaVerwaltung/PptxGenJS/releases')"}>
 							<i className="bi bi-box-arrow-up-right me-2"></i>Latest Release
 						</button>
 						<button type="button" className="btn btn-primary" title="Docs" onClick={() => "window.open('https://gitbrent.github.io/PptxGenJS/docs/installation/')"}>

@@ -2,7 +2,7 @@
  * Test TypeScript Defs file
  */
 import { SVG_MASTODON_LOGO_BASE64, STARLABS_LOGO_SM } from "../enums";
-import pptxgen from "pptxgenjs";
+import pptxgen from "@neoma/pptxgenjs";
 
 export function testMainMethods() {
 	const pptx = new pptxgen();
