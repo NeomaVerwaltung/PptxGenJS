@@ -2,11 +2,8 @@
 
 ![PptxGenJS Sample Slides](https://raw.githubusercontent.com/gitbrent/PptxGenJS/gh-pages/img/readme_banner.png)
 
-![jsdelivr downloads](https://data.jsdelivr.com/v1/package/gh/gitbrent/pptxgenjs/badge)
-![NPM Downloads](https://img.shields.io/npm/dm/pptxgenjs?style=flat-square)
-![GitHub Repo stars](https://img.shields.io/github/stars/gitbrent/pptxgenjs?style=flat-square)
-![GitHub License](https://img.shields.io/github/license/gitbrent/pptxgenjs?style=flat-square)
-![TypeScript defs](https://img.shields.io/npm/types/pptxgenjs?style=flat-square)
+![GitHub Repo stars](https://img.shields.io/github/stars/NeomaVerwaltung/PptxGenJS?style=flat-square)
+![GitHub License](https://img.shields.io/github/license/NeomaVerwaltung/PptxGenJS?style=flat-square)
 
 ## 🚀 Features
 
@@ -64,30 +61,11 @@ Choose your preferred method to install **PptxGenJS**:
 ### Quick Install (Node-based)
 
 ```bash
-npm install pptxgenjs
+npm install @neoma/pptxgenjs
 ```
 
 ```bash
-yarn add pptxgenjs
-```
-
-### CDN (Browser Usage)
-
-Use the bundled or minified version via [jsDelivr](https://www.jsdelivr.com/package/gh/gitbrent/pptxgenjs):
-
-```html
-<script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs/dist/pptxgen.bundle.js"></script>
-```
-
-> Includes the sole dependency (JSZip) in one file.
-
-📁 Advanced: Separate Files, Direct Download
-
-Download from GitHub: [Latest Release](https://github.com/gitbrent/PptxGenJS/releases/latest)
-
-```html
-<script src="PptxGenJS/libs/jszip.min.js"></script>
-<script src="PptxGenJS/dist/pptxgen.min.js"></script>
+yarn add @neoma/pptxgenjs
 ```
 
 ## 🚀 Universal Compatibility
@@ -118,7 +96,7 @@ PptxGenJS PowerPoint presentations are created via JavaScript by following 4 bas
 #### Angular/React, ES6, TypeScript
 
 ```typescript
-import pptxgen from "pptxgenjs";
+import pptxgen from "@neoma/pptxgenjs";
 
 // 1. Create a new Presentation
 let pres = new pptxgen();
@@ -179,7 +157,7 @@ Complete API reference, tutorials, and integration guides are available on the o
 
 ## 🛠️ Issues / Suggestions
 
-Please file issues or suggestions on the [issues page on github](https://github.com/gitbrent/PptxGenJS/issues/new), or even better, [submit a pull request](https://github.com/gitbrent/PptxGenJS/pulls). Feedback is always welcome!
+Please file issues or suggestions on the [issues page on github](https://github.com/NeomaVerwaltung/PptxGenJS/issues/new), or even better, [submit a pull request](https://github.com/NeomaVerwaltung/PptxGenJS/pulls). Feedback is always welcome!
 
 When reporting issues, please include a code snippet or a link demonstrating the problem.
 Here is a small [jsFiddle](https://jsfiddle.net/gitbrent/L1uctxm0/) that is already configured and uses the latest PptxGenJS code.
@@ -219,6 +197,6 @@ If you find this library useful, consider contributing to open-source projects, 
 
 ## 📜 License
 
-Copyright &copy; 2015-present [Brent Ely](https://github.com/gitbrent/)
+Copyright &copy; 2015-present [Brent Ely](https://github.com/gitbrent/), &copy; 2026-present [NEOMA GmbH](https://github.com/NeomaVerwaltung)
 
-[MIT](https://github.com/gitbrent/PptxGenJS/blob/master/LICENSE)
+[MIT](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/LICENSE)
