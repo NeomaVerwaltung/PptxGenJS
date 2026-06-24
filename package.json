@@ -1,12 +1,12 @@
 {
-	"name": "pptxgenjs",
+	"name": "@neoma/pptxgenjs",
 	"version": "4.0.1",
 	"author": {
 		"name": "Brent Ely",
 		"url": "https://github.com/gitbrent/"
 	},
 	"description": "Create JavaScript PowerPoint Presentations",
-	"homepage": "https://gitbrent.github.io/PptxGenJS/",
+	"homepage": "https://github.com/NeomaVerwaltung/PptxGenJS#readme",
 	"license": "MIT",
 	"exports": {
 		"types": "./types/index.d.ts",
@@ -22,15 +22,21 @@
 	"types": "types",
 	"scripts": {
 		"build": "rollup -c --bundleConfigAsCjs",
+		"dist": "gulp dist",
+		"prepare": "gulp dist",
 		"start": "gulp",
 		"ship": "gulp ship",
 		"defs": "gulp reactTestDefs",
-		"watch": "rollup -cw"
+		"watch": "rollup -cw",
+		"lint": "eslint src test",
+		"typecheck": "tsc --noEmit",
+		"typecheck:strict": "tsc -p tsconfig.strict.json",
+		"test": "node --import tsx --test test/gen-utils.test.ts test/pptxgen.e2e.test.ts test/snapshot.test.ts",
+		"check": "npm run lint && npm run typecheck && npm run typecheck:strict && npm test",
+		"prepublishOnly": "npm run check"
 	},
 	"browser": {
-		"express": false,
 		"fs": false,
-		"https": false,
 		"image-size": false,
 		"node:fs": false,
 		"node:https": false,
@@ -38,8 +44,6 @@
 		"path": false
 	},
 	"dependencies": {
-		"@types/node": "^22.8.1",
-		"https": "^1.0.0",
 		"image-size": "^1.2.1",
 		"jszip": "^3.10.1"
 	},
@@ -48,10 +52,11 @@
 		"@rollup/plugin-commonjs": "^28.0.1",
 		"@rollup/plugin-node-resolve": "^16.0.1",
 		"@stylistic/eslint-plugin": "^4.2.0",
+		"@types/node": "^22.8.1",
 		"@typescript-eslint/eslint-plugin": "^8.31.0",
 		"@typescript-eslint/parser": "^8.31.0",
 		"eslint": "^9.25.1",
-		"express": "^5.1.0",
+		"fast-xml-parser": "^5.9.3",
 		"gulp": "^5.0.0",
 		"gulp-concat": "^2.6.1",
 		"gulp-delete-lines": "0.0.7",
@@ -62,12 +67,13 @@
 		"rollup": "^4.24.2",
 		"rollup-plugin-typescript2": "^0.36.0",
 		"tslib": "^2.8.0",
+		"tsx": "^4.22.4",
 		"typescript": "^5.6.3",
 		"typescript-eslint": "^8.31.0"
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/gitbrent/PptxGenJS.git"
+		"url": "git+https://github.com/NeomaVerwaltung/PptxGenJS.git"
 	},
 	"keywords": [
 		"es6-powerpoint",
@@ -91,6 +97,6 @@
 		"typescript-powerpoint"
 	],
 	"bugs": {
-		"url": "https://github.com/gitbrent/PptxGenJS/issues"
+		"url": "https://github.com/NeomaVerwaltung/PptxGenJS/issues"
 	}
 }

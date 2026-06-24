@@ -35,6 +35,7 @@ Run local test server:
 
 ```bash
 cd demos
+npm install   # installs express (demo-only; no longer in the library's deps)
 node browser_server.mjs
 ```
 

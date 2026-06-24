@@ -3,6 +3,9 @@ import tseslint from 'typescript-eslint';
 import stylistic from '@stylistic/eslint-plugin'
 
 export default tseslint.config({
+	// Build output (`src/bld`) and emitted decls (`out`) are generated — never lint them
+	ignores: ['src/bld/**', 'out/**'],
+}, {
 	plugins: {
 		'@stylistic': stylistic
 	},
@@ -18,6 +21,8 @@ export default tseslint.config({
 		"@stylistic/quotes": ["error", "single"],
 		"@stylistic/semi": ["error", "never"],
 		"no-lone-blocks": 0,
+		// Allow intentionally-unused identifiers when prefixed with `_` (e.g. reserved/documented params)
+		"@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" }],
 	},
 });
 
