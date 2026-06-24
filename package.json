@@ -36,7 +36,6 @@
 		"prepublishOnly": "npm run check"
 	},
 	"browser": {
-		"express": false,
 		"fs": false,
 		"image-size": false,
 		"node:fs": false,
@@ -45,7 +44,6 @@
 		"path": false
 	},
 	"dependencies": {
-		"@types/node": "^22.8.1",
 		"image-size": "^1.2.1",
 		"jszip": "^3.10.1"
 	},
@@ -54,10 +52,10 @@
 		"@rollup/plugin-commonjs": "^28.0.1",
 		"@rollup/plugin-node-resolve": "^16.0.1",
 		"@stylistic/eslint-plugin": "^4.2.0",
+		"@types/node": "^22.8.1",
 		"@typescript-eslint/eslint-plugin": "^8.31.0",
 		"@typescript-eslint/parser": "^8.31.0",
 		"eslint": "^9.25.1",
-		"express": "^5.1.0",
 		"fast-xml-parser": "^5.9.3",
 		"gulp": "^5.0.0",
 		"gulp-concat": "^2.6.1",
