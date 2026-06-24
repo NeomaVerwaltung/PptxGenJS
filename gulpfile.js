@@ -109,6 +109,9 @@ gulp.task('nodeTestEs', () => {
 		.pipe(gulp.dest('./demos/node/node_modules/pptxgenjs/dist'))
 })
 
+// Produce ./dist/* only (no demo-copy steps) - safe to run on a clean checkout / CI / publish
+gulp.task('dist', gulp.series('build', 'min', 'cjs', 'es', 'bundle'))
+
 // Build/Deploy (ad-hoc, no watch)
 gulp.task( 'ship',
 	gulp.series('build', 'min', 'cjs', 'es', 'bundle', 'reactTestCode', 'reactTestDefs', 'nodeTestCjs', 'nodeTestEs'), () => {
