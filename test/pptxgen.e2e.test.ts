@@ -11,7 +11,7 @@ import { test, before } from 'node:test'
 import assert from 'node:assert/strict'
 import JSZip from 'jszip'
 import { XMLValidator } from 'fast-xml-parser'
-import pptxgen from './pptxgen'
+import pptxgen from '../src/pptxgen'
 
 const MARKER = 'ENTERPRISE_SMOKE_TEST'
 

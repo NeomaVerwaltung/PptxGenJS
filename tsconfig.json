@@ -20,8 +20,5 @@
 	"$schema": "https://json.schemastore.org/tsconfig",
 	"include": [
 		"src/**/*"
-	],
-	"exclude": [
-		"src/**/*.test.ts"
 	]
 }

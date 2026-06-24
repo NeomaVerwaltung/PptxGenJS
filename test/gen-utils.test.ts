@@ -18,8 +18,8 @@ import {
 	genXmlColorSelection,
 	getNewRelId,
 	correctShadowOptions,
-} from './gen-utils'
-import { PresLayout, PresSlide, ShadowProps } from './core-interfaces'
+} from '../src/gen-utils'
+import { PresLayout, PresSlide, ShadowProps } from '../src/core-interfaces'
 
 // 10in x 7.5in layout expressed in EMU
 const LAYOUT = { name: 'TEST', width: 9144000, height: 6858000 } as PresLayout

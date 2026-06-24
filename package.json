@@ -26,10 +26,10 @@
 		"ship": "gulp ship",
 		"defs": "gulp reactTestDefs",
 		"watch": "rollup -cw",
-		"lint": "eslint src",
+		"lint": "eslint src test",
 		"typecheck": "tsc --noEmit",
 		"typecheck:strict": "tsc -p tsconfig.strict.json",
-		"test": "node --import tsx --test \"src/**/*.test.ts\"",
+		"test": "node --import tsx --test \"test/**/*.test.ts\"",
 		"check": "npm run lint && npm run typecheck && npm run typecheck:strict && npm test",
 		"prepublishOnly": "npm run check"
 	},
