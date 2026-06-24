@@ -5,8 +5,13 @@
 > were removed from the working tree (`git rm`). The 🔴/🟡 tables below are retained as the **record of what was removed**.
 > Only 🟢 project/generic/scaffold assets remain.
 >
-> ⚠️ **History caveat:** these files still exist in **git history**. If your legal team requires them gone entirely,
-> a history rewrite (git-filter-repo / BFG) + force-push is needed — ask for it as a separate step.
+> ⚠️ **History caveat:** these files still exist in **git history** (most originate in upstream `gitbrent/PptxGenJS`,
+> which retains them permanently in its public history regardless of this fork).
+>
+> **Decision (2026-06-24): current state accepted for now.** HEAD is clean; no history rewrite performed.
+> Rationale: this is a public fork of a public upstream, so an in-place scrub (git-filter-repo/BFG + force-push +
+> GitHub Support GC/fork-network detach) cannot remove the assets from the internet and offers limited benefit.
+> Revisit if legal requires byte-level removal — the cleaner path would be a fresh standalone (private) repo, not a scrub.
 >
 > Some demo code still references the removed files (local and via upstream raw URLs); those demo slides will fail to
 > load images. Demos are local-only dev fixtures and not published, so this does not affect the library or consumers.
