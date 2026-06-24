@@ -1,5 +1,16 @@
 # Demo Image Asset Audit
 
+> ## ✅ Status: REMEDIATED (2026-06-24)
+> The **31 flagged images** (🔴 + 🟡 below) and the entire **`demos/common/media/`** folder (10 audio/video files)
+> were removed from the working tree (`git rm`). The 🔴/🟡 tables below are retained as the **record of what was removed**.
+> Only 🟢 project/generic/scaffold assets remain.
+>
+> ⚠️ **History caveat:** these files still exist in **git history**. If your legal team requires them gone entirely,
+> a history rewrite (git-filter-repo / BFG) + force-push is needed — ask for it as a separate step.
+>
+> Some demo code still references the removed files (local and via upstream raw URLs); those demo slides will fail to
+> load images. Demos are local-only dev fixtures and not published, so this does not affect the library or consumers.
+
 > Compliance + metadata inventory of images under `demos/`. Generated 2026-06-24.
 > Dimensions/size/format are mechanical (via `image-size`); **Risk** and **Source** are human assessment.
 >
