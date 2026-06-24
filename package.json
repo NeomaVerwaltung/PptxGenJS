@@ -6,7 +6,7 @@
 		"url": "https://github.com/gitbrent/"
 	},
 	"description": "Create JavaScript PowerPoint Presentations",
-	"homepage": "https://gitbrent.github.io/PptxGenJS/",
+	"homepage": "https://github.com/NeomaVerwaltung/PptxGenJS#readme",
 	"license": "MIT",
 	"exports": {
 		"types": "./types/index.d.ts",
@@ -75,7 +75,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/gitbrent/PptxGenJS.git"
+		"url": "git+https://github.com/NeomaVerwaltung/PptxGenJS.git"
 	},
 	"keywords": [
 		"es6-powerpoint",
@@ -99,6 +99,6 @@
 		"typescript-powerpoint"
 	],
 	"bugs": {
-		"url": "https://github.com/gitbrent/PptxGenJS/issues"
+		"url": "https://github.com/NeomaVerwaltung/PptxGenJS/issues"
 	}
 }
