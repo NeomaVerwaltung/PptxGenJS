@@ -6,9 +6,7 @@ const typescript = require('rollup-plugin-typescript2')
 const { watch, series } = require('gulp')
 const gulp = require('gulp'),
 	concat = require('gulp-concat'),
-	ignore = require('gulp-ignore'),
 	insert = require('gulp-insert'),
-	source = require('gulp-sourcemaps'),
 	uglify = require('gulp-uglify')
 
 gulp.task('build', () => {
@@ -52,9 +50,6 @@ gulp.task('min', () => {
 		.pipe(concat('pptxgen.min.js'))
 		.pipe(uglify())
 		.pipe(insert.prepend('/* PptxGenJS ' + pkg.version + ' @ ' + new Date().toISOString() + ' */\n'))
-		.pipe(source.init())
-		.pipe(ignore.exclude(['**/*.map']))
-		.pipe(source.write('./'))
 		.pipe(gulp.dest('./dist/'))
 })
 
@@ -64,11 +59,7 @@ gulp.task('bundle', () => {
 		.pipe(concat('pptxgen.bundle.js'))
 		.pipe(uglify())
 		.pipe(insert.prepend('/* PptxGenJS ' + pkg.version + ' @ ' + new Date().toISOString() + ' */\n'))
-		.pipe(source.init())
-		.pipe(ignore.exclude(['**/*.map']))
-		.pipe(source.write('./'))
 		.pipe(gulp.dest('./dist/'))
-		.pipe(gulp.dest('./demos/browser/js/'))
 })
 
 gulp.task('cjs', () => {
