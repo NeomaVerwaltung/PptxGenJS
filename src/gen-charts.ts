@@ -552,7 +552,7 @@ export function makeXmlCharts (rel: ISlideRelChart): string {
 	{
 		// CHARTSPACE: BEGIN vvv
 		strXml +=
-            '<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+			'<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
 		strXml += '<c:date1904 val="0"/>' // ppt defaults to 1904 dates, excel to 1900
 		strXml += `<c:roundedCorners val="${rel.opts.chartArea.roundedCorners ? '1' : '0'}"/>`
 		strXml += '<c:chart>'
@@ -1813,7 +1813,7 @@ function makeValAxis (opts: IChartOptsLib, valAxisId: string): string {
 		strXml += ' <c:crosses val="' + crosses + '"/>'
 	}
 	strXml +=
-        ' <c:crossBetween val="' +
+		' <c:crossBetween val="' +
         (opts._type === CHART_TYPE.SCATTER || (!!(Array.isArray(opts._type) && opts._type.filter(type => type.type === CHART_TYPE.AREA).length > 0)) ? 'midCat' : 'between') +
         '"/>'
 	if (opts.valAxisMajorUnit) strXml += ` <c:majorUnit val="${opts.valAxisMajorUnit}"/>`

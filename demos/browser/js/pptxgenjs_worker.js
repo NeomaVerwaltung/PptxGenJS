@@ -1,10 +1,10 @@
 // demos/browser/js/pptxgenjs_worker.js
 
 // IMPORTANT: You need to load pptxgenjs within the worker.
-// Assuming your built pptxgen.js is available relative to the worker script.
-// Adjust the path as needed based on your project structure.
+// Loaded from the CDN (jsdelivr serves permissive CORS, so importScripts works cross-origin).
+// For local dev, run `npm run dist` and swap this for '../../../dist/pptxgen.bundle.js'.
 try {
-	importScripts('./pptxgen.bundle.js');
+	importScripts('https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@latest/dist/pptxgen.bundle.js');
 	console.log('pptxgenjs loaded successfully in worker.');
 } catch (e) {
 	console.error('Failed to load pptxgenjs in worker:', e);
