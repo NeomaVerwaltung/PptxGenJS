@@ -61,6 +61,8 @@ npm publish
 ## 🏁 Post-Release Tasks
 
 1. Test CDN links on README.md
-2. Load **gh-pages** branch
-3. Update `installation.md` with latest CDN version
-4. Update API documentation if needed
+2. Update `docs/installation.md` with the latest CDN version if it changed
+3. Update the docs under `docs/` for any API changes
+
+> The docs site (GitHub Pages) redeploys automatically from `docs/` on push to `master`
+> via `.github/workflows/docs.yml` — no manual gh-pages branch step.

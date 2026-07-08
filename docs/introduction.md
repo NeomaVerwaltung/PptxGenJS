@@ -1,6 +1,9 @@
-# PptxGenJS
+---
+id: introduction
+title: Introduction
+---
 
-![PptxGenJS Sample Slides](https://raw.githubusercontent.com/gitbrent/PptxGenJS/gh-pages/img/readme_banner.png)
+![PptxGenJS Sample Slides](./assets/readme_banner.png)
 
 ![GitHub Repo stars](https://img.shields.io/github/stars/NeomaVerwaltung/PptxGenJS?style=flat-square)
 ![GitHub License](https://img.shields.io/github/license/NeomaVerwaltung/PptxGenJS?style=flat-square)
@@ -45,6 +48,11 @@ Design custom slides, charts, images, tables, and templates programmatically - n
 
 - Convert any HTML `<table>` to one or more slides with a single line of code → [Explore the HTML-to-PPTX feature](#html-to-powerpoint-magic)
 
+## 🌐 Working Examples
+
+- [Quick Start](./quick-start) — create a presentation in four steps, browser or Node
+- [demos/node](https://github.com/NeomaVerwaltung/PptxGenJS/tree/master/demos/node) — a runnable CLI demo exercising every feature
+
 ## 📦 Installation
 
 Choose your preferred method to install **PptxGenJS**:
@@ -57,6 +65,25 @@ npm install @neoma/pptxgenjs
 
 ```bash
 yarn add @neoma/pptxgenjs
+```
+
+### CDN (Browser Usage)
+
+Use the bundled or minified version via [jsDelivr](https://www.jsdelivr.com/package/gh/NeomaVerwaltung/PptxGenJS):
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/NeomaVerwaltung/PptxGenJS/dist/pptxgen.bundle.js"></script>
+```
+
+> Includes the sole dependency (JSZip) in one file.
+
+📁 Advanced: Separate Files, Direct Download
+
+Download from GitHub: [Latest Release](https://github.com/NeomaVerwaltung/PptxGenJS/releases/latest)
+
+```html
+<script src="PptxGenJS/libs/jszip.min.js"></script>
+<script src="PptxGenJS/dist/pptxgen.min.js"></script>
 ```
 
 ## 🚀 Universal Compatibility
@@ -75,8 +102,8 @@ PptxGenJS works seamlessly in **modern web and Node environments**, thanks to du
 
 ### Builds Provided
 
-- **CommonJS**: [`dist/pptxgen.cjs.js`](./dist/pptxgen.cjs.js)
-- **ES Module**: [`dist/pptxgen.es.js`](./dist/pptxgen.es.js)
+- **CommonJS**: [`dist/pptxgen.cjs.js`](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/dist/pptxgen.cjs.js)
+- **ES Module**: [`dist/pptxgen.es.js`](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/dist/pptxgen.es.js)
 
 ## 📖 Documentation
 
@@ -140,13 +167,13 @@ Perfect for transforming:
 - Exportable grids in web apps
 - Tabular content from CMS or BI tools
 
-[Read the HTML to PowerPoint guide](https://neomaverwaltung.github.io/PptxGenJS/html-to-powerpoint)
+[See the HTML to PowerPoint guide](./html-to-powerpoint)
 
 ## 📚 Full Documentation
 
-Complete API reference, tutorials, and integration guides are available on the docs site: [https://neomaverwaltung.github.io/PptxGenJS](https://neomaverwaltung.github.io/PptxGenJS)
-
-The docs are plain markdown under [`docs/`](docs) and build with VitePress (`npm run docs:dev` to preview locally); they deploy to GitHub Pages automatically on push to `master`.
+Browse the API reference, usage guides, and feature docs using the sidebar. Every page is editable
+in-repo under [`docs/`](https://github.com/NeomaVerwaltung/PptxGenJS/tree/master/docs) — feature PRs
+update the docs in the same commit.
 
 ## 🛠️ Issues / Suggestions
 
@@ -159,8 +186,8 @@ Here is a small [jsFiddle](https://jsfiddle.net/gitbrent/L1uctxm0/) that is alre
 
 Sometimes implementing a new library can be a difficult task and the slightest mistake will keep something from working. We've all been there!
 
-If you are having issues getting a presentation to generate, check out the code in the `demos` directory. The
-Node demo (`demos/node`) contains working examples of every available library feature.
+If you are having issues getting a presentation to generate, check out the code in the `demos` directory. There
+are demos for browser, node and, react that contain working examples of every available library feature.
 
 - Use a pre-configured jsFiddle to test with: [PptxGenJS Fiddle](https://jsfiddle.net/gitbrent/L1uctxm0/)
 - [View questions tagged `PptxGenJS` on StackOverflow](https://stackoverflow.com/questions/tagged/pptxgenjs?sort=votes&pageSize=50). If you can't find your question, [ask it yourself](https://stackoverflow.com/questions/ask?tags=PptxGenJS) - be sure to tag it `pptxgenjs`.
@@ -190,6 +217,6 @@ If you find this library useful, consider contributing to open-source projects, 
 
 ## 📜 License
 
-Copyright &copy; 2015-present [Brent Ely](https://github.com/gitbrent/), &copy; 2026-present [NEOMA GmbH](https://github.com/NeomaVerwaltung)
+Copyright &copy; 2015-present [Brent Ely](https://github.com/gitbrent/)
 
 [MIT](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/LICENSE)
