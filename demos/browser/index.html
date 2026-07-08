@@ -3,14 +3,14 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<meta name="author" content="https://github.com/gitbrent">
-	<meta name="website" content="https://github.com/gitbrent/PptxGenJS/">
+	<meta name="author" content="https://github.com/NeomaVerwaltung">
+	<meta name="website" content="https://github.com/NeomaVerwaltung/PptxGenJS/">
 	<meta name="version" content="4.0.1">
 	<meta name="updated" content="2025-06-25">
 	<link rel="icon" href="images/favicon-32x32.png" sizes="32x32" type="image/png">
 	<link rel="icon" href="images/favicon-16x16.png" sizes="16x16" type="image/png">
 	<link rel="icon" href="images/favicon.png">
-	<title>PptxGenJS | Interactive Feature Demos</title>
+	<title>PptxGenJS (NEOMA) | Interactive Feature Demos</title>
 	<!-- bootstrap -->
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet"
 		integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">
@@ -26,22 +26,10 @@
 		integrity="sha512-axJX7DJduStuBB8ePC8ryGzacZPr3rdLaIDZitiEgWWk2gsXxEFlm4UW0iNzj2h3wp5mOylgHAzBzM4nRSvTZA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 	<!-- local styles -->
 	<link rel="stylesheet" href="./css/style.css">
-	<!-- RELEASE (CDN)
-	-->
-	<script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@latest/dist/pptxgen.bundle.js"></script>
-	<script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@latest/demos/modules/demos.mjs" type="module"></script>
-	<!--
-	TODO: [only used during `-beta` dev cycles; update to below on release]
-	<script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@master/dist/pptxgen.bundle.js"></script>
-	<script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@master/demos/common/demo.js type="module""></script>
-	-->
-	<!-- LOCAL TESTING:
-	<script src="../../libs/jszip.min.js"></script>
-	<script src="../../dist/pptxgen.min.js"></script>
-	<script src="../modules/demos.mjs" type="module"></script>
-	-->
-	<!-- LOCAL TESTING: bundle
+	<!-- LOCAL bundle (checked in; refreshed by `npm run ship`) - the demo always exercises this repo's build -->
 	<script src="./js/pptxgen.bundle.js"></script>
+	<!-- RELEASE (CDN) alternative:
+	<script src="https://cdn.jsdelivr.net/gh/NeomaVerwaltung/PptxGenJS@latest/dist/pptxgen.bundle.js"></script>
 	-->
 </head>
 <body>

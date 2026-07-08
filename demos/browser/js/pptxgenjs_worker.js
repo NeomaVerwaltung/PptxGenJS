@@ -37,9 +37,9 @@ self.onmessage = async function(event) {
 				`Library version: ${pptx.version}`,
 				{ x: 5, y: 2, w: 4, h: 0.5, fontSize: 14 }
 			);
-			// Test with an image from a URL as Issue #1354 called this out)
+			// Test with an image from a URL (Issue #1354) - served by browser_server.mjs from this repo
 			slide.addImage({
-				path: "https://raw.githubusercontent.com/gitbrent/PptxGenJS/master/demos/common/images/krita_square.jpg",
+				path: "/common/images/logo_square.png",
 				x: 1.0, y: 3.1, w: 2.0, h: 2.0
 			});
 			slide.addText("<-- test image via `path` URL", { x: 3.1, y: 4.7, w: 4, h: 0.5, fontSize: 14, color: '0000FF' });

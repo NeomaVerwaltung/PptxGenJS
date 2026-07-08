@@ -17,6 +17,7 @@ const app = express();
 const port = 8000;
 const DEMO_URL = `http://localhost:${port}/browser/index.html`;
 
+app.get("/", (_req, res) => res.redirect("/browser/index.html"));
 app.use("/browser", express.static("./browser"));
 app.use("/common", express.static("./common"));
 app.use("/modules", express.static("./modules"));
