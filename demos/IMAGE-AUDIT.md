@@ -90,14 +90,6 @@
 | `common/images/brokenImage.png` | 200×238 | 3.8 KB | png |
 | `node/assets/image.png` | 192×192 | 8.4 KB | png |
 
-## 🟢 Vite/React scaffold defaults (third-party marks, standard)
-
-| File | Dimensions | Size | Fmt |
-| --- | --- | ---: | --- |
-| `vite-demo/public/vite.svg` | 32×32 | 1.5 KB | svg |
-| `vite-demo/src/assets/react.svg` | 36×32 | 4.0 KB | svg |
-| `vite-demo/src/assets/logo.png` | 30×30 | 0.6 KB | png |
-
 ## ⚠️ Media (audio/video) — higher copyright risk than images
 
 `demos/common/media/` holds `earth-big.mp4` (17 MB), `sample-hd.m4v`, `sample.{avi,mov,mpg,m4v,mp4,mp3,wav,aif}`.

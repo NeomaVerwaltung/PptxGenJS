@@ -32,7 +32,6 @@
 		"prepare": "gulp dist",
 		"start": "gulp",
 		"ship": "gulp ship",
-		"defs": "gulp reactTestDefs",
 		"watch": "rollup -cw",
 		"lint": "eslint src test",
 		"typecheck": "tsc --noEmit",

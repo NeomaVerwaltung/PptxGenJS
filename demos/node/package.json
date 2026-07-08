@@ -27,6 +27,6 @@
 	"license": "MIT",
 	"dependencies": {
 		"express": "^5.1.0",
-		"@neoma/pptxgenjs": "^4.0.1"
+		"@neoma/pptxgenjs": "file:../.."
 	}
 }

@@ -18,8 +18,7 @@
 4. Build library: npm scripts > `ship`
 5. Consolidate new changes from `src/bld/*.ts` into `types/index.d.ts` and update version in head comment
 6. Open `dist/*.js` and check headers
-7. Update version in: `demos/node/package.json`
-8. Update `@neoma/pptxgenjs` dep version in: `demos/vite-demo/package.json`
+7. Update version in: `demos/node/package.json` (its `@neoma/pptxgenjs` dep is `file:../..` — no dep bump needed)
 
 ## 🧪 Run Tests Before Release
 
@@ -68,5 +67,4 @@ npm publish
 1. Test CDN links on README.md
 2. Load **gh-pages** branch
 3. Update `installation.md` with latest CDN version
-4. Copy contents of the newest "build" folder (from above) into `./demo-react` folder
-5. Update API documentation if needed
+4. Update API documentation if needed

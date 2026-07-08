@@ -88,51 +88,20 @@ npm run demo-stream
 
 **Purpose:** Validate integration in modern front-end SPA toolchains (Vite, TypeScript, React-compatible).
 
-Ensure the latest files below are copied to local `node_modules`:
-
-- `dist/pptxgen.es.js`
-- `types/index.d.ts`
-
-1. Update `package.json` (and `package-lock.json` if needed) in `demos/vite-demo/`
-2. Check for TS errors in files:
-
-- Open `src/tstest/Test.tsx`
-- Use IntelliSense to autocomplete things like `pptxgen.ChartType.`
-
-Start the app:
+There is no checked-in Vite app (a pinned SPA rots between releases). Scaffold a fresh one and link this repo:
 
 ```bash
-cd demos/vite-demo
-npm install (?)
+npm create vite@latest pptxgenjs-vite-test -- --template react-ts
+cd pptxgenjs-vite-test
+npm install
+npm install /path/to/this/repo   # installs @neoma/pptxgenjs from the local checkout
 npm run dev
 ```
 
-From your network:
-
-- MacBook..: [Demo](http://localhost:8080/PptxGenJS/)
-- iPhone...: [Demo](http://192.168.254.x:8080/PptxGenJS/)
-- Android..: [Demo](http://192.168.254.x:8080/PptxGenJS/)
-
-1. Run test slides, export PowerPoint files.
-2. Open files on each device to verify:
-
-- MIME type is valid
-- File renders as expected in PowerPoint or previewer
-
----
-
-## 🚀 Build for gh-pages (Manual)
-
-After confirming the above:
-
-```bash
-npm run build
-```
-
-1. Copy the entire `dist` folder from `demos/vite-demo/` to a safe location.
-2. Use this copy when updating the `gh-pages` branch after the release.
-
-> ⚠️ DO NOT use the "deploy" script displayed onscreen by Vite. Manual copying ensures full control over final content.
+1. In a component, `import pptxgen from "@neoma/pptxgenjs"` and export a test slide.
+2. Verify IntelliSense autocompletes e.g. `pptxgen.ChartType.` (types resolve).
+3. Export a PowerPoint file and open it to verify it renders correctly.
+4. Delete the scaffold when done — nothing to maintain.
 
 ---
 
