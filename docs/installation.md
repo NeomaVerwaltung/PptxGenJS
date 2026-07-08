@@ -25,7 +25,7 @@ Use the bundled or minified version via [jsDelivr](https://www.jsdelivr.com/pack
 
 > Includes the sole dependency (JSZip) in one file.
 
-📁 Advanced: Separate Files, Direct Download
+Advanced: Separate Files, Direct Download
 
 ```html
 <script src="PptxGenJS/libs/jszip.min.js"></script>

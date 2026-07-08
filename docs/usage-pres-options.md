@@ -19,7 +19,7 @@ These optional metadata properties correspond to built-in PowerPoint document pr
 
 ## Library Version
 
-> 💡 You can also check the current PptxGenJS library version using the read-only `version` property
+> You can also check the current PptxGenJS library version using the read-only `version` property
 
 ```javascript
 console.log(pptx.version); // e.g. "4.0.0"
@@ -73,7 +73,7 @@ pptx.defineLayout({ name:'A3', width:16.5, height:11.7 });
 pptx.layout = 'A3';
 ```
 
-> 🔍 Need to inspect the current layout size?
+> Need to inspect the current layout size?
 
 ```javascript
 console.log(pptx.presLayout); // { width: 10, height: 5.625 }

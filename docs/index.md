@@ -13,23 +13,19 @@ hero:
       text: Quick Start
       link: /quick-start
     - theme: alt
-      text: Introduction
+      text: How the API works
       link: /introduction
     - theme: alt
-      text: GitHub
-      link: https://github.com/NeomaVerwaltung/PptxGenJS
+      text: Migrate from pptxgenjs
+      link: /migration
 
 features:
-  - icon: 📊
-    title: Full feature set
-    details: Charts, tables, images, media, shapes, text, slide masters, sections, and speaker notes — the complete OOXML surface.
-  - icon: 🧩
-    title: Works everywhere
-    details: Browser, Node, React, Angular, Vite, Webpack, and web workers. One API, every runtime.
-  - icon: 🧠
-    title: TypeScript-first
-    details: Complete type definitions ship with the package — your editor documents the API as you type.
-  - icon: 🔁
-    title: HTML to PowerPoint
-    details: Convert any HTML table to one or more slides with a single line of code.
+    - title: One object model
+      details: A Presentation holds Slides; each Slide holds Text, Tables, Shapes, Images, Charts, and Media. Learn five add-methods and you know the API.
+    - title: Works everywhere
+      details: Browser, Node, React, Angular, Vite, Webpack, and web workers. One API, every runtime.
+    - title: TypeScript-first
+      details: Complete type definitions ship with the package, so your editor documents the API and options as you type.
+    - title: HTML to PowerPoint
+      details: Convert any HTML table to one or more slides with a single line of code.
 ---

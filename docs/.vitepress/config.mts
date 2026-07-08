@@ -18,6 +18,7 @@ export default defineConfig({
 			{ text: 'Docs', link: '/introduction' },
 			{ text: 'Quick Start', link: '/quick-start' },
 			{ text: 'API', link: '/api-text' },
+			{ text: 'Migrate', link: '/migration' },
 		],
 		sidebar: [
 			{ text: 'Introduction', link: '/introduction' },
@@ -27,6 +28,7 @@ export default defineConfig({
 				items: [
 					{ text: 'Quick Start', link: '/quick-start' },
 					{ text: 'Installation', link: '/installation' },
+					{ text: 'Migrating from pptxgenjs', link: '/migration' },
 					{ text: 'Compatibility', link: '/compatibility' },
 					{ text: 'Integration', link: '/integration' },
 				],
