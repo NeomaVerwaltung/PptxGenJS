@@ -32,20 +32,16 @@ See [TESTING.md](./TESTING.md) for complete test instructions.
 | ----------------- | ---------- | ---------------------- | ------ |
 | pptxgen.es.js     | Webpack 4  | SPFx (v1.16.1) project | ✅?🟡    |
 | pptxgen.es.js     | Webpack 5  | SPFx (v1.19.1) project | ✅?🟡    |
-| pptxgen.es.js     | Rollup 4   | Vite (v6) demo         | ✅?🟡    |
+| pptxgen.es.js     | Rollup 4   | Vite (v6) scaffold     | ✅?🟡    |
 | pptxgen.cjs.js    | Node/CJS   | Node demo              | ✅?🟡    |
-| pptxgen.bundle.js | Script     | Browser demo (desktop) | ✅?🟡    |
-| pptxgen.bundle.js | Script     | Browser demo (iOS)     | ✅?🟡    |
-| pptxgen.bundle.js | Web Worker | worker_test demo       | ✅?🟡    |
 
 ## 🚌 Release New Version
 
 ### 🟡 Pre-Release Checklist
 
-1. Update: `demos/browser/index.html` head to use "RELEASE (CDN)"
-2. Check: Is `version` updated in package.json?
-3. Check: Is `version` updated in src/pptxgen.ts?
-4. Check: Is `types/index.d.ts` version in header updated?
+1. Check: Is `version` updated in package.json?
+2. Check: Is `version` updated in src/pptxgen.ts?
+3. Check: Is `types/index.d.ts` version in header updated?
 
 ### 🟢 Release: GitHub
 

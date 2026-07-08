@@ -68,7 +68,6 @@ gulp.task('bundle', () => {
 		.pipe(ignore.exclude(['**/*.map']))
 		.pipe(source.write('./'))
 		.pipe(gulp.dest('./dist/'))
-		.pipe(gulp.dest('./demos/browser/js/'))
 })
 
 gulp.task('cjs', () => {

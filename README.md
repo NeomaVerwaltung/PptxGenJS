@@ -45,15 +45,6 @@ Design custom slides, charts, images, tables, and templates programmatically - n
 
 - Convert any HTML `<table>` to one or more slides with a single line of code → [Explore the HTML-to-PPTX feature](#html-to-powerpoint-magic)
 
-## 🌐 Live Demos
-
-Try PptxGenJS right in your browser - no setup required.
-
-- [Basic Slide Demo](https://gitbrent.github.io/PptxGenJS/demos/) - Build a basic presentation in seconds
-- [Full Feature Showcase](https://gitbrent.github.io/PptxGenJS/demo/browser/index.html) - Explore every available feature
-
-> Perfect for testing compatibility or learning by example - all demos run 100% in the browser.
-
 ## 📦 Installation
 
 Choose your preferred method to install **PptxGenJS**:
@@ -166,8 +157,8 @@ Here is a small [jsFiddle](https://jsfiddle.net/gitbrent/L1uctxm0/) that is alre
 
 Sometimes implementing a new library can be a difficult task and the slightest mistake will keep something from working. We've all been there!
 
-If you are having issues getting a presentation to generate, check out the code in the `demos` directory. There
-are demos for browser, node and, react that contain working examples of every available library feature.
+If you are having issues getting a presentation to generate, check out the code in the `demos` directory. The
+Node demo (`demos/node`) contains working examples of every available library feature.
 
 - Use a pre-configured jsFiddle to test with: [PptxGenJS Fiddle](https://jsfiddle.net/gitbrent/L1uctxm0/)
 - [View questions tagged `PptxGenJS` on StackOverflow](https://stackoverflow.com/questions/tagged/pptxgenjs?sort=votes&pageSize=50). If you can't find your question, [ask it yourself](https://stackoverflow.com/questions/ask?tags=PptxGenJS) - be sure to tag it `pptxgenjs`.
