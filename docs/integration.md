@@ -22,23 +22,8 @@ PptxGenJS can be used in various JavaScript environments. Choose the integration
 | **Electron (Main Process)**| Same as **Node.js**| In the main Electron process, you have full access to Node.js APIs, including the filesystem, which is useful for directly saving presentation files using the `writeFile()` method.|
 | **Electron (Renderer Process)**| Same as **Browser Bundlers**| The renderer process is similar to a browser environment. If `nodeIntegration` is enabled and securely configured, you may also be able to use Node.js filesystem access from the renderer.|
 
-## Integration Demos
-
-Many of the common integration methods have working demos and code available.
-
-### Node.js
-
-A runnable CLI demo covering every feature ships in the repo:
-
-- Source Code: [demos/node](https://github.com/NeomaVerwaltung/PptxGenJS/tree/master/demos/node)
-- Run it: `cd demos/node && npm install && npm run demo-all`
-
-### React + Vite / other bundlers
-
-There is no pinned SPA demo (a checked-in app rots between releases). Scaffold a fresh
-one and install the library — see the Vite steps in
-[TESTING.md](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/TESTING.md).
-The [Quick Start](./quick-start) shows the browser and Node code side by side.
+The [Quick Start](./quick-start) shows the browser and Node code side by side, and each API
+Reference page includes runnable snippets.
 
 ## Troubleshooting
 

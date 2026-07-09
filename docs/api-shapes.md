@@ -31,7 +31,7 @@ slide.addText("ShapeType.line", {
 
 ## Properties
 
-### Position/Size Props ([PositionProps](./types#position-props))
+### Position/Size Props (`PositionProps`)
 
 | Name | Type   | Default | Description            | Possible Values                              |
 | :--- | :----- | :------ | :--------------------- | :------------------------------------------- |
@@ -44,25 +44,21 @@ slide.addText("ShapeType.line", {
 | `h`  | number | `1.0`   | height (inches)        | 0-n                                          |
 | `h`  | string |         | height (percent)       | 'n%'. (Ex: `{h:'50%'}` 50% the Slide height) |
 
-### Shape Props ([ShapeProps](./types#shape-props-shapeprops))
+### Shape Props (`ShapeProps`)
 
 | Name         | Type                                                                    | Description         | Possible Values                                             |
 | :----------- | :---------------------------------------------------------------------- | :------------------ | :---------------------------------------------------------- |
 | `align`      | string                                                                  | alignment           | `left` or `center` or `right`. Default: `left`              |
-| `fill`       | [ShapeFillProps](./types#fill-props-shapefillprops)       | fill props          | Fill color/transparency props                               |
+| `fill`       | `ShapeFillProps`       | fill props          | Fill color/transparency props                               |
 | `flipH`      | boolean                                                                 | flip Horizontal     | `true` or `false`                                           |
 | `flipV`      | boolean                                                                 | flip Vertical       | `true` or `false`                                           |
-| `hyperlink`  | [HyperlinkProps](./types#hyperlink-props-hyperlinkprops)  | hyperlink props     | (see type link)                                             |
-| `line`       | [ShapeLineProps](./types#shape-line-props-shapelineprops) | border line props   | (see type link)                                             |
+| `hyperlink`  | `HyperlinkProps`  | hyperlink props     | (see type link)                                             |
+| `line`       | `ShapeLineProps` | border line props   | (see type link)                                             |
 | `rectRadius` | number                                                                  | rounding radius     | 0 to 1. (Ex: 0.5. Only for `pptx.shapes.ROUNDED_RECTANGLE`) |
 | `rotate`     | number                                                                  | rotation (degrees)  | -360 to 360. Default: `0`                                   |
-| `shadow`     | [ShadowProps](./types#shadow-props-shadowprops)           | shadow props        | (see type link)                                             |
+| `shadow`     | `ShadowProps`           | shadow props        | (see type link)                                             |
 | `shapeName`  | string                                                                  | optional shape name | Ex: "Customer Network Diagram 99"                           |
 
 ## Examples
 
 ![Shapes with Text Demo](./assets/ex-shape-slide.png)
-
-## Samples
-
-Sample code all available types: [demos/modules/demo_shape.mjs](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/demos/modules/demo_shape.mjs)

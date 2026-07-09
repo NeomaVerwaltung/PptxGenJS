@@ -95,10 +95,6 @@ pptx.tableToSlides("myHtmlTableID", {
 
 ![HTML-to-PowerPoint Presentation](./assets/ex-html-to-powerpoint-2.png)
 
-### Demos
-
-- Working example is available under [/demos](https://github.com/NeomaVerwaltung/PptxGenJS/tree/master/demos)
-
 ## HTML to PowerPoint Creative Solutions
 
 Design a Master Slide that already contains: slide layout, margins, logos, etc., then you can produce

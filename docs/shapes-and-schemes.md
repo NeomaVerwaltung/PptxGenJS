@@ -22,7 +22,6 @@ To use a scheme color, set a color constant as a property value:
 slide.addText("Scheme Color 'text1'", { color: pptx.SchemeColor.text1 });
 ```
 
-See [`demo_shape.mjs`](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/demos/modules/demo_shape.mjs) for a Scheme Colors example.
 
 ![Scheme Demo](./assets/demo-scheme.png)
 

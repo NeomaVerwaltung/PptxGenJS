@@ -6,11 +6,11 @@ title: Slide Properties and Methods
 
 | Option               | Type                                                                 | Default  | Description                      | Possible Values                                                                                                                                                    |
 | :------------------- | :------------------------------------------------------------------- | :------- | :------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `background`         | `BackgroundProps`                                                    | `FFFFFF` | background color/images          | add background color or image [`DataOrPathProps`](./types.md#datapath-props-dataorpathprops) and/or [`ShapeFillProps`](./types.md#shape-fill-props-shapefillprops) |
+| `background`         | `BackgroundProps`                                                    | `FFFFFF` | background color/images          | add background color or image `DataOrPathProps` and/or `ShapeFillProps` |
 | `color`              | string                                                               | `000000` | default text color               | hex color or [scheme color](./shapes-and-schemes.md).                                                                                                              |
 | `hidden`             | boolean                                                              | `false`  | whether slide is hidden          | Ex: `slide.hidden = true`                                                                                                                                          |
 | `newAutoPagedSlides` | PresSlide[]                                                          |          | all slides created by autopaging | Contains slides automatically created when content (e.g. a table) overflows the current slide using autoPage:true                                                  |
-| `slideNumber`        | [`SlideNumberProps`](./types.md#slide-number-props-slidenumberprops) |          | slide number props               | (see examples below)                                                                                                                                               |
+| `slideNumber`        | `SlideNumberProps` |          | slide number props               | (see examples below)                                                                                                                                               |
 
 ## Full Examples
 

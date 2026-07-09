@@ -66,7 +66,7 @@ slide.addText([{ text: "TEXT", options: { OPTIONS } }]);
 | `subscript`           | boolean            |         | `false` | subscript text            | `true` or `false`                                                                                                              |
 | `superscript`         | boolean            |         | `false` | superscript text          | `true` or `false`                                                                                                              |
 | `transparency`        | number             |         | `0`     | transparency              | Percentage: 0-100                                                                                                              |
-| `underline`           | TextUnderlineProps |         |         | underline color/style     | [TextUnderlineProps](./types#text-underline-props-textunderlineprops)                                            |
+| `underline`           | TextUnderlineProps |         |         | underline color/style     | `TextUnderlineProps`                                            |
 | `valign`              | string             |         |         | vertical alignment        | `top` or `middle` or `bottom`                                                                                                  |
 | `vert`                | string             |         | `horz`  | text direction            | `eaVert` or `horz` or `mongolianVert` or `vert` or `vert270` or `wordArtVert` or `wordArtVertRtl`                              |
 | `wrap`                | boolean            |         | `true`  | text wrapping             | `true` or `false`                                                                                                              |
@@ -241,7 +241,3 @@ slide.addText(arrTextObjs2, { x: 0.5, y: 4, w: 8, h: 2, fill: { color: "232323" 
 ### Tab Stops
 
 ![tab stops](./assets/ex-text-tabstops.png)
-
-## Samples
-
-Sample code: [demos/modules/demo_text.mjs](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/demos/modules/demo_text.mjs)

@@ -13,7 +13,7 @@ functionality. This enables you to easily create a Master Slide using code.
 
 Slide Masters are created by calling the `defineSlideMaster()` method along with an options object
 (same style used in Slides). Once defined, you can pass the Master title to `addSlide()` and that Slide will
-use the Layout previously defined. See the demo under /examples for several working examples.
+use the Layout previously defined.
 
 The defined Masters become first-class Layouts in the exported PowerPoint presentation and can be changed
 via View > Slide Master and will affect the Slides created using that layout.
@@ -138,7 +138,8 @@ pptx.writeFile();
 Using the 'PLACEHOLDER_SLIDE' defined above to produce a Slide:
 ![Placeholder Demo Presentation](./assets/ex-master-slide-placeholder-output.png)
 
-## More Examples and Demos
+## More Examples
 
-There are several Master Slides defined in the Demo: `demos/browser/index.html` including examples using placeholders.
+A presentation built from several defined Master Slides, including placeholder examples:
+
 ![PptxGenJS Master Slide Demo](./assets/ex-master-slide-demo.png)

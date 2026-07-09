@@ -2,7 +2,7 @@
 title: Charts
 ---
 
-Charts of almost any type can be added to Slides, including combo and 3D charts. See [demos/modules/demo_chart.mjs](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/demos/modules/demo_chart.mjs) for the working code used to create the charts shown below.
+Charts of almost any type can be added to Slides, including combo and 3D charts.
 
 ![PptxGenJS Chart Samples](./assets/demo-all-charts.png)
 
@@ -47,11 +47,10 @@ slide.addChart(pres.ChartType.line, dataChartAreaLine, { x: 1, y: 1, w: 8, h: 4 
 
 - Zero values can be hidden using Microsoft formatting specs (see [Issue #288](https://github.com/gitbrent/PptxGenJS/issues/278))
 - Use `*LabelFormatCode` props to format numbers - see [Microsoft Number Format Codes](https://support.office.com/en-us/article/Number-format-codes-5026bbd6-04bc-48cd-bf33-80f18b4eae68)
-- Examples: The [`demos/modules/demo_chart.mjs`](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/demos/modules/demo_chart.mjs) file has 17 slides of well-documented chart examples
 
 ## Properties
 
-### Position/Size Props ([PositionProps](./types.md#position-props-positionprops))
+### Position/Size Props (`PositionProps`)
 
 | Option | Type   | Default | Description            | Possible Values                              |
 | :----- | :----- | :------ | :--------------------- | :------------------------------------------- |
@@ -191,7 +190,7 @@ slide.addChart(pres.ChartType.line, dataChartAreaLine, { x: 1, y: 1, w: 8, h: 4 
 | `lineDataSymbolLineColor` | string      | `000000`    | color of data symbol line                    | hex color code. Ex: `{ lineDataSymbolLineColor:'0088CC' }`                               |
 | `lineSize`                | number      | `2`         | thickness of data line (0 is no line)        | 0-256. Ex: `{ lineSize: 1 }`                                                             |
 | `lineSmooth`              | boolean     | `false`     | whether to smooth lines                      | `true` or `false` - Ex: `{ lineSmooth: true }`                                           |
-| `shadow`                  | ShadowProps |             | data element shadow options                  | `none` or [`ShadowProps`](./types.md#shadow-props-shadowprops)                           |
+| `shadow`                  | ShadowProps |             | data element shadow options                  | `none` or `ShadowProps`                           |
 
 ### 3D Bar Chart (`IChartPropsChartBar`), Series Axis (`IChartPropsDataTable`)
 
@@ -245,7 +244,3 @@ slide.addChart(pres.ChartType.line, dataChartAreaLine, { x: 1, y: 1, w: 8, h: 4 
 | `secondaryCatAxis` | boolean | `false` | If data should use secondary category axis (or primary) | `true` or `false` |
 | `secondaryValAxis` | boolean | `false` | If data should use secondary value axis (or primary)    | `true` or `false` |
 | `valAxes`          | array   |         | array of two axis options objects                       | See example below |
-
-## Samples
-
-Sample code: [demos/modules/demo_chart.mjs](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/demos/modules/demo_chart.mjs)

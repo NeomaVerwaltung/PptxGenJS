@@ -50,7 +50,7 @@ slide.addTable(rows, { w: 9, rowH: 1, align: "left", fontFace: "Arial" });
 
 ## Properties
 
-### Position/Size Props ([PositionProps](./types#position-props))
+### Position/Size Props (`PositionProps`)
 
 | Option | Type   | Default | Description            | Possible Values                              |
 | :----- | :----- | :------ | :--------------------- | :------------------------------------------- |
@@ -139,7 +139,6 @@ Auto-paging will create new slides as table rows overflow, doing the magical wor
 
 ### Table Cell Formatting
 
-- Sample Code: [`demo_table.mjs`](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/demos/modules/demo_table.mjs) for 700+ lines of demo code
 
 ```typescript
 // -------
@@ -192,7 +191,3 @@ slide.addTable(arrTabRows, { x: 0.5, y: 3.5, w: 9, h: 1, colW: [1.5, 1.5, 6] });
 ```
 
 ![Table Cell Formatting](./assets/ex-table-cell-format.png)
-
-## Samples
-
-Sample code: [demos/modules/demo_table.mjs](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/demos/modules/demo_table.mjs)

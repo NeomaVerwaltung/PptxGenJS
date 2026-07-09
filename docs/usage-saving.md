@@ -5,7 +5,6 @@ title: Saving Presentations
 Several methods are available when generating a presentation.
 
 - All methods return a Promise
-- Working examples are available under [/PptxGenJS/demos](https://github.com/NeomaVerwaltung/PptxGenJS/tree/master/demos)
 
 ## Saving as a File (writeFile)
 
@@ -73,24 +72,27 @@ Returns the presentation as a binary string, suitable for streaming in HTTP resp
 
 ### Stream Example
 
+Stream the generated file in an HTTP response (shown here with Express):
+
 ```typescript
-// SRC: https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/demos/node/demo_stream.js
-// HOW: using: `const app = express();``
-pptx.stream()
-    .then((data) => {
-        app.get("/", (req, res) => {
-            res.writeHead(200, { "Content-disposition": "attachment;filename=" + fileName, "Content-Length": data.length });
-            res.end(new Buffer(data, "binary"));
-        });
-        app.listen(3000, () => {
-            console.log("PptxGenJS Node Stream Demo app listening on port 3000!");
-            console.log("Visit: http://localhost:3000/");
-            console.log("(press Ctrl-C to quit demo)");
-        });
+import express from "express"
+import pptxgen from "@neoma/pptxgenjs"
+
+const app = express()
+
+app.get("/download", async (req, res) => {
+    const pptx = new pptxgen()
+    pptx.addSlide().addText("Streamed with PptxGenJS", { x: 1, y: 1 })
+
+    const data = await pptx.stream()
+    res.writeHead(200, {
+        "Content-disposition": "attachment;filename=Presentation.pptx",
+        "Content-Length": data.length,
     })
-    .catch((err) => {
-        console.log("ERROR: " + err);
-    });
+    res.end(Buffer.from(data as string, "binary"))
+})
+
+app.listen(3000)
 ```
 
 ## Saving Multiple Presentations
@@ -115,8 +117,19 @@ pptx.writeFile({ fileName: "PptxGenJS-Browser-2" });
 
 ### In Node.js
 
-- See `demos/node/demo.js` for a working demo with multiple presentations, promises, etc.
-- See `demos/node/demo_stream.js` for a working demo using streaming
+```typescript
+import pptxgen from "@neoma/pptxgenjs"
+
+// Presentation 1:
+let pptx = new pptxgen()
+pptx.addSlide().addText("Presentation 1", { x: 1, y: 1 })
+await pptx.writeFile({ fileName: "PptxGenJS-Node-1.pptx" })
+
+// Presentation 2 — a fresh instance:
+pptx = new pptxgen()
+pptx.addSlide().addText("Presentation 2", { x: 1, y: 1 })
+await pptx.writeFile({ fileName: "PptxGenJS-Node-2.pptx" })
+```
 
 ```typescript
 import pptxgen from "@neoma/pptxgenjs";

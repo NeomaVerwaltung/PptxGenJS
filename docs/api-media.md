@@ -35,7 +35,7 @@ Either provide a URL location or base64 data along with type to create media.
 
 ## Properties
 
-### Position/Size Props ([PositionProps](./types#position-props))
+### Position/Size Props (`PositionProps`)
 
 | Option | Type   | Default | Description            | Possible Values                              |
 | :----- | :----- | :------ | :--------------------- | :------------------------------------------- |
@@ -48,14 +48,14 @@ Either provide a URL location or base64 data along with type to create media.
 | `h`    | number | `1.0`   | height (inches)        | 0-n                                          |
 | `h`    | string |         | height (percent)       | 'n%'. (Ex: `{h:'50%'}` 50% the Slide height) |
 
-### Data/Path Props ([DataOrPathProps](./types#datapath-props-dataorpathprops))
+### Data/Path Props (`DataOrPathProps`)
 
 | Option | Type   | Description         | Possible Values                                             |
 | :----- | :----- | :------------------ | :---------------------------------------------------------- |
 | `data` | string | image data (base64) | (`data` or `path` is required) base64-encoded image string. |
 | `path` | string | image path          | (`data` or `path` is required) relative or full URL         |
 
-### Media Props ([MediaProps](./types#media-props-mediaprops))
+### Media Props (`MediaProps`)
 
 | Option  | Type   | Description     | Possible Values                                                                         |
 | :------ | :----- | :-------------- | :-------------------------------------------------------------------------------------- |
@@ -67,7 +67,3 @@ Either provide a URL location or base64 data along with type to create media.
 ## Example
 
 ![Media Examples](./assets/ex-media-slide.png)
-
-## Samples
-
-Sample code: [demos/modules/demo_media.mjs](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/demos/modules/demo_media.mjs)
