@@ -1,5 +1,4 @@
 ---
-id: api-text
 title: Text
 ---
 
@@ -211,7 +210,7 @@ pptx.writeFile("Demo-Text");
 - Use the `breakLine` prop to force line breaks when composing text objects using an array of text objects.
 - Use the `softBreakBefore` prop to create a "soft line break" (shift-enter)
 
-```javascript
+```typescript
 let arrTextObjs1 = [
     { text: "1st line", options: { fontSize: 24, color: "99ABCC", breakLine: true } },
     { text: "2nd line", options: { fontSize: 36, color: "FFFF00", breakLine: true } },

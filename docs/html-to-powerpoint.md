@@ -1,5 +1,4 @@
 ---
-id: html-to-powerpoint
 sidebar_label: HTML-to-PowerPoint
 title: HTML to PowerPoint
 ---
@@ -16,7 +15,7 @@ Notes:
 
 ## HTML to PowerPoint Syntax
 
-```javascript
+```typescript
 slide.tableToSlides(htmlElementID);
 slide.tableToSlides(htmlElementID, { OPTIONS });
 ```
@@ -72,7 +71,7 @@ Example:
 
 ## HTML to PowerPoint Examples
 
-```javascript
+```typescript
 // Pass table element ID to tableToSlides function to produce 1-N slides
 pptx.tableToSlides("myHtmlTableID");
 

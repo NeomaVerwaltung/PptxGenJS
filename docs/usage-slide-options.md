@@ -1,5 +1,4 @@
 ---
-id: usage-slide-options
 title: Slide Properties and Methods
 ---
 
@@ -17,7 +16,7 @@ title: Slide Properties and Methods
 
 ### Example: Background/Foreground
 
-```javascript
+```typescript
 // EX: Use several methods to set a background
 slide.background = { color: "F1F1F1" }; // Solid color
 slide.background = { color: "FF3399", transparency: 50 }; // hex fill color with transparency of 50%
@@ -25,14 +24,14 @@ slide.background = { data: "image/png;base64,ABC[...]123" }; // image: base64 da
 slide.background = { path: "https://some.url/image.jpg" }; // image: url
 ```
 
-```javascript
+```typescript
 // EX: Set slide default font color
 slide.color = "696969";
 ```
 
 ### Example: Slide Number
 
-```javascript
+```typescript
 // EX: Add a Slide Number at a given location
 slide.slideNumber = { x: 1.0, y: "90%" };
 

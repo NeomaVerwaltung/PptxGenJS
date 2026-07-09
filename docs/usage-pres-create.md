@@ -1,5 +1,4 @@
 ---
-id: usage-pres-create
 title: Creating a Presentation
 ---
 A "presentation" is a single `.pptx` file.
@@ -16,6 +15,6 @@ let pres = new pptxgen();
 
 ## Script/Web Browser
 
-```javascript
+```typescript
 let pres = new PptxGenJS();
 ```

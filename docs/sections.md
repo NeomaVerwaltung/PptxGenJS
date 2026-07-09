@@ -1,5 +1,4 @@
 ---
-id: sections
 title: Slide Sections
 ---
 

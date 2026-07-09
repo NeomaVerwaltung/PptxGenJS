@@ -1,5 +1,4 @@
 ---
-id: deprecated
 title: Deprecated
 ---
 

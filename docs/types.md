@@ -1,5 +1,4 @@
 ---
-id: types
 title: Type Interfaces
 ---
 

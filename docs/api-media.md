@@ -1,5 +1,4 @@
 ---
-id: api-media
 title: Media
 ---
 

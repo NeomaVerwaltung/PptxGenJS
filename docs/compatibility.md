@@ -1,5 +1,4 @@
 ---
-id: compatibility
 title: Universal Compatibility
 ---
 

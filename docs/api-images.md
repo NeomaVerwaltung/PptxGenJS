@@ -1,5 +1,4 @@
 ---
-id: api-images
 title: Images
 ---
 

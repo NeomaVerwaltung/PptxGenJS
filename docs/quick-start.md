@@ -1,60 +1,75 @@
 ---
-id: quick-start
-title: Quick Start Guide
+title: Quick Start
 ---
 
-## Create a PowerPoint in 4 easy steps
+# Quick Start
 
-PptxGenJS PowerPoint presentations are created by following 4 basic steps. See examples below by environment.
+Create a PowerPoint presentation in four steps: create the presentation, add a slide, add content, save.
 
-That's really all there is to it!
+## Node, React, Angular, Vite (ES modules)
 
-## Node-Based Applications
+```typescript
+import pptxgen from "@neoma/pptxgenjs"
 
-```tsx title="HelloWorld.ts"
-import pptxgen from "@neoma/pptxgenjs";
+// 1. Create a presentation
+const pres = new pptxgen()
 
-// 1. Create a Presentation
-let pres = new pptxgen();
+// 2. Add a slide
+const slide = pres.addSlide()
 
-// 2. Add a Slide to the presentation
-let slide = pres.addSlide();
+// 3. Add one or more objects (text, tables, shapes, images, charts, media)
+slide.addText("Hello World from PptxGenJS!", { x: 1, y: 1, w: "80%", h: 1, fontSize: 24, color: "363636" })
 
-// 3. Add 1+ objects (Tables, Shapes, etc.) to the Slide
-let textboxText = "Hello World from PptxGenJS!";
-let textboxOpts = { x: 1, y: 1, color: "363636" };
-slide.addText(textboxText, textboxOpts);
-
-// 4. Save the Presentation
-pres.writeFile({ fileName: "Hello-World.pptx" });
+// 4. Save the presentation
+await pres.writeFile({ fileName: "HelloWorld.pptx" })
 ```
 
-### TypeScript Support
+## Browser (script tag)
 
-Modern application developers using ES6 with Angular, React, TypeScript, etc. benefit from full typescript defs.
+Loaded from a `<script>` tag, the library is available as the `PptxGenJS` global. The API is identical:
 
-Learn as you code in a modern development with included TypeScript definitions the documentation comes to you.
+```typescript
+// 1. Create a presentation
+const pres = new PptxGenJS()
 
-![TypeScript Support](./assets/ex-typescript.png)
+// 2. Add a slide
+const slide = pres.addSlide()
 
-Develop your apps quickly without needing to look up documentation.
+// 3. Add content
+slide.addText("Hello World from PptxGenJS!", { x: 1, y: 1, w: "80%", h: 1, fontSize: 24, color: "363636" })
 
-![TypeScript Support](./assets/ex-typescript-writefile.png)
-
-## Client Web Browser
-
-```javascript title="HelloWorld.js"
-// 1. Create a new Presentation
-let pres = new PptxGenJS();
-
-// 2. Add a Slide
-let slide = pres.addSlide();
-
-// 3. Add one or more objects (Tables, Shapes, Images, Text and Media) to the Slide
-let textboxText = "Hello World from PptxGenJS!";
-let textboxOpts = { x: 1, y: 1, color: "363636" };
-slide.addText(textboxText, textboxOpts);
-
-// 4. Save the Presentation
-pres.writeFile({ fileName: "Hello-World.pptx" });
+// 4. Save the presentation (triggers a download)
+await pres.writeFile({ fileName: "HelloWorld.pptx" })
 ```
+
+## Typed options and autocomplete
+
+Every `addX` method is fully typed, so option objects are checked as you write them and your editor
+autocompletes property names, enum values, and expected types — no need to look them up in the docs.
+
+```typescript
+import pptxgen from "@neoma/pptxgenjs"
+
+const pres = new pptxgen()
+const slide = pres.addSlide()
+
+// `TextPropsOptions` is inferred: `align` only accepts "left" | "center" | "right",
+// `fontSize` must be a number, and unknown properties are a compile error.
+const textOptions: pptxgen.TextPropsOptions = {
+	x: 1,
+	y: 1,
+	w: "80%",
+	h: 1,
+	align: "center",
+	fontSize: 24,
+	color: "363636",
+	bold: true,
+}
+
+slide.addText("Typed and checked at compile time", textOptions)
+
+await pres.writeFile({ fileName: "TypedOptions.pptx" })
+```
+
+That is the whole workflow. Continue with [Installation](./installation), or see the API reference in the
+sidebar for the options each object accepts.

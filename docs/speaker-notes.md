@@ -1,5 +1,4 @@
 ---
-id: speaker-notes
 title: Speaker Notes
 ---
 

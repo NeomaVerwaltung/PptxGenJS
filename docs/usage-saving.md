@@ -1,5 +1,4 @@
 ---
-id: usage-saving
 title: Saving Presentations
 ---
 
@@ -24,7 +23,7 @@ Save the presentation as a PowerPoint .pptx file.
 
 ### Write File Example
 
-```javascript
+```typescript
 // For simple cases, you can omit `then`
 pptx.writeFile({ fileName: 'Browser-PowerPoint-Demo.pptx' });
 
@@ -57,7 +56,7 @@ Generate the presentation in various formats (e.g., base64, arraybuffer) — use
 
 ### Write Example
 
-```javascript
+```typescript
 pptx.write({ outputType: "base64" })
     .then((data) => {
         console.log("write as base64: Here are 0-100 chars of `data`:\n");
@@ -74,7 +73,7 @@ Returns the presentation as a binary string, suitable for streaming in HTTP resp
 
 ### Stream Example
 
-```javascript
+```typescript
 // SRC: https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/demos/node/demo_stream.js
 // HOW: using: `const app = express();``
 pptx.stream()
@@ -100,7 +99,7 @@ pptx.stream()
 
 > Each new presentation should use a fresh new PptxGenJS() instance to avoid reusing slides or metadata.
 
-```javascript
+```typescript
 let pptx = null;
 
 // Presentation 1:
@@ -119,7 +118,7 @@ pptx.writeFile({ fileName: "PptxGenJS-Browser-2" });
 - See `demos/node/demo.js` for a working demo with multiple presentations, promises, etc.
 - See `demos/node/demo_stream.js` for a working demo using streaming
 
-```javascript
+```typescript
 import pptxgen from "@neoma/pptxgenjs";
 
 // Presentation 1:

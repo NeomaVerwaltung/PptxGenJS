@@ -1,5 +1,4 @@
 ---
-id: usage-add-slide
 title: Adding a Slide
 ---
 
@@ -7,7 +6,7 @@ title: Adding a Slide
 
 Create a new slide in the presentation:
 
-```javascript
+```typescript
 let slide = pptx.addSlide();
 ```
 
@@ -15,7 +14,7 @@ let slide = pptx.addSlide();
 
 The `addSlide()` method returns a reference to the created Slide object, so method calls can be chained.
 
-```javascript
+```typescript
 let slide1 = pptx.addSlide();
 slide1
   .addImage({ path: "img1.png", x: 1, y: 2 })
@@ -24,7 +23,7 @@ slide1
 
 You can also create multiple slides:
 
-```javascript
+```typescript
 let slide1 = pptx.addSlide();
 slide1.addText("Slide One", { x: 1, y: 1 });
 

@@ -1,5 +1,4 @@
 ---
-id: usage-pres-options
 title: Presentation Options
 ---
 
@@ -21,7 +20,7 @@ These optional metadata properties correspond to built-in PowerPoint document pr
 
 > You can also check the current PptxGenJS library version using the read-only `version` property
 
-```javascript
+```typescript
 console.log(pptx.version); // e.g. "4.0.0"
 ```
 
@@ -29,7 +28,7 @@ console.log(pptx.version); // e.g. "4.0.0"
 
 PptxGenJS uses ES6-style getters/setters.
 
-```javascript
+```typescript
 pptx.title = 'My Awesome Presentation';
 pptx.author = 'Brent Ely';
 pptx.subject = 'Annual Report';
@@ -43,7 +42,7 @@ Layout option applies to all slides in the current Presentation.
 
 ### Slide Layout Syntax
 
-```javascript
+```typescript
 pptx.layout = 'LAYOUT_NAME';
 ```
 
@@ -65,7 +64,7 @@ You can create custom layouts of any size!
 
 ### Custom Slide Layout Example
 
-```javascript
+```typescript
 // Define new layout for the Presentation
 pptx.defineLayout({ name:'A3', width:16.5, height:11.7 });
 
@@ -75,7 +74,7 @@ pptx.layout = 'A3';
 
 > Need to inspect the current layout size?
 
-```javascript
+```typescript
 console.log(pptx.presLayout); // { width: 10, height: 5.625 }
 ```
 
@@ -87,7 +86,7 @@ Right-to-Left (RTL) text is supported. Simply set the RTL mode presentation prop
 
 ### Text Direction Examples
 
-```javascript
+```typescript
 pptx.rtlMode = true; // set RTL text mode to true
 pptx.theme = { lang: "he" }; // set RTL language to use (default is 'EN-US')
 ```
@@ -105,7 +104,7 @@ Use the `headFontFace` and `bodyFontFace` properties to set the default font use
 
 ### Default Font Examples
 
-```javascript
+```typescript
 pptx.theme = { headFontFace: "Arial Light" };
 pptx.theme = { bodyFontFace: "Arial" };
 ```

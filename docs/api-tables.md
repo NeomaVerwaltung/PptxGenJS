@@ -1,5 +1,4 @@
 ---
-id: api-tables
 title: Tables
 ---
 

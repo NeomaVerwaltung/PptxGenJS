@@ -1,5 +1,4 @@
 ---
-id: shapes-and-schemes
 title: Shapes and Schemes
 ---
 
@@ -19,7 +18,7 @@ Scheme color is a variable that changes its value whenever another scheme palett
 
 To use a scheme color, set a color constant as a property value:
 
-```javascript
+```typescript
 slide.addText("Scheme Color 'text1'", { color: pptx.SchemeColor.text1 });
 ```
 

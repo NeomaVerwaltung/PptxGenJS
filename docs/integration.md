@@ -1,5 +1,4 @@
 ---
-id: integration
 title: Integration by Environment
 ---
 
@@ -89,7 +88,7 @@ UnhandledSchemeError: Reading from "node:fs" is not handled by plugins (Unhandle
 Tell Webpack to ignore the `node:` prefix by adding a `NormalModuleReplacementPlugin` in your
 `webpack.config.js` (or the equivalent hook in your framework's build config):
 
-```js
+```typescript
 const webpack = require("webpack")
 
 module.exports = {

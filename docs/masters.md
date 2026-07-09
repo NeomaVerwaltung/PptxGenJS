@@ -1,5 +1,4 @@
 ---
-id: masters
 title: Masters and Placeholders
 ---
 
@@ -59,7 +58,7 @@ via View > Slide Master and will affect the Slides created using that layout.
 
 ### Slide Master Example
 
-```javascript
+```typescript
 let pptx = new PptxGenJS();
 pptx.layout = "LAYOUT_WIDE";
 
@@ -106,7 +105,7 @@ name when adding text or other objects.
 
 ### Placeholder Example
 
-```javascript
+```typescript
 let pptx = new PptxGenJS();
 pptx.layout = "LAYOUT_WIDE";
 

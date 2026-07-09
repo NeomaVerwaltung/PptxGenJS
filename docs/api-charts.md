@@ -1,5 +1,4 @@
 ---
-id: api-charts
 title: Charts
 ---
 
