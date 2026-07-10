@@ -2,21 +2,25 @@
 title: Slide Sections
 ---
 
-Group slides using sections.
+Sections group slides in PowerPoint's slide navigator, giving long decks a collapsible outline (for
+example "Intro", "Financials", "Appendix"). They are organizational only — they do not change how slides
+render. Reach for them when a presentation is large enough that named groups help reviewers navigate it.
 
 ## Syntax
 
+Define a section on the presentation, then assign slides to it by title when you add them:
+
 ```typescript
-pptx.addSection({ title: "Tables" });
-pptx.addSection({ title: "Tables", order: 3 });
+pptx.addSection({ title: "Tables" })
+pptx.addSection({ title: "Charts", order: 3 })
 ```
 
 ## Section Options
 
-| Option  | Type    | Description   | Possible Values                                                             |
-| :------ | :------ | :------------ | :-------------------------------------------------------------------------- |
-| `title` | string  | section title | 0-n OR 'n%'. (Ex: `{x:'50%'}` will place object in the middle of the Slide) |
-| `order` | integer | section order | 1-n. Used to add section at any index                                       |
+| Option  | Type    | Description   | Notes                                                                              |
+| :------ | :------ | :------------ | :--------------------------------------------------------------------------------- |
+| `title` | string  | section title | Required. Shown in the PowerPoint navigator; must be unique.                       |
+| `order` | integer | section order | Optional, `1`-based. Inserts the section at a specific index instead of appending. |
 
 ## Section Example
 

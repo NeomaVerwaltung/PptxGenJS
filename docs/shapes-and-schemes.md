@@ -4,22 +4,42 @@ title: Shapes and Schemes
 
 ## PowerPoint Shape Types
 
-The library comes with over 180 built-in PowerPoint shapes (thanks to [officegen project](https://github.com/Ziv-Barber/officegen)).
+The library ships every built-in PowerPoint shape — over 180 of them (rectangles, ovals, arrows, callouts,
+stars, connectors, and more), courtesy of the [officegen project](https://github.com/Ziv-Barber/officegen).
+Shapes are enumerated on the instance as `pptx.ShapeType`, so your editor autocompletes the full list as you
+type — that is the fastest way to discover them. The complete enum also lives in
+[`index.d.ts`](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/types/index.d.ts).
 
-- Use inline typescript definitions to view available shapes
-- or see `ShapeType` in [index.d.ts](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/types/index.d.ts) for the complete list
+Add a shape with `slide.addShape(type, options)`. The options control fill, line, and position:
+
+```typescript
+// A filled rounded rectangle
+slide.addShape(pptx.ShapeType.roundRect, {
+	x: 1, y: 1, w: 3, h: 1.5,
+	fill: { color: "0088CC" },
+	line: { color: "004466", width: 1 },
+})
+
+// Shapes can also back a text box — pass `shape` to addText
+slide.addText("Label", { shape: pptx.ShapeType.ellipse, x: 5, y: 1, w: 2, h: 2, fill: { color: "ED7D31" }, align: "center" })
+```
+
+See [Shapes API](./api-shapes) for the full list of shape options.
 
 ## PowerPoint Scheme Colors
 
-Scheme color is a variable that changes its value whenever another scheme palette is selected. Using scheme colors, design consistency can be easily preserved throughout the presentation and viewers can change color theme without any text/background contrast issues.
+A scheme color is a reference to a slot in the presentation's theme rather than a fixed hex value. When a
+viewer switches the theme (or you apply a different template), everything painted with a scheme color
+updates automatically — so text stays readable against backgrounds and the deck keeps a consistent palette.
+Prefer scheme colors over hardcoded hex when you want a deck to adapt to corporate templates.
 
-- Use inline typescript definitions to view available colors
-- or see `SchemeColor` in [index.d.ts](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/types/index.d.ts) for the complete list
-
-To use a scheme color, set a color constant as a property value:
+The ten slots map to PowerPoint's theme: two text colors, two background colors, and six accents. Reference
+them through `pptx.SchemeColor`; the complete enum is in
+[`index.d.ts`](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/types/index.d.ts).
 
 ```typescript
-slide.addText("Scheme Color 'text1'", { color: pptx.SchemeColor.text1 });
+slide.addText("Themed heading", { color: pptx.SchemeColor.accent1 })
+slide.addShape(pptx.ShapeType.rect, { x: 1, y: 3, w: 4, h: 1, fill: { color: pptx.SchemeColor.background2 } })
 ```
 
 

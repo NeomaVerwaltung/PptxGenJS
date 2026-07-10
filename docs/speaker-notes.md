@@ -2,38 +2,29 @@
 title: Speaker Notes
 ---
 
-Speaker Notes can be included on any Slide.
+Speaker notes are the private text shown to the presenter in PowerPoint's Presenter View and printed on
+notes pages — the audience never sees them. Use them for talking points, source citations, or cues. Any
+slide can have notes; call `addNotes()` once per slide (a second call replaces the previous notes).
 
 ## Syntax
 
 ```typescript
-slide.addNotes('TEXT');
+slide.addNotes("Text shown only to the presenter")
 ```
 
-## Example: JavaScript
+## Example
 
 ```typescript
-let pres = new PptxGenJS();
-let slide = pptx.addSlide();
+import pptxgen from "@neoma/pptxgenjs"
 
-slide.addText('Hello World!', { x:1.5, y:1.5, fontSize:18, color:'363636' });
+const pres = new pptxgen()
+const slide = pres.addSlide()
 
-slide.addNotes('This is my favorite slide!');
+slide.addText("Hello World!", { x: 1.5, y: 1.5, fontSize: 18, color: "363636" })
+slide.addNotes("Remember to mention the Q3 numbers here.")
 
-pptx.writeFile('Sample Speaker Notes');
+await pres.writeFile({ fileName: "Speaker-Notes.pptx" })
 ```
 
-## Example: TypeScript
-
-```typescript
-import pptxgen from "@neoma/pptxgenjs";
-
-let pres = new pptxgen();
-let slide = pptx.addSlide();
-
-slide.addText('Hello World!', { x:1.5, y:1.5, fontSize:18, color:'363636' });
-
-slide.addNotes('This is my favorite slide!');
-
-pptx.writeFile('Sample Speaker Notes');
-```
+Notes are plain text. Line breaks (`\n`) are preserved, but rich formatting (bold, color, bullets) is not
+applied to notes — for formatted on-slide content use [`addText`](./api-text) instead.
