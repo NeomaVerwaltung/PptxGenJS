@@ -2,8 +2,8 @@
  * PptxGenJS: Utility Methods
  */
 
-import { EMU, REGEX_HEX_COLOR, DEF_FONT_COLOR, ONEPT, SchemeColor, SCHEME_COLORS } from './core-enums'
-import { PresLayout, TextGlowProps, PresSlide, SlideLayout, ShapeFillProps, Color, ShapeLineProps, Coord, ShadowProps } from './core-interfaces'
+import { EMU, REGEX_HEX_COLOR, DEF_FONT_COLOR, DEF_TEXT_GLOW, ONEPT, SchemeColor, SCHEME_COLORS } from './core-enums'
+import { PresLayout, TextGlowProps, ResolvedGlowProps, PresSlide, SlideLayout, ShapeFillProps, Color, ShapeLineProps, Coord, ShadowProps } from './core-interfaces'
 
 /**
  * Translates any type of `x`/`y`/`w`/`h` prop to EMU
@@ -168,12 +168,21 @@ export function createColorElement (colorStr: string | SCHEME_COLORS | undefined
  * @see http://officeopenxml.com/drwSp-effects.php
  * { size: 8, color: 'FFFFFF', opacity: 0.75 };
  */
-export function createGlowElement (options: TextGlowProps, defaults: Required<TextGlowProps>): string {
+/**
+ * Resolve boundary: merge user glow options over the documented defaults, producing the internal
+ * `ResolvedGlowProps` (every field present). The only constructor of `ResolvedGlowProps`, so
+ * `createGlowElement` is statically guaranteed to receive fully-defaulted data.
+ */
+export function resolveGlowOptions (options: TextGlowProps | undefined): ResolvedGlowProps | undefined {
+	if (!options) return undefined
+	return { ...DEF_TEXT_GLOW, ...options }
+}
+
+export function createGlowElement (glow: ResolvedGlowProps): string {
 	let strXml = ''
-	const opts: Required<TextGlowProps> = { ...defaults, ...options }
-	const size = Math.round(opts.size * ONEPT)
-	const color = opts.color
-	const opacity = Math.round(opts.opacity * 100000)
+	const size = Math.round(glow.size * ONEPT)
+	const color = glow.color
+	const opacity = Math.round(glow.opacity * 100000)
 
 	strXml += `<a:glow rad="${size}">`
 	strXml += createColorElement(color, `<a:alpha val="${opacity}"/>`)

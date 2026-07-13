@@ -19,7 +19,7 @@ import {
 	LETTERS,
 	ONEPT,
 } from './core-enums'
-import { IChartOptsLib, ISlideRelChart, ShadowProps, IChartPropsTitle, OptsChartGridLine, IOptsChartData, ChartLineCap } from './core-interfaces'
+import { IChartOptsLib, ISlideRelChart, ShadowProps, ResolvedShadowProps, IChartPropsTitle, OptsChartGridLine, IOptsChartData, ChartLineCap } from './core-interfaces'
 import { createColorElement, genXmlColorSelection, convertRotationDegrees, encodeXmlEntities, getUuid, valToPts } from './gen-utils'
 import JSZip from 'jszip'
 
@@ -877,7 +877,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 					strXml += `<a:ln w="${valToPts(opts.dataBorder.pt)}" cap="${createLineCap(opts.lineCap)}"><a:solidFill>${createColorElement(opts.dataBorder.color)}</a:solidFill><a:prstDash val="solid"/><a:round/></a:ln>`
 				}
 
-				strXml += createShadowElement(opts.shadow, DEF_SHAPE_SHADOW)
+				strXml += createShadowElement(resolveShadowOptions(opts.shadow))
 
 				strXml += '  </c:spPr>'
 				strXml += '  <c:invertIfNegative val="0"/>'
@@ -946,7 +946,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 							strXml += '  </a:solidFill>'
 							strXml += '</a:ln>'
 						}
-						strXml += createShadowElement(opts.shadow, DEF_SHAPE_SHADOW)
+						strXml += createShadowElement(resolveShadowOptions(opts.shadow))
 						strXml += '    </c:spPr>'
 						strXml += '  </c:dPt>'
 					})
@@ -1099,7 +1099,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 					}
 
 					// Shadow
-					strXml += createShadowElement(opts.shadow, DEF_SHAPE_SHADOW)
+					strXml += createShadowElement(resolveShadowOptions(opts.shadow))
 				}
 				strXml += '  </c:spPr>'
 
@@ -1259,7 +1259,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 							strXml += ' <a:srgbClr val="' + arrColors[index % arrColors.length] + '"/>'
 							strXml += '</a:solidFill>'
 						}
-						strXml += createShadowElement(opts.shadow, DEF_SHAPE_SHADOW)
+						strXml += createShadowElement(resolveShadowOptions(opts.shadow))
 						strXml += '    </c:spPr>'
 						strXml += '  </c:dPt>'
 					})
@@ -1393,7 +1393,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 					}
 
 					// Shadow
-					strXml += createShadowElement(opts.shadow, DEF_SHAPE_SHADOW)
+					strXml += createShadowElement(resolveShadowOptions(opts.shadow))
 
 					strXml += '</c:spPr>'
 				}
@@ -1530,7 +1530,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 			if (opts.dataNoEffects) {
 				strXml += '<a:effectLst/>'
 			} else {
-				strXml += createShadowElement(opts.shadow, DEF_SHAPE_SHADOW)
+				strXml += createShadowElement(resolveShadowOptions(opts.shadow))
 			}
 			strXml += '  </c:spPr>'
 			// strXml += '<c:explosion val="0"/>'
@@ -1549,7 +1549,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 						opts.dataBorder.color
 					)}</a:solidFill><a:prstDash val="solid"/><a:round/></a:ln>`
 				}
-				strXml += createShadowElement(opts.shadow, DEF_SHAPE_SHADOW)
+				strXml += createShadowElement(resolveShadowOptions(opts.shadow))
 				strXml += '  </c:spPr>'
 				strXml += '</c:dPt>'
 			})
@@ -2001,23 +2001,34 @@ function getExcelColName (colIndex: number): string {
  * @example { type: 'outer', blur: 3, offset: (23000 / 12700), angle: 90, color: '000000', opacity: 0.35, rotateWithShape: true };
  * @return {string} XML
  */
-function createShadowElement (options: ShadowProps | undefined, defaults: Required<ShadowProps>): string {
-	if (!options) {
-		return '<a:effectLst/>'
-	} else if (typeof options !== 'object') {
+/**
+ * Resolve boundary: merge user shadow options over the documented defaults, producing the internal
+ * `ResolvedShadowProps` (every field present). Returns undefined for absent/invalid input. This is the
+ * ONLY way to construct a `ResolvedShadowProps`, so `createShadowElement` is statically guaranteed to
+ * receive fully-defaulted data.
+ */
+function resolveShadowOptions (options: ShadowProps | undefined): ResolvedShadowProps | undefined {
+	if (!options) return undefined
+	if (typeof options !== 'object') {
 		console.warn('`shadow` options must be an object. Ex: `{shadow: {type:\'none\'}}`')
+		return undefined
+	}
+	return { ...DEF_SHAPE_SHADOW, ...options }
+}
+
+function createShadowElement (shadow: ResolvedShadowProps | undefined): string {
+	if (!shadow) {
 		return '<a:effectLst/>'
 	}
 
 	let strXml = '<a:effectLst>'
-	const opts: Required<ShadowProps> = { ...defaults, ...options }
-	const type = opts.type || 'outer'
-	const blur = valToPts(opts.blur)
-	const offset = valToPts(opts.offset)
-	const angle = Math.round(opts.angle * 60000)
-	const color = opts.color
-	const opacity = Math.round(opts.opacity * 100000)
-	const rotShape = opts.rotateWithShape ? 1 : 0
+	const type = shadow.type
+	const blur = valToPts(shadow.blur)
+	const offset = valToPts(shadow.offset)
+	const angle = Math.round(shadow.angle * 60000)
+	const color = shadow.color
+	const opacity = Math.round(shadow.opacity * 100000)
+	const rotShape = shadow.rotateWithShape ? 1 : 0
 
 	strXml += `<a:${type}Shdw sx="100000" sy="100000" kx="0" ky="0"  algn="bl" blurRad="${blur}" rotWithShape="${rotShape}" dist="${offset}" dir="${angle}">`
 	strXml += `<a:srgbClr val="${color}">`
