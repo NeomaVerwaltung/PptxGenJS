@@ -116,7 +116,7 @@ export default class PptxGenJS implements IPresentationProps {
 	 * @type {string}
 	 * @see https://support.office.com/en-us/article/Change-the-size-of-your-slides-040a811c-be43-40b9-8d04-0de5ed79987e
 	 */
-	private _layout!: string
+	private _layout: string
 	public set layout(value: string) {
 		const newLayout: PresLayout = this.LAYOUTS[value]
 
@@ -192,12 +192,12 @@ export default class PptxGenJS implements IPresentationProps {
 	/**
 	 * @type {ThemeProps}
 	 */
-	private _theme!: ThemeProps
+	private _theme?: ThemeProps
 	public set theme(value: ThemeProps) {
 		this._theme = value
 	}
 
-	public get theme(): ThemeProps {
+	public get theme(): ThemeProps | undefined {
 		return this._theme
 	}
 
@@ -332,6 +332,7 @@ export default class PptxGenJS implements IPresentationProps {
 		this._subject = 'PptxGenJS Presentation'
 		this._title = 'PptxGenJS Presentation'
 		// PptxGenJS props
+		this._layout = DEF_PRES_LAYOUT
 		this._presLayout = {
 			name: this.LAYOUTS[DEF_PRES_LAYOUT].name,
 			_sizeW: this.LAYOUTS[DEF_PRES_LAYOUT].width,
@@ -669,6 +670,7 @@ export default class PptxGenJS implements IPresentationProps {
 			_relsChart: [],
 			_relsMedia: [],
 			_slideNum: this.slides.length + 1,
+			_slideObjects: [],
 		}
 
 		if (masterSlideName) {

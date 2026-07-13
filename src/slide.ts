@@ -45,7 +45,7 @@ export default class Slide {
 	public _slideNum: number
 	public _slideNumberProps: SlideNumberProps
 	public _slideObjects: ISlideObject[]
-	public _newAutoPagedSlides!: PresSlide[]
+	public _newAutoPagedSlides?: PresSlide[]
 
 	constructor(params: {
 		addSlide: (options?: AddSlideProps) => PresSlide
@@ -82,7 +82,7 @@ export default class Slide {
 	 * @type {string|BackgroundProps}
 	 * @deprecated in v3.3.0 - use `background` instead
 	 */
-	private _bkgd!: string | BackgroundProps
+	private _bkgd?: string | BackgroundProps
 	public set bkgd(value: string | BackgroundProps) {
 		this._bkgd = value
 		if (!this._background || !this._background.color) {
@@ -91,7 +91,7 @@ export default class Slide {
 		}
 	}
 
-	public get bkgd(): string | BackgroundProps {
+	public get bkgd(): string | BackgroundProps | undefined {
 		return this._bkgd
 	}
 
@@ -104,14 +104,14 @@ export default class Slide {
 	 * @example url `background: { path:'https://some.url/image.jpg'}`
 	 * @since v3.3.0
 	 */
-	private _background!: BackgroundProps
+	private _background?: BackgroundProps
 	public set background(props: BackgroundProps) {
 		this._background = props
 		// Add background (image data/path must be captured before `exportPresentation()` is called)
 		if (props) genObj.addBackgroundDefinition(props, this)
 	}
 
-	public get background(): BackgroundProps {
+	public get background(): BackgroundProps | undefined {
 		return this._background
 	}
 
@@ -119,19 +119,19 @@ export default class Slide {
 	 * Default font color
 	 * @type {HexColor}
 	 */
-	private _color!: HexColor
+	private _color?: HexColor
 	public set color(value: HexColor) {
 		this._color = value
 	}
 
-	public get color(): HexColor {
+	public get color(): HexColor | undefined {
 		return this._color
 	}
 
 	/**
 	 * @type {boolean}
 	 */
-	private _hidden!: boolean
+	private _hidden = false
 	public set hidden(value: boolean) {
 		this._hidden = value
 	}
@@ -153,7 +153,7 @@ export default class Slide {
 		return this._slideNumberProps
 	}
 
-	public get newAutoPagedSlides(): PresSlide[] {
+	public get newAutoPagedSlides(): PresSlide[] | undefined {
 		return this._newAutoPagedSlides
 	}
 

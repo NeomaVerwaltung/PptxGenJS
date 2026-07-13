@@ -1787,7 +1787,7 @@ export interface SlideBaseProps {
 	_relsMedia: ISlideRelMedia[] // needed as we use args:"PresSlide|SlideLayout" often
 	_slideNum: number
 	_slideNumberProps?: SlideNumberProps
-	_slideObjects?: ISlideObject[]
+	_slideObjects: ISlideObject[]
 
 	background?: BackgroundProps
 	/**
@@ -1863,7 +1863,7 @@ export interface PresentationProps {
 	 */
 	rtlMode: boolean
 	subject: string
-	theme: ThemeProps
+	theme?: ThemeProps
 	title: string
 }
 // PRIVATE interface

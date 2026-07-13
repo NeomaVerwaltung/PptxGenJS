@@ -206,7 +206,7 @@ export function addChartDefinition(target: PresSlide, type: CHART_NAME | IChartM
 	options.h = options.h || '50%'
 	options.objectName = options.objectName
 		? encodeXmlEntities(options.objectName)
-		: `Chart ${target._slideObjects!.filter(obj => obj._type === SLIDE_OBJECT_TYPES.chart).length}`
+		: `Chart ${target._slideObjects.filter(obj => obj._type === SLIDE_OBJECT_TYPES.chart).length}`
 
 	// B: Options: misc
 	if (!['bar', 'col'].includes(options.barDir || '')) options.barDir = 'col'
@@ -372,7 +372,7 @@ export function addChartDefinition(target: PresSlide, type: CHART_NAME | IChartM
 		Target: `/ppt/charts/chart${chartId}.xml`,
 	})
 
-	target._slideObjects!.push(resultObject)
+	target._slideObjects.push(resultObject)
 	return resultObject
 }
 
@@ -403,7 +403,7 @@ export function addImageDefinition(target: PresSlide, opt: ImageProps): void {
 	const strImageData = opt.data || ''
 	const strImagePath = opt.path || ''
 	let imageRelId = getNewRelId(target)
-	const objectName = opt.objectName ? encodeXmlEntities(opt.objectName) : `Image ${target._slideObjects!.filter(obj => obj._type === SLIDE_OBJECT_TYPES.image).length}`
+	const objectName = opt.objectName ? encodeXmlEntities(opt.objectName) : `Image ${target._slideObjects.filter(obj => obj._type === SLIDE_OBJECT_TYPES.image).length}`
 
 	// REALITY-CHECK:
 	if (!strImagePath && !strImageData) {
@@ -523,7 +523,7 @@ export function addImageDefinition(target: PresSlide, opt: ImageProps): void {
 	}
 
 	// STEP 6: Add object to slide
-	target._slideObjects!.push(newObject)
+	target._slideObjects.push(newObject)
 }
 
 /**
@@ -542,7 +542,7 @@ export function addMediaDefinition(target: PresSlide, opt: MediaProps): void {
 	const strType = opt.type || 'audio'
 	let strExtn = ''
 	const strCover = opt.cover || IMG_PLAYBTN
-	const objectName = opt.objectName ? encodeXmlEntities(opt.objectName) : `Media ${target._slideObjects!.filter(obj => obj._type === SLIDE_OBJECT_TYPES.media).length}`
+	const objectName = opt.objectName ? encodeXmlEntities(opt.objectName) : `Media ${target._slideObjects.filter(obj => obj._type === SLIDE_OBJECT_TYPES.media).length}`
 	const slideData: ISlideObject = { _type: SLIDE_OBJECT_TYPES.media }
 
 	// STEP 1: REALITY-CHECK
@@ -646,7 +646,7 @@ export function addMediaDefinition(target: PresSlide, opt: MediaProps): void {
 	}
 
 	// LAST
-	target._slideObjects!.push(slideData)
+	target._slideObjects.push(slideData)
 }
 
 /**
@@ -656,7 +656,7 @@ export function addMediaDefinition(target: PresSlide, opt: MediaProps): void {
  * @since 2.3.0
  */
 export function addNotesDefinition(target: PresSlide, notes: string): void {
-	target._slideObjects!.push({
+	target._slideObjects.push({
 		_type: SLIDE_OBJECT_TYPES.notes,
 		text: [{ text: notes }],
 	})
@@ -700,7 +700,7 @@ export function addShapeDefinition(target: PresSlide, shapeName: SHAPE_NAME, opt
 	options.h = options.h || (options.h === 0 ? 0 : 1)
 	options.objectName = options.objectName
 		? encodeXmlEntities(options.objectName)
-		: `Shape ${target._slideObjects!.filter(obj => obj._type === SLIDE_OBJECT_TYPES.text).length}`
+		: `Shape ${target._slideObjects.filter(obj => obj._type === SLIDE_OBJECT_TYPES.text).length}`
 
 	// 3: Handle line (lots of deprecated opts)
 	if (typeof options.line === 'string') {
@@ -717,7 +717,7 @@ export function addShapeDefinition(target: PresSlide, shapeName: SHAPE_NAME, opt
 	createHyperlinkRels(target, newObject)
 
 	// LAST: Add object to slide
-	target._slideObjects!.push(newObject)
+	target._slideObjects.push(newObject)
 }
 
 /**
@@ -741,7 +741,7 @@ export function addTableDefinition(
 ): PresSlide[] {
 	const slides: PresSlide[] = [target] // Create array of Slides as more may be added by auto-paging
 	const opt: TableProps = options && typeof options === 'object' ? options : {}
-	opt.objectName = opt.objectName ? encodeXmlEntities(opt.objectName) : `Table ${target._slideObjects!.filter(obj => obj._type === SLIDE_OBJECT_TYPES.table).length}`
+	opt.objectName = opt.objectName ? encodeXmlEntities(opt.objectName) : `Table ${target._slideObjects.filter(obj => obj._type === SLIDE_OBJECT_TYPES.table).length}`
 
 	// STEP 1: REALITY-CHECK
 	{
@@ -955,7 +955,7 @@ export function addTableDefinition(
 		createHyperlinkRels(target, arrRows)
 
 		// Add slideObjects (NOTE: Use `extend` to avoid mutation)
-		target._slideObjects!.push({
+		target._slideObjects.push({
 			_type: SLIDE_OBJECT_TYPES.table,
 			arrTabRows: arrRows,
 			options: Object.assign({}, opt),
@@ -1031,7 +1031,7 @@ export function addTextDefinition(target: PresSlide, text: TextProps[], opts: Te
 			// A.4: Other options
 			itemOpts.objectName = itemOpts.objectName
 				? encodeXmlEntities(itemOpts.objectName)
-				: `Text ${target._slideObjects!.filter(obj => obj._type === SLIDE_OBJECT_TYPES.text).length}`
+				: `Text ${target._slideObjects.filter(obj => obj._type === SLIDE_OBJECT_TYPES.text).length}`
 
 			// B:
 			if (itemOpts.shape === SHAPE_TYPE.LINE) {
@@ -1113,7 +1113,7 @@ export function addTextDefinition(target: PresSlide, text: TextProps[], opts: Te
 	createHyperlinkRels(target, newObject.text || '')
 
 	// LAST: Add object to Slide
-	target._slideObjects!.push(newObject)
+	target._slideObjects.push(newObject)
 }
 
 /**
@@ -1127,7 +1127,7 @@ export function addPlaceholdersToSlideLayouts(slide: PresSlide): void {
 			// A: Search for this placeholder on Slide before we add
 			// NOTE: Check to ensure a placeholder does not already exist on the Slide
 			// They are created when they have been populated with text (ex: `slide.addText('Hi', { placeholder:'title' });`)
-			if (slide._slideObjects!.filter(slideObj => slideObj.options && slideObj.options.placeholder === slideLayoutObj.options!.placeholder).length === 0) {
+			if (slide._slideObjects.filter(slideObj => slideObj.options && slideObj.options.placeholder === slideLayoutObj.options!.placeholder).length === 0) {
 				addTextDefinition(slide, [{ text: '' }], slideLayoutObj.options!, false)
 			}
 		}

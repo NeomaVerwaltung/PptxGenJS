@@ -103,7 +103,7 @@ function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 	strSlideXml += '<a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>'
 
 	// STEP 3: Loop over all Slide.data objects and add them to this slide
-	slide._slideObjects!.forEach((slideItemObj: ISlideObject, idx: number) => {
+	slide._slideObjects.forEach((slideItemObj: ISlideObject, idx: number) => {
 		let x = 0
 		let y = 0
 		let cx = getSmartParseNumber('75%', 'X', slide._presLayout)
@@ -125,7 +125,7 @@ function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 			slideItemObj.options &&
 			slideItemObj.options.placeholder
 		) {
-			placeholderObj = (slide as PresSlide)._slideLayout!._slideObjects!.filter(
+			placeholderObj = (slide as PresSlide)._slideLayout!._slideObjects.filter(
 				(object: ISlideObject) => object.options!.placeholder === slideItemObj.options!.placeholder
 			)[0]
 		}
@@ -1577,7 +1577,7 @@ export function makeXmlSlide (slide: PresSlide): string {
 export function getNotesFromSlide (slide: PresSlide): string {
 	let notesText = ''
 
-	slide._slideObjects!.forEach(data => {
+	slide._slideObjects.forEach(data => {
 		if (data._type === SLIDE_OBJECT_TYPES.notes) notesText += data?.text && data.text[0] ? data.text[0].text : ''
 	})
 
