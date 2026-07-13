@@ -358,27 +358,31 @@ export default class PptxGenJS implements IPresentationProps {
 		]
 		this._slides = []
 		this._sections = []
+		// The master is a container for master-level objects/rels; its add* methods and
+		// slide identity are never used, so add* throw and identity fields hold neutral values.
+		const notOnMaster = (): never => {
+			throw new Error('add* methods are not available on the master slide')
+		}
 		this._masterSlide = {
-			addChart: null,
-			addImage: null,
-			addMedia: null,
-			addNotes: null,
-			addShape: null,
-			addTable: null,
-			addText: null,
+			addChart: notOnMaster,
+			addImage: notOnMaster,
+			addMedia: notOnMaster,
+			addNotes: notOnMaster,
+			addShape: notOnMaster,
+			addTable: notOnMaster,
+			addText: notOnMaster,
 			//
-			_name: null,
+			_name: '',
 			_presLayout: this._presLayout,
-			_rId: null,
+			_rId: 0,
 			_rels: [],
 			_relsChart: [],
 			_relsMedia: [],
-			_slideId: null,
-			_slideLayout: null,
+			_slideId: 0,
+			_slideLayout: { _name: '', _presLayout: this._presLayout, _rels: [], _relsChart: [], _relsMedia: [], _slideNum: null, _slideObjects: [] },
 			_slideNum: null,
-			_slideNumberProps: null,
 			_slideObjects: [],
-		} as unknown as PresSlide
+		}
 	}
 
 	/**
@@ -392,9 +396,10 @@ export default class PptxGenJS implements IPresentationProps {
 			this.sections.length > 0 &&
 			this.sections[this.sections.length - 1]._slides.filter(slide => slide._slideNum === this.slides[this.slides.length - 1]._slideNum).length > 0
 
-		options!.sectionTitle = sectAlreadyInUse ? this.sections[this.sections.length - 1].title : undefined
+		const opts: AddSlideProps = options ?? {}
+		opts.sectionTitle = sectAlreadyInUse ? this.sections[this.sections.length - 1].title : undefined
 
-		return this.addSlide(options)
+		return this.addSlide(opts)
 	}
 
 	/**
@@ -436,7 +441,7 @@ export default class PptxGenJS implements IPresentationProps {
 				else if (!data.includes(';')) data = 'image/png;' + data
 
 				// C: Add media
-				zip.file(rel.Target.replace(/\.\./g, 'ppt'), data.split(',').pop()!, { base64: true })
+				zip.file(rel.Target.replace(/\.\./g, 'ppt'), data.split(',').pop() ?? '', { base64: true })
 			}
 		})
 	}
@@ -504,16 +509,16 @@ export default class PptxGenJS implements IPresentationProps {
 			// B: Add all required folders and files
 			zip.folder('_rels')
 			zip.folder('docProps')
-			zip.folder('ppt')!.folder('_rels')
-			zip.folder('ppt/charts')!.folder('_rels')
+			zip.folder('ppt')?.folder('_rels')
+			zip.folder('ppt/charts')?.folder('_rels')
 			zip.folder('ppt/embeddings')
 			zip.folder('ppt/media')
-			zip.folder('ppt/slideLayouts')!.folder('_rels')
-			zip.folder('ppt/slideMasters')!.folder('_rels')
-			zip.folder('ppt/slides')!.folder('_rels')
+			zip.folder('ppt/slideLayouts')?.folder('_rels')
+			zip.folder('ppt/slideMasters')?.folder('_rels')
+			zip.folder('ppt/slides')?.folder('_rels')
 			zip.folder('ppt/theme')
-			zip.folder('ppt/notesMasters')!.folder('_rels')
-			zip.folder('ppt/notesSlides')!.folder('_rels')
+			zip.folder('ppt/notesMasters')?.folder('_rels')
+			zip.folder('ppt/notesSlides')?.folder('_rels')
 			zip.file('[Content_Types].xml', genXml.makeXmlContTypes(this.slides, this.slideLayouts, this.masterSlide)) // TODO: pass only `this` like below! 20200206
 			zip.file('_rels/.rels', genXml.makeXmlRootRels())
 			zip.file('docProps/app.xml', genXml.makeXmlApp(this.slides, this.company)) // TODO: pass only `this` like below! 20200206
@@ -588,7 +593,7 @@ export default class PptxGenJS implements IPresentationProps {
 	 */
 	async write(props?: WriteProps | WRITE_OUTPUT_TYPE): Promise<string | ArrayBuffer | Blob | Buffer | Uint8Array> {
 		// DEPRECATED: @deprecated v3.5.0 - outputType - [[remove in v4.0.0]]
-		const propsOutpType = typeof props === 'object' && props?.outputType ? props.outputType : props ? (props as WRITE_OUTPUT_TYPE) : undefined
+		const propsOutpType: WRITE_OUTPUT_TYPE | undefined = typeof props === 'object' ? props?.outputType : props
 		const propsCompress = typeof props === 'object' && props?.compression ? props.compression : false
 
 		return await this.exportPresentation({
@@ -611,9 +616,9 @@ export default class PptxGenJS implements IPresentationProps {
 		if (typeof props === 'string') {
 			// DEPRECATED: @deprecated v3.5.0 - fileName - [[remove in v4.0.0]]
 			console.warn('[WARNING] writeFile(string) is deprecated - pass { fileName } instead.')
-			props = { fileName: props }
 		}
-		const { fileName: rawName = 'Presentation.pptx', compression = false } = props as WriteFileProps
+		const writeProps: WriteFileProps = typeof props === 'string' ? { fileName: props } : (props ?? {})
+		const { fileName: rawName = 'Presentation.pptx', compression = false } = writeProps
 		const fileName = rawName.toLowerCase().endsWith('.pptx') ? rawName : `${rawName}.pptx`
 
 		// STEP 3: Get the binary/Blob from exportPresentation()
@@ -625,12 +630,12 @@ export default class PptxGenJS implements IPresentationProps {
 			// Dynamically import to avoid bundling fs in the browser build
 			const { promises: fs } = await import('node:fs')
 			const { writeFile } = fs
-			await writeFile(fileName, data as Buffer)
+			if (Buffer.isBuffer(data)) await writeFile(fileName, data)
 			return fileName
 		}
 
 		// Browser branch - push a download
-		await this.writeFileToBrowser(fileName, data as Blob)
+		if (data instanceof Blob) await this.writeFileToBrowser(fileName, data)
 		return fileName
 	}
 

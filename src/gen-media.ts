@@ -107,7 +107,7 @@ export function encodeSlideMediaRels(layout: PresSlide | SlideLayout): Array<Pro
 						xhr.onload = () => {
 							const reader = new FileReader()
 							reader.onloadend = () => {
-								rel.data = reader.result as string
+								if (typeof reader.result === 'string') rel.data = reader.result
 								candidateRels
 									.filter(dupe => dupe.isDuplicate && dupe.path === rel.path)
 									.forEach(dupe => (dupe.data = rel.data))
@@ -168,16 +168,22 @@ async function createSvgPngPreview(rel: ISlideRelMedia): Promise<string> {
 		// A: Create
 		const image = new Image()
 
+		// Shared error handler (also wired to `image.onerror`); the reason string is informational only
+		const handleError = (): void => {
+			rel.data = IMG_BROKEN
+			reject(new Error(`ERROR! Unable to load image (image.onerror): ${rel.path}`))
+		}
+
 		// B: Set onload event
 		image.onload = () => {
 			// First: Check for any errors: This is the best method (try/catch wont work, etc.)
 			if (image.width + image.height === 0) {
-				image.onerror!('h/w=0')
+				handleError()
 			}
 			const canvas = document.createElement('canvas')
 			const ctx = canvas.getContext('2d')
 			if (!ctx) {
-				image.onerror!('Unable to acquire 2d canvas context')
+				handleError()
 				return
 			}
 			canvas.width = image.width
@@ -189,14 +195,11 @@ async function createSvgPngPreview(rel: ISlideRelMedia): Promise<string> {
 			try {
 				rel.data = canvas.toDataURL(rel.type)
 				resolve('done')
-			} catch (ex) {
-				image.onerror!(String(ex))
+			} catch (_ex) {
+				handleError()
 			}
 		}
-		image.onerror = () => {
-			rel.data = IMG_BROKEN
-			reject(new Error(`ERROR! Unable to load image (image.onerror): ${rel.path}`))
-		}
+		image.onerror = handleError
 
 		// C: Load image
 		image.src = typeof rel.data === 'string' ? rel.data : IMG_BROKEN

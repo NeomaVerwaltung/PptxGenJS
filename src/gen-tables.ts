@@ -3,7 +3,7 @@
  */
 
 import { DEF_FONT_SIZE, DEF_SLIDE_MARGIN_IN, EMU, LINEH_MODIFIER, ONEPT, SLIDE_OBJECT_TYPES } from './core-enums'
-import { PresLayout, SlideLayout, TableCell, TableToSlidesProps, TableRow, TableRowSlide, TableCellProps, HAlign, VAlign, Margin, BorderProps } from './core-interfaces'
+import { PresLayout, SlideLayout, TableCell, TableToSlidesProps, TableRow, TableRowSlide, TableCellProps, BorderProps } from './core-interfaces'
 import { getSmartParseNumber, inch2Emu, rgbToHex, valToPts } from './gen-utils'
 import PptxGenJS from './pptxgen'
 
@@ -282,7 +282,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 		if (tableProps.colW && !isNaN(Number(tableProps.colW))) {
 			const arrColW: number[] = []
 			const firstRow = tableRows[0] || []
-			firstRow.forEach(() => arrColW.push(tableProps.colW as number))
+			firstRow.forEach(() => arrColW.push(Number(tableProps.colW)))
 			tableProps.colW = []
 			arrColW.forEach(val => {
 				if (Array.isArray(tableProps.colW)) tableProps.colW.push(val)
@@ -297,7 +297,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 	}
 
 	// STEP 6: **MAIN** Iterate over rows, add table content, create new slides as rows overflow
-	let newTableRowSlide: TableRowSlide = { rows: [] as TableRow[] }
+	let newTableRowSlide: TableRowSlide = { rows: [] }
 	tableRows.forEach((row, iRow) => {
 		// A: Row variables
 		const rowCellLines: TableCell[] = []
@@ -339,7 +339,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 		row.forEach((cell, iCell) => {
 			const newCell: TableCell = {
 				_type: SLIDE_OBJECT_TYPES.tablecell,
-				_lines: null as unknown as TableCell[][],
+				_lines: undefined,
 				_lineHeight: inch2Emu(
 					((cell.options?.fontSize ? cell.options.fontSize : tableProps.fontSize ? tableProps.fontSize : DEF_FONT_SIZE) *
 						(LINEH_MODIFIER + (tableProps.autoPageLineWeight ? tableProps.autoPageLineWeight : 0))) /
@@ -353,7 +353,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 			if (newCell.options?.rowspan) newCell._lineHeight = 0
 
 			// E-2: The parseTextToLines method uses `autoPageCharWeight`, so inherit from table options
-			if (newCell.options) newCell.options.autoPageCharWeight = tableProps.autoPageCharWeight ? tableProps.autoPageCharWeight : (null as unknown as number)
+			if (newCell.options) newCell.options.autoPageCharWeight = tableProps.autoPageCharWeight ? tableProps.autoPageCharWeight : (undefined)
 
 			// E-3: **MAIN** Parse cell contents into lines based upon col width, font, etc
 			let totalColW = Array.isArray(tableProps.colW) ? tableProps.colW[iCell] : tableProps.colW ?? 0
@@ -563,8 +563,8 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 	// STEP 2: Grab table col widths - just find the first availble row, either thead/tbody/tfoot, others may have colspans, who cares, we only need col widths from 1
 	let firstRowCells = document.querySelectorAll(`#${tabEleId} tr:first-child th`)
 	if (firstRowCells.length === 0) firstRowCells = document.querySelectorAll(`#${tabEleId} tr:first-child td`)
-	firstRowCells.forEach((cellEle: Element) => {
-		const cell = cellEle as HTMLTableCellElement
+	firstRowCells.forEach(cell => {
+		if (!(cell instanceof HTMLTableCellElement)) return
 		if (cell.getAttribute('colspan')) {
 			// Guesstimate (divide evenly) col widths
 			// NOTE: both j$query and vanilla selectors return {0} when table is not visible)
@@ -598,8 +598,8 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 	// NOTE: We create 3 arrays instead of one so we can loop over body then show header/footer rows on first and last page
 	const tableParts = ['thead', 'tbody', 'tfoot']
 	tableParts.forEach(part => {
-		document.querySelectorAll(`#${tabEleId} ${part} tr`).forEach((row: Element) => {
-			const htmlRow = row as HTMLTableRowElement
+		document.querySelectorAll(`#${tabEleId} ${part} tr`).forEach(htmlRow => {
+			if (!(htmlRow instanceof HTMLTableRowElement)) return
 			const arrObjTabCells: TableCell[] = []
 			Array.from(htmlRow.cells).forEach(cell => {
 				// A: Get RGB text/bkgd colors
@@ -622,30 +622,30 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 
 				// B: Create option object
 				const cellOpts: TableCellProps = {
-					align: null as unknown as HAlign,
+					align: undefined,
 					bold:
 						!!(window.getComputedStyle(cell).getPropertyValue('font-weight') === 'bold' ||
 							Number(window.getComputedStyle(cell).getPropertyValue('font-weight')) >= 500),
-					border: null as unknown as BorderProps,
+					border: undefined,
 					color: rgbToHex(Number(arrRGB1[0]), Number(arrRGB1[1]), Number(arrRGB1[2])),
 					fill: { color: rgbToHex(Number(arrRGB2[0]), Number(arrRGB2[1]), Number(arrRGB2[2])) },
 					fontFace:
 						(window.getComputedStyle(cell).getPropertyValue('font-family') || '').split(',')[0].replace(/"/g, '').replace('inherit', '').replace('initial', '') ||
-						(null as unknown as string),
+						(undefined),
 					fontSize: Number(window.getComputedStyle(cell).getPropertyValue('font-size').replace(/[a-z]/gi, '')),
-					margin: null as unknown as Margin,
-					colspan: Number(cell.getAttribute('colspan')) || (null as unknown as number),
-					rowspan: Number(cell.getAttribute('rowspan')) || (null as unknown as number),
-					valign: null as unknown as VAlign,
+					margin: undefined,
+					colspan: Number(cell.getAttribute('colspan')) || (undefined),
+					rowspan: Number(cell.getAttribute('rowspan')) || (undefined),
+					valign: undefined,
 				}
 
 				if (['left', 'center', 'right', 'start', 'end'].includes(window.getComputedStyle(cell).getPropertyValue('text-align'))) {
 					const align = window.getComputedStyle(cell).getPropertyValue('text-align').replace('start', 'left').replace('end', 'right')
-					cellOpts.align = align === 'center' ? 'center' : align === 'left' ? 'left' : align === 'right' ? 'right' : (null as unknown as HAlign)
+					cellOpts.align = align === 'center' ? 'center' : align === 'left' ? 'left' : align === 'right' ? 'right' : (undefined)
 				}
 				if (['top', 'middle', 'bottom'].includes(window.getComputedStyle(cell).getPropertyValue('vertical-align'))) {
 					const valign = window.getComputedStyle(cell).getPropertyValue('vertical-align')
-					cellOpts.valign = valign === 'top' ? 'top' : valign === 'middle' ? 'middle' : valign === 'bottom' ? 'bottom' : (null as unknown as VAlign)
+					cellOpts.valign = valign === 'top' ? 'top' : valign === 'middle' ? 'middle' : valign === 'bottom' ? 'bottom' : (undefined)
 				}
 
 				// C: Add padding [margin] (if any)
@@ -666,7 +666,8 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 					window.getComputedStyle(cell).getPropertyValue('border-bottom-width') ||
 					window.getComputedStyle(cell).getPropertyValue('border-left-width')
 				) {
-					const border = [null, null, null, null] as unknown as [BorderProps, BorderProps, BorderProps, BorderProps]
+					// all four sides are assigned unconditionally in the loop below
+					const border: [BorderProps, BorderProps, BorderProps, BorderProps] = [{}, {}, {}, {}]
 					cellOpts.border = border
 					const sidesBor = ['top', 'right', 'bottom', 'left']
 					sidesBor.forEach((val, idxb) => {
@@ -718,11 +719,11 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 
 	// STEP 5: Break table into Slides as needed
 	// Pass head-rows as there is an option to add to each table and the parse func needs this data to fulfill that option
-	opts._arrObjTabHeadRows = arrObjTabHeadRows || (null as unknown as TableRow[])
+	opts._arrObjTabHeadRows = arrObjTabHeadRows || (undefined)
 	opts.colW = arrColW
 	getSlidesForTableRows([...arrObjTabHeadRows, ...arrObjTabBodyRows, ...arrObjTabFootRows], opts, pptx.presLayout, masterSlide).forEach((slide, idxTr) => {
 		// A: Create new Slide
-		const newSlide = pptx.addSlide({ masterName: opts.masterSlideName || (null as unknown as string) })
+		const newSlide = pptx.addSlide({ masterName: opts.masterSlideName || (undefined) })
 
 		// B: DESIGN: Reset `y` to startY or margin after first Slide (ISSUE#43, ISSUE#47, ISSUE#48)
 		if (idxTr === 0) opts.y = opts.y || arrInchMargins[0]

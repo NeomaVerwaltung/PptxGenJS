@@ -120,12 +120,12 @@ function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 		const rounding = slideItemObj.options?.rounding
 
 		if (
-			(slide as PresSlide)._slideLayout !== undefined &&
-			(slide as PresSlide)._slideLayout._slideObjects !== undefined &&
+			'_slideLayout' in slide &&
+			slide._slideLayout?._slideObjects !== undefined &&
 			slideItemObj.options &&
 			slideItemObj.options.placeholder
 		) {
-			placeholderObj = (slide as PresSlide)._slideLayout._slideObjects.filter(
+			placeholderObj = slide._slideLayout._slideObjects.filter(
 				(object: ISlideObject) => object.options?.placeholder === slideItemObj.options?.placeholder
 			)[0]
 		}
@@ -172,7 +172,7 @@ function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 
 				// STEP 1: Start Table XML
 				// NOTE: Non-numeric cNvPr id values will trigger "presentation needs repair" type warning in MS-PPT-2013
-				strXml = `<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="${intTableNum * slide._slideNum + 1}" name="${slideItemObj.options.objectName}"/>`
+				strXml = `<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="${intTableNum * (slide._slideNum ?? 0) + 1}" name="${slideItemObj.options.objectName}"/>`
 				strXml +=
 					'<p:cNvGraphicFramePr><a:graphicFrameLocks noGrp="1"/></p:cNvGraphicFramePr>' +
 					'  <p:nvPr><p:extLst><p:ext uri="{D42A27DB-BD31-4B8C-83A1-F6EECF244321}"><p14:modId xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main" val="1579011935"/></p:ext></p:extLst></p:nvPr>' +
@@ -1196,8 +1196,7 @@ export function genXmlTextBody (slideObj: ISlideObject | TableCell): string {
 		tmpTextObjects.push({ text: slideObj.text || '', options: slideObj.options || {} })
 	} else if (Array.isArray(slideObj.text)) {
 		// Handle cases 4,5,6
-		// NOTE: use cast as text is TextProps[]|TableCell[] and their `options` dont overlap (they share the same TextBaseProps though)
-		tmpTextObjects = (slideObj.text as TextProps[]).map(item => ({ text: item.text, options: item.options }))
+		tmpTextObjects = slideObj.text.map(item => ({ text: item.text, options: item.options }))
 	}
 
 	// STEP 4: Iterate over text objects, set text/options, break into pieces if '\n'/breakLine found

@@ -1785,7 +1785,7 @@ export interface SlideBaseProps {
 	_rels: ISlideRel[]
 	_relsChart: ISlideRelChart[] // needed as we use args:"PresSlide|SlideLayout" often
 	_relsMedia: ISlideRelMedia[] // needed as we use args:"PresSlide|SlideLayout" often
-	_slideNum: number
+	_slideNum: number | null
 	_slideNumberProps?: SlideNumberProps
 	_slideObjects: ISlideObject[]
 

@@ -574,8 +574,8 @@ export function makeXmlCharts (rel: ISlideRelChart): string {
 					titlePos: rel.opts.titlePos,
 					titleRotate: rel.opts.titleRotate,
 				},
-				rel.opts.x as number,
-				rel.opts.y as number
+				typeof rel.opts.x === 'number' ? rel.opts.x : undefined,
+				typeof rel.opts.y === 'number' ? rel.opts.y : undefined
 			)
 			strXml += '<c:autoTitleDeleted val="0"/>'
 		} else {
