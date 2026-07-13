@@ -18,8 +18,7 @@
 4. Build library: npm scripts > `ship`
 5. Consolidate new changes from `src/bld/*.ts` into `types/index.d.ts` and update version in head comment
 6. Open `dist/*.js` and check headers
-7. Update version in: `demos/node/package.json`
-8. Update `@neoma/pptxgenjs` dep version in: `demos/vite-demo/package.json`
+7. Update version in: `demos/node/package.json` (its `@neoma/pptxgenjs` dep is `file:../..` — no dep bump needed)
 
 ## 🧪 Run Tests Before Release
 
@@ -33,20 +32,16 @@ See [TESTING.md](./TESTING.md) for complete test instructions.
 | ----------------- | ---------- | ---------------------- | ------ |
 | pptxgen.es.js     | Webpack 4  | SPFx (v1.16.1) project | ✅?🟡    |
 | pptxgen.es.js     | Webpack 5  | SPFx (v1.19.1) project | ✅?🟡    |
-| pptxgen.es.js     | Rollup 4   | Vite (v6) demo         | ✅?🟡    |
+| pptxgen.es.js     | Rollup 4   | Vite (v6) scaffold     | ✅?🟡    |
 | pptxgen.cjs.js    | Node/CJS   | Node demo              | ✅?🟡    |
-| pptxgen.bundle.js | Script     | Browser demo (desktop) | ✅?🟡    |
-| pptxgen.bundle.js | Script     | Browser demo (iOS)     | ✅?🟡    |
-| pptxgen.bundle.js | Web Worker | worker_test demo       | ✅?🟡    |
 
 ## 🚌 Release New Version
 
 ### 🟡 Pre-Release Checklist
 
-1. Update: `demos/browser/index.html` head to use "RELEASE (CDN)"
-2. Check: Is `version` updated in package.json?
-3. Check: Is `version` updated in src/pptxgen.ts?
-4. Check: Is `types/index.d.ts` version in header updated?
+1. Check: Is `version` updated in package.json?
+2. Check: Is `version` updated in src/pptxgen.ts?
+3. Check: Is `types/index.d.ts` version in header updated?
 
 ### 🟢 Release: GitHub
 
@@ -66,7 +61,8 @@ npm publish
 ## 🏁 Post-Release Tasks
 
 1. Test CDN links on README.md
-2. Load **gh-pages** branch
-3. Update `installation.md` with latest CDN version
-4. Copy contents of the newest "build" folder (from above) into `./demo-react` folder
-5. Update API documentation if needed
+2. Update `docs/installation.md` with the latest CDN version if it changed
+3. Update the docs under `docs/` for any API changes
+
+> The docs site (GitHub Pages) redeploys automatically from `docs/` on push to `master`
+> via `.github/workflows/docs.yml` — no manual gh-pages branch step.
