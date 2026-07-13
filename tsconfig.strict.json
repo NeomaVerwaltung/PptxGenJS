@@ -8,6 +8,7 @@
 		"noEmit": true
 	},
 	"include": [
-		"src/gen-utils.ts"
+		"src/gen-utils.ts",
+		"src/gen-media.ts"
 	]
 }
