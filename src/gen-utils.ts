@@ -16,7 +16,7 @@ import { PresLayout, TextGlowProps, PresSlide, ShapeFillProps, Color, ShapeLineP
  * @param {PresLayout} layout - presentation layout
  * @returns {number} calculated size
  */
-export function getSmartParseNumber (size: Coord, xyDir: 'X' | 'Y', layout: PresLayout): number {
+export function getSmartParseNumber (size: Coord | undefined, xyDir: 'X' | 'Y', layout: PresLayout): number {
 	// FIRST: Convert string numeric value if reqd
 	if (typeof size === 'string' && !isNaN(Number(size))) size = Number(size)
 
@@ -62,7 +62,7 @@ export function getUuid (uuidFormat: string): string {
  * @param {string} xml - XML string to encode
  * @returns {string} escaped XML
  */
-export function encodeXmlEntities (xml: string): string {
+export function encodeXmlEntities (xml: string | undefined): string {
 	// NOTE: Dont use short-circuit eval here as value c/b "0" (zero) etc.!
 	if (typeof xml === 'undefined' || xml == null) return ''
 	return xml.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')
@@ -86,7 +86,7 @@ export function inch2Emu (inches: number | string): number {
  * @param {number|string} pt
  * @returns {number} value in points (`ONEPT`)
  */
-export function valToPts (pt: number | string): number {
+export function valToPts (pt: number | string | undefined): number {
 	const points = Number(pt) || 0
 	return isNaN(points) ? 0 : Math.round(points * ONEPT)
 }
@@ -96,7 +96,7 @@ export function valToPts (pt: number | string): number {
  * @param {number} d degrees
  * @returns {number} calculated `rot` value
  */
-export function convertRotationDegrees (d: number): number {
+export function convertRotationDegrees (d: number | undefined): number {
 	d = d || 0
 	return Math.round((d > 360 ? d - 360 : d) * 60000)
 }
@@ -135,7 +135,7 @@ export function rgbToHex (r: number, g: number, b: number): string {
  * @param {string} innerElements - additional elements that adjust the color and are enclosed by the color element
  * @returns {string} XML string
  */
-export function createColorElement (colorStr: string | SCHEME_COLORS, innerElements?: string): string {
+export function createColorElement (colorStr: string | SCHEME_COLORS | undefined, innerElements?: string): string {
 	let colorVal = (colorStr || '').replace('#', '')
 
 	if (
@@ -187,7 +187,7 @@ export function createGlowElement (options: TextGlowProps, defaults: TextGlowPro
  * @param {Color | ShapeFillProps | ShapeLineProps} props fill props
  * @returns XML string
  */
-export function genXmlColorSelection (props: Color | ShapeFillProps | ShapeLineProps): string {
+export function genXmlColorSelection (props: Color | ShapeFillProps | ShapeLineProps | undefined): string {
 	let fillType = 'solid'
 	let colorVal = ''
 	let internalElements = ''
