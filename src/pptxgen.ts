@@ -435,7 +435,7 @@ export default class PptxGenJS implements IPresentationProps {
 				else if (!data.includes(';')) data = 'image/png;' + data
 
 				// C: Add media
-				zip.file(rel.Target.replace('..', 'ppt'), data.split(',').pop()!, { base64: true })
+				zip.file(rel.Target.replace(/\.\./g, 'ppt'), data.split(',').pop()!, { base64: true })
 			}
 		})
 	}

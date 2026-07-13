@@ -49,7 +49,8 @@ export function getSmartParseNumber (size: Coord, xyDir: 'X' | 'Y', layout: Pres
  */
 export function getUuid (uuidFormat: string): string {
 	return uuidFormat.replace(/[xy]/g, function (c) {
-		const r = (Math.random() * 16) | 0
+		// Web Crypto API - a global in browsers and in Node >=20 (this package's engines floor)
+		const r = globalThis.crypto.getRandomValues(new Uint8Array(1))[0] % 16
 		const v = c === 'x' ? r : (r & 0x3) | 0x8
 		return v.toString(16)
 	})
