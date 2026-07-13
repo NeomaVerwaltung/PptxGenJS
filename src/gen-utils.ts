@@ -168,12 +168,12 @@ export function createColorElement (colorStr: string | SCHEME_COLORS | undefined
  * @see http://officeopenxml.com/drwSp-effects.php
  * { size: 8, color: 'FFFFFF', opacity: 0.75 };
  */
-export function createGlowElement (options: TextGlowProps, defaults: TextGlowProps): string {
+export function createGlowElement (options: TextGlowProps, defaults: Required<TextGlowProps>): string {
 	let strXml = ''
-	const opts = { ...defaults, ...options }
+	const opts: Required<TextGlowProps> = { ...defaults, ...options }
 	const size = Math.round(opts.size * ONEPT)
-	const color = opts.color ?? ''
-	const opacity = Math.round((opts.opacity ?? 0) * 100000)
+	const color = opts.color
+	const opacity = Math.round(opts.opacity * 100000)
 
 	strXml += `<a:glow rad="${size}">`
 	strXml += createColorElement(color, `<a:alpha val="${opacity}"/>`)

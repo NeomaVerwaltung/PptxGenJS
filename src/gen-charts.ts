@@ -2001,7 +2001,7 @@ function getExcelColName (colIndex: number): string {
  * @example { type: 'outer', blur: 3, offset: (23000 / 12700), angle: 90, color: '000000', opacity: 0.35, rotateWithShape: true };
  * @return {string} XML
  */
-function createShadowElement (options: ShadowProps | undefined, defaults: object): string {
+function createShadowElement (options: ShadowProps | undefined, defaults: Required<ShadowProps>): string {
 	if (!options) {
 		return '<a:effectLst/>'
 	} else if (typeof options !== 'object') {
@@ -2010,13 +2010,13 @@ function createShadowElement (options: ShadowProps | undefined, defaults: object
 	}
 
 	let strXml = '<a:effectLst>'
-	const opts = { ...defaults, ...options }
+	const opts: Required<ShadowProps> = { ...defaults, ...options }
 	const type = opts.type || 'outer'
 	const blur = valToPts(opts.blur)
 	const offset = valToPts(opts.offset)
-	const angle = Math.round((opts.angle ?? 0) * 60000)
+	const angle = Math.round(opts.angle * 60000)
 	const color = opts.color
-	const opacity = Math.round((opts.opacity ?? 0) * 100000)
+	const opacity = Math.round(opts.opacity * 100000)
 	const rotShape = opts.rotateWithShape ? 1 : 0
 
 	strXml += `<a:${type}Shdw sx="100000" sy="100000" kx="0" ky="0"  algn="bl" blurRad="${blur}" rotWithShape="${rotShape}" dist="${offset}" dir="${angle}">`
