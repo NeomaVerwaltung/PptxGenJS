@@ -90,7 +90,7 @@ test('coverage: hyperlink + image slide', async () => {
 
 test('coverage: hyperlink relationship emitted', async () => {
 	const rels = await zip.file('ppt/slides/_rels/slide2.xml.rels')!.async('string')
-	assert.ok(rels.includes('https://example.com'), 'hyperlink target missing from slide rels')
+	assert.match(rels, /Target="https:\/\/example\.com"/, 'hyperlink target missing from slide rels')
 })
 
 test('coverage: speaker notes part emitted', async () => {

@@ -57,8 +57,9 @@ export function secureRandom (): number {
 
 export function getUuid (uuidFormat: string): string {
 	return uuidFormat.replace(/[xy]/g, function (c) {
-		// Web Crypto API - a global in browsers and in Node >=20 (this package's engines floor)
-		const r = globalThis.crypto.getRandomValues(new Uint8Array(1))[0] % 16
+		// Web Crypto API - a global in browsers and in Node >=20 (this package's engines floor).
+		// Mask the low nibble (0-15) - an unbiased reduction (no modulo) for a hex digit.
+		const r = globalThis.crypto.getRandomValues(new Uint8Array(1))[0] & 0x0f
 		const v = c === 'x' ? r : (r & 0x3) | 0x8
 		return v.toString(16)
 	})
