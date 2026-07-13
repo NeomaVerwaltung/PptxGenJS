@@ -38,8 +38,6 @@
 | `common/images/krita_square.jpg` | 500×500 | 47.4 KB | jpg | Krita mascot **"Kiki"** (Tyson Tan) — character art, specific license |
 | `common/images/krita_splashscreen.jpeg` | 2276×1280 | 448.3 KB | jpeg | Krita splash artwork — artist copyright |
 | `common/images/wiki-example.jpg` | 275×297 | 27.0 KB | jpg | Wikipedia placeholder — Wikimedia globe trademark |
-| `browser/images/github.svg` | 16×16 | 0.7 KB | svg | GitHub Octocat — trademark, brand guidelines |
-| `browser/images/mastodon.svg` | 16×16 | 0.9 KB | svg | Mastodon logo — trademark |
 | `common/images/mastodon-logo-purple.svg` | 75×79 | 2.4 KB | svg | Mastodon logo — trademark |
 | `common/images/pixelfed_icon.svg` | 75×75 | 14.9 KB | svg | Pixelfed logo — trademark |
 | `common/images/fediverse_actpub.png` | 1114×1200 | 975.1 KB | png | ActivityPub / Fediverse branding |
@@ -71,12 +69,6 @@
 
 | File | Dimensions | Size | Fmt |
 | --- | --- | ---: | --- |
-| `browser/images/favicon.png` | 480×349 | 15.4 KB | png |
-| `browser/images/favicon-16x16.png` | 16×16 | 0.5 KB | png |
-| `browser/images/favicon-32x32.png` | 32×32 | 1.3 KB | png |
-| `browser/images/html2pptx.png` | 1712×836 | 672.8 KB | png |
-| `browser/images/slide-master.png` | 2088×1248 | 859.9 KB | png |
-| `browser/images/info-circle.svg` | 16×16 | 0.4 KB | svg |
 | `common/images/lock-green.svg` | 500×500 | 15.4 KB | svg |
 | `common/images/logo_square.png` | 210×210 | 27.9 KB | png |
 | `common/images/logo_square_25.png` | 25×25 | 1.4 KB | png |
@@ -89,14 +81,6 @@
 | `common/images/brokenImage.gif` | 100×119 | 1.3 KB | gif |
 | `common/images/brokenImage.png` | 200×238 | 3.8 KB | png |
 | `node/assets/image.png` | 192×192 | 8.4 KB | png |
-
-## 🟢 Vite/React scaffold defaults (third-party marks, standard)
-
-| File | Dimensions | Size | Fmt |
-| --- | --- | ---: | --- |
-| `vite-demo/public/vite.svg` | 32×32 | 1.5 KB | svg |
-| `vite-demo/src/assets/react.svg` | 36×32 | 4.0 KB | svg |
-| `vite-demo/src/assets/logo.png` | 30×30 | 0.6 KB | png |
 
 ## ⚠️ Media (audio/video) — higher copyright risk than images
 
