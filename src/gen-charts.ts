@@ -20,7 +20,7 @@ import {
 	ONEPT,
 } from './core-enums'
 import { IChartOptsLib, ISlideRelChart, ShadowProps, IChartPropsTitle, OptsChartGridLine, IOptsChartData, ChartLineCap } from './core-interfaces'
-import { createColorElement, genXmlColorSelection, convertRotationDegrees, encodeXmlEntities, getUuid, valToPts } from './gen-utils'
+import { createColorElement, genXmlColorSelection, convertRotationDegrees, encodeXmlEntities, getUuid, secureRandom, valToPts } from './gen-utils'
 import JSZip from 'jszip'
 
 /**
@@ -899,7 +899,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 					strXml += '  <c:symbol val="' + opts.lineDataSymbol + '"/>'
 					if (opts.lineDataSymbolSize) strXml += `<c:size val="${opts.lineDataSymbolSize}"/>` // Defaults to "auto" otherwise (but this is usually too small, so there is a default)
 					strXml += '  <c:spPr>'
-					strXml += `    <a:solidFill>${createColorElement(opts.chartColors![obj._dataIndex! + 1 > opts.chartColors!.length ? Math.floor(Math.random() * opts.chartColors!.length) : obj._dataIndex!])}</a:solidFill>`
+					strXml += `    <a:solidFill>${createColorElement(opts.chartColors![obj._dataIndex! + 1 > opts.chartColors!.length ? Math.floor(secureRandom() * opts.chartColors!.length) : obj._dataIndex!])}</a:solidFill>`
 					strXml += `    <a:ln w="${opts.lineDataSymbolLineSize}" cap="flat"><a:solidFill>${createColorElement(opts.lineDataSymbolLineColor || seriesColor!)}</a:solidFill><a:prstDash val="solid"/><a:round/></a:ln>`
 					strXml += '    <a:effectLst/>'
 					strXml += '  </c:spPr>'
@@ -1100,7 +1100,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 						strXml += `<c:size val="${opts.lineDataSymbolSize}"/>`
 					}
 					strXml += '<c:spPr>'
-					strXml += `<a:solidFill>${createColorElement(opts.chartColors![idx + 1 > opts.chartColors!.length ? Math.floor(Math.random() * opts.chartColors!.length) : idx])}</a:solidFill>`
+					strXml += `<a:solidFill>${createColorElement(opts.chartColors![idx + 1 > opts.chartColors!.length ? Math.floor(secureRandom() * opts.chartColors!.length) : idx])}</a:solidFill>`
 					strXml += `<a:ln w="${opts.lineDataSymbolLineSize}" cap="flat"><a:solidFill>${createColorElement(opts.lineDataSymbolLineColor || opts.chartColors![colorIndex % opts.chartColors!.length])}</a:solidFill><a:prstDash val="solid"/><a:round/></a:ln>`
 					strXml += '<a:effectLst/>'
 					strXml += '</c:spPr>'
@@ -1525,7 +1525,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 				strXml += ' <c:bubble3D val="0"/>'
 				strXml += ' <c:spPr>'
 				strXml += `<a:solidFill>${createColorElement(
-					opts.chartColors![idx + 1 > opts.chartColors!.length ? Math.floor(Math.random() * opts.chartColors!.length) : idx]
+					opts.chartColors![idx + 1 > opts.chartColors!.length ? Math.floor(secureRandom() * opts.chartColors!.length) : idx]
 				)}</a:solidFill>`
 				if (opts.dataBorder) {
 					strXml += `<a:ln w="${valToPts(opts.dataBorder.pt!)}" cap="flat"><a:solidFill>${createColorElement(
