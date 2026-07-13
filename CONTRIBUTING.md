@@ -16,8 +16,7 @@ npm run check # lint + typecheck + strict typecheck + tests — run before every
 `npm run check` must pass. It runs:
 
 - `npm run lint` — ESLint
-- `npm run typecheck` — full-project TypeScript
-- `npm run typecheck:strict` — `strictNullChecks` on migrated files (see below)
+- `npm run typecheck` — full-project TypeScript (`strictNullChecks` is enabled)
 - `npm test` — unit, e2e, and XML snapshot tests
 
 Build the distributables locally with `npm run build` (or `npm run dist` for
@@ -29,13 +28,11 @@ Tests live in `test/`. When you change XML generation, update or add a
 golden-file snapshot (`test/__snapshots__/`) and include the regenerated
 snapshot in your PR. Coverage can be inspected with `npm run test:coverage`.
 
-## `strictNullChecks` migration
+## Type safety
 
-The codebase is migrating to `strictNullChecks` incrementally (see
-`tsconfig.strict.json`). When you make a source file null-safe, add it to the
-`include` list in `tsconfig.strict.json` so it stays that way. When every
-`src/**` file is listed, `strictNullChecks` will be enabled in the base
-`tsconfig.json` and `tsconfig.strict.json` deleted.
+`strictNullChecks` is enabled in `tsconfig.json` and enforced by
+`npm run typecheck`. Keep new code null-safe; prefer real guards over
+non-null assertions (`!`) except where a value is genuinely invariant.
 
 ## Coding style
 

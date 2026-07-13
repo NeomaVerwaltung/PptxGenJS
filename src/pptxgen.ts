@@ -116,7 +116,7 @@ export default class PptxGenJS implements IPresentationProps {
 	 * @type {string}
 	 * @see https://support.office.com/en-us/article/Change-the-size-of-your-slides-040a811c-be43-40b9-8d04-0de5ed79987e
 	 */
-	private _layout: string
+	private _layout!: string
 	public set layout(value: string) {
 		const newLayout: PresLayout = this.LAYOUTS[value]
 
@@ -192,7 +192,7 @@ export default class PptxGenJS implements IPresentationProps {
 	/**
 	 * @type {ThemeProps}
 	 */
-	private _theme: ThemeProps
+	private _theme!: ThemeProps
 	public set theme(value: ThemeProps) {
 		this._theme = value
 	}
@@ -349,9 +349,9 @@ export default class PptxGenJS implements IPresentationProps {
 				_rels: [],
 				_relsChart: [],
 				_relsMedia: [],
-				_slide: null,
+				_slide: undefined,
 				_slideNum: 1000,
-				_slideNumberProps: null,
+				_slideNumberProps: undefined,
 				_slideObjects: [],
 			},
 		]
@@ -377,7 +377,7 @@ export default class PptxGenJS implements IPresentationProps {
 			_slideNum: null,
 			_slideNumberProps: null,
 			_slideObjects: [],
-		}
+		} as unknown as PresSlide
 	}
 
 	/**
@@ -391,7 +391,7 @@ export default class PptxGenJS implements IPresentationProps {
 			this.sections.length > 0 &&
 			this.sections[this.sections.length - 1]._slides.filter(slide => slide._slideNum === this.slides[this.slides.length - 1]._slideNum).length > 0
 
-		options.sectionTitle = sectAlreadyInUse ? this.sections[this.sections.length - 1].title : null
+		options!.sectionTitle = sectAlreadyInUse ? this.sections[this.sections.length - 1].title : undefined
 
 		return this.addSlide(options)
 	}
@@ -435,7 +435,7 @@ export default class PptxGenJS implements IPresentationProps {
 				else if (!data.includes(';')) data = 'image/png;' + data
 
 				// C: Add media
-				zip.file(rel.Target.replace('..', 'ppt'), data.split(',').pop(), { base64: true })
+				zip.file(rel.Target.replace('..', 'ppt'), data.split(',').pop()!, { base64: true })
 			}
 		})
 	}
@@ -470,6 +470,8 @@ export default class PptxGenJS implements IPresentationProps {
 			// Done
 			return await Promise.resolve(exportName)
 		}
+
+		return await Promise.resolve(exportName)
 	}
 
 	/**
@@ -501,16 +503,16 @@ export default class PptxGenJS implements IPresentationProps {
 			// B: Add all required folders and files
 			zip.folder('_rels')
 			zip.folder('docProps')
-			zip.folder('ppt').folder('_rels')
-			zip.folder('ppt/charts').folder('_rels')
+			zip.folder('ppt')!.folder('_rels')
+			zip.folder('ppt/charts')!.folder('_rels')
 			zip.folder('ppt/embeddings')
 			zip.folder('ppt/media')
-			zip.folder('ppt/slideLayouts').folder('_rels')
-			zip.folder('ppt/slideMasters').folder('_rels')
-			zip.folder('ppt/slides').folder('_rels')
+			zip.folder('ppt/slideLayouts')!.folder('_rels')
+			zip.folder('ppt/slideMasters')!.folder('_rels')
+			zip.folder('ppt/slides')!.folder('_rels')
 			zip.folder('ppt/theme')
-			zip.folder('ppt/notesMasters').folder('_rels')
-			zip.folder('ppt/notesSlides').folder('_rels')
+			zip.folder('ppt/notesMasters')!.folder('_rels')
+			zip.folder('ppt/notesSlides')!.folder('_rels')
 			zip.file('[Content_Types].xml', genXml.makeXmlContTypes(this.slides, this.slideLayouts, this.masterSlide)) // TODO: pass only `this` like below! 20200206
 			zip.file('_rels/.rels', genXml.makeXmlRootRels())
 			zip.file('docProps/app.xml', genXml.makeXmlApp(this.slides, this.company)) // TODO: pass only `this` like below! 20200206
@@ -585,7 +587,7 @@ export default class PptxGenJS implements IPresentationProps {
 	 */
 	async write(props?: WriteProps | WRITE_OUTPUT_TYPE): Promise<string | ArrayBuffer | Blob | Buffer | Uint8Array> {
 		// DEPRECATED: @deprecated v3.5.0 - outputType - [[remove in v4.0.0]]
-		const propsOutpType = typeof props === 'object' && props?.outputType ? props.outputType : props ? (props as WRITE_OUTPUT_TYPE) : null
+		const propsOutpType = typeof props === 'object' && props?.outputType ? props.outputType : props ? (props as WRITE_OUTPUT_TYPE) : undefined
 		const propsCompress = typeof props === 'object' && props?.compression ? props.compression : false
 
 		return await this.exportPresentation({
@@ -614,7 +616,7 @@ export default class PptxGenJS implements IPresentationProps {
 		const fileName = rawName.toLowerCase().endsWith('.pptx') ? rawName : `${rawName}.pptx`
 
 		// STEP 3: Get the binary/Blob from exportPresentation()
-		const outputType = isNode ? ('nodebuffer' as const) : null
+		const outputType = isNode ? ('nodebuffer' as const) : undefined
 		const data = await this.exportPresentation({ compression, outputType })
 
 		// STEP 4: Write the file out
@@ -752,7 +754,7 @@ export default class PptxGenJS implements IPresentationProps {
 			_rels: [],
 			_relsChart: [],
 			_relsMedia: [],
-			_slide: null,
+			_slide: undefined,
 			_slideNum: 1000 + this.slideLayouts.length + 1,
 			_slideNumberProps: propsClone.slideNumber || null,
 			_slideObjects: [],
@@ -786,7 +788,7 @@ export default class PptxGenJS implements IPresentationProps {
 			this,
 			eleId,
 			options,
-			options?.masterSlideName ? this.slideLayouts.filter(layout => layout._name === options.masterSlideName)[0] : null
+			options?.masterSlideName ? this.slideLayouts.filter(layout => layout._name === options.masterSlideName)[0] : undefined
 		)
 	}
 }
