@@ -47,14 +47,6 @@ export function getSmartParseNumber (size: Coord, xyDir: 'X' | 'Y', layout: Pres
  * @param {string} uuidFormat - UUID format
  * @returns {string} UUID
  */
-/**
- * Cryptographically-seeded random float in [0, 1) - a drop-in for `Math.random()`.
- * Uses the Web Crypto API (a global in browsers and in Node >=20, this package's engines floor).
- */
-export function secureRandom (): number {
-	return globalThis.crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32
-}
-
 export function getUuid (uuidFormat: string): string {
 	return uuidFormat.replace(/[xy]/g, function (c) {
 		// Web Crypto API - a global in browsers and in Node >=20 (this package's engines floor).
