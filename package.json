@@ -26,6 +26,9 @@
 		"types"
 	],
 	"types": "types",
+	"engines": {
+		"node": ">=20"
+	},
 	"scripts": {
 		"build": "rollup -c --bundleConfigAsCjs",
 		"dist": "gulp dist",
@@ -38,9 +41,9 @@
 		"docs:preview": "vitepress preview docs",
 		"lint": "eslint src test",
 		"typecheck": "tsc --noEmit",
-		"typecheck:strict": "tsc -p tsconfig.strict.json",
-		"test": "node --import tsx --test test/gen-utils.test.ts test/pptxgen.e2e.test.ts test/snapshot.test.ts",
-		"check": "npm run lint && npm run typecheck && npm run typecheck:strict && npm test",
+		"test": "node --import tsx --test test/gen-utils.test.ts test/pptxgen.e2e.test.ts test/snapshot.test.ts test/coverage.test.ts",
+		"test:coverage": "node --import tsx --test --experimental-test-coverage test/gen-utils.test.ts test/pptxgen.e2e.test.ts test/snapshot.test.ts test/coverage.test.ts",
+		"check": "npm run lint && npm run typecheck && npm test",
 		"prepublishOnly": "npm run check"
 	},
 	"browser": {
@@ -67,13 +70,10 @@
 		"fast-xml-parser": "^5.9.3",
 		"gulp": "^5.0.0",
 		"gulp-concat": "^2.6.1",
-		"gulp-delete-lines": "0.0.7",
-		"gulp-ignore": "^3.0.0",
 		"gulp-insert": "^0.5.0",
-		"gulp-sourcemaps": "^3.0.0",
 		"gulp-uglify": "^3.0.2",
 		"rollup": "^4.24.2",
-		"rollup-plugin-typescript2": "^0.36.0",
+		"rollup-plugin-typescript2": "^0.37.0",
 		"tslib": "^2.8.0",
 		"tsx": "^4.22.4",
 		"typescript": "^5.6.3",

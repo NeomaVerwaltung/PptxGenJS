@@ -41,6 +41,15 @@ Design custom slides, charts, images, tables, and templates programmatically - n
 - Export as **base64**, **Blob**, **Buffer**, or **Node stream**
 - Supports compression and advanced output options for production use
 
+### Production-Ready & Type-Safe
+
+This NEOMA-maintained fork (`@neoma/pptxgenjs`) is hardened for production use:
+
+- **Strict null-safety** - the entire source compiles under TypeScript `strictNullChecks` with **zero** non-null assertions (`!`) and **zero** unchecked `as` casts; null-safety is enforced through honest types, guard clauses, and validated defaults
+- **Tested in CI** - unit, end-to-end, and golden-file OOXML snapshot tests run on **Node.js 20 & 22**
+- **Secure** - no known vulnerabilities in the published package, [CodeQL](https://github.com/NeomaVerwaltung/PptxGenJS/security/code-scanning) scanning, and a published [security policy](SECURITY.md)
+- **Requires Node.js 20+** (see [`CONTRIBUTING.md`](CONTRIBUTING.md) to build and test locally)
+
 ### HTML to PowerPoint Magic
 
 - Convert any HTML `<table>` to one or more slides with a single line of code → [Explore the HTML-to-PPTX feature](#html-to-powerpoint-magic)
