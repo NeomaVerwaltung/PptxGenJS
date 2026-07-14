@@ -3,7 +3,7 @@
  */
 
 import { DEF_FONT_SIZE, DEF_SLIDE_MARGIN_IN, EMU, LINEH_MODIFIER, ONEPT, SLIDE_OBJECT_TYPES } from './core-enums'
-import { PresLayout, SlideLayout, TableCell, TableToSlidesProps, TableRow, TableRowSlide, TableCellProps } from './core-interfaces'
+import { PresLayout, SlideLayout, TableCell, TableToSlidesProps, TableRow, TableRowSlide, TableCellProps, BorderProps } from './core-interfaces'
 import { getSmartParseNumber, inch2Emu, rgbToHex, valToPts } from './gen-utils'
 import PptxGenJS from './pptxgen'
 
@@ -142,8 +142,9 @@ function parseTextToLines(cell: TableCell, colWidth: number, verbose?: boolean):
 		let strCurrLine = ''
 
 		line.forEach(word => {
+			const wordText = word.text ?? ''
 			// A: create new line when horizontal space is exhausted
-			if (strCurrLine.length + word.text.length > CPL) {
+			if (strCurrLine.length + wordText.length > CPL) {
 				// if (verbose) console.log(`STEP 4: New line added: (${strCurrLine.length} + ${word.text.length} > ${CPL})`);
 				parsedLines.push(lineCells)
 				lineCells = []
@@ -154,7 +155,7 @@ function parseTextToLines(cell: TableCell, colWidth: number, verbose?: boolean):
 			lineCells.push(word)
 
 			// C: add current word to `strCurrLine` which we use to keep track of line's char length
-			strCurrLine += word.text.toString()
+			strCurrLine += wordText.toString()
 		})
 
 		// Flush buffer: Only create a line when there's text to avoid empty row
@@ -279,9 +280,9 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 	// STEP 5: Calculate column widths if not provided (emuSlideTabW will be used below to determine lines-per-col)
 	if (!tableProps.colW || !Array.isArray(tableProps.colW)) {
 		if (tableProps.colW && !isNaN(Number(tableProps.colW))) {
-			const arrColW = []
+			const arrColW: number[] = []
 			const firstRow = tableRows[0] || []
-			firstRow.forEach(() => arrColW.push(tableProps.colW))
+			firstRow.forEach(() => arrColW.push(Number(tableProps.colW)))
 			tableProps.colW = []
 			arrColW.forEach(val => {
 				if (Array.isArray(tableProps.colW)) tableProps.colW.push(val)
@@ -296,7 +297,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 	}
 
 	// STEP 6: **MAIN** Iterate over rows, add table content, create new slides as rows overflow
-	let newTableRowSlide: TableRowSlide = { rows: [] as TableRow[] }
+	let newTableRowSlide: TableRowSlide = { rows: [] }
 	tableRows.forEach((row, iRow) => {
 		// A: Row variables
 		const rowCellLines: TableCell[] = []
@@ -316,7 +317,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 			 * - Backwards-Compat: Oops! Discovered we were still using points for cell margin before v3.8.0 (UGH!)
 			 * - We cant introduce a breaking change before v4.0, so...
 			 */
-			if (cell.options.margin && cell.options.margin[0] >= 1) {
+			if (cell.options?.margin && cell.options.margin[0] >= 1) {
 				if (cell.options?.margin && cell.options.margin[0] && valToPts(cell.options.margin[0]) > maxCellMarTopEmu) maxCellMarTopEmu = valToPts(cell.options.margin[0])
 				else if (tableProps?.margin && tableProps.margin[0] && valToPts(tableProps.margin[0]) > maxCellMarTopEmu) maxCellMarTopEmu = valToPts(tableProps.margin[0])
 				if (cell.options?.margin && cell.options.margin[2] && valToPts(cell.options.margin[2]) > maxCellMarBtmEmu) maxCellMarBtmEmu = valToPts(cell.options.margin[2])
@@ -338,7 +339,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 		row.forEach((cell, iCell) => {
 			const newCell: TableCell = {
 				_type: SLIDE_OBJECT_TYPES.tablecell,
-				_lines: null,
+				_lines: undefined,
 				_lineHeight: inch2Emu(
 					((cell.options?.fontSize ? cell.options.fontSize : tableProps.fontSize ? tableProps.fontSize : DEF_FONT_SIZE) *
 						(LINEH_MODIFIER + (tableProps.autoPageLineWeight ? tableProps.autoPageLineWeight : 0))) /
@@ -349,15 +350,16 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 			}
 
 			// E-1: Exempt cells with `rowspan` from increasing lineHeight (or we could create a new slide when unecessary!)
-			if (newCell.options.rowspan) newCell._lineHeight = 0
+			if (newCell.options?.rowspan) newCell._lineHeight = 0
 
 			// E-2: The parseTextToLines method uses `autoPageCharWeight`, so inherit from table options
-			newCell.options.autoPageCharWeight = tableProps.autoPageCharWeight ? tableProps.autoPageCharWeight : null
+			if (newCell.options) newCell.options.autoPageCharWeight = tableProps.autoPageCharWeight ? tableProps.autoPageCharWeight : (undefined)
 
 			// E-3: **MAIN** Parse cell contents into lines based upon col width, font, etc
-			let totalColW = tableProps.colW[iCell]
-			if (cell.options.colspan && Array.isArray(tableProps.colW)) {
-				totalColW = tableProps.colW.filter((_cell, idx) => idx >= iCell && idx < idx + cell.options.colspan).reduce((prev, curr) => prev + curr)
+			let totalColW = Array.isArray(tableProps.colW) ? tableProps.colW[iCell] : tableProps.colW ?? 0
+			if (cell.options?.colspan && Array.isArray(tableProps.colW)) {
+				const colspan = cell.options.colspan
+				totalColW = tableProps.colW.filter((_cell, idx) => idx >= iCell && idx < idx + colspan).reduce((prev, curr) => prev + curr)
 			}
 
 			// E-4: Create lines based upon available column width
@@ -414,7 +416,8 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 
 			// 1: calc emuLineMaxH
 			rowCellLines.forEach(cell => {
-				if (cell._lineHeight >= emuLineMaxH) emuLineMaxH = cell._lineHeight
+				const lh = cell._lineHeight ?? 0
+				if (lh >= emuLineMaxH) emuLineMaxH = lh
 			})
 
 			// 2: create a new slide if there is insufficient room for the current row
@@ -422,12 +425,12 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 				if (tableProps.verbose) {
 					console.log('\n|-----------------------------------------------------------------------|')
 					// prettier-ignore
-					console.log(`|-- NEW SLIDE CREATED (currTabH+currLineH > maxH) => ${(emuTabCurrH / EMU).toFixed(2)} + ${(srcCell._lineHeight / EMU).toFixed(2)} > ${emuSlideTabH / EMU}`)
+					console.log(`|-- NEW SLIDE CREATED (currTabH+currLineH > maxH) => ${(emuTabCurrH / EMU).toFixed(2)} + ${((srcCell._lineHeight ?? 0) / EMU).toFixed(2)} > ${emuSlideTabH / EMU}`)
 					console.log('|-----------------------------------------------------------------------|\n\n')
 				}
 
 				// A: add current row slide or it will be lost (only if it has rows and text)
-				if (currTableRow.length > 0 && currTableRow.map(cell => cell.text.length).reduce((p, n) => p + n) > 0) newTableRowSlide.rows.push(currTableRow)
+				if (currTableRow.length > 0 && currTableRow.map(cell => cell.text?.length ?? 0).reduce((p, n) => p + n) > 0) newTableRowSlide.rows.push(currTableRow)
 
 				// B: add current slide to Slides array
 				tableRowSlides.push(newTableRowSlide)
@@ -455,7 +458,8 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 						let maxLineHeight = 0
 						row.forEach(cell => {
 							newHeadRow.push(cell)
-							if (cell._lineHeight > maxLineHeight) maxLineHeight = cell._lineHeight
+							const lh = cell._lineHeight ?? 0
+							if (lh > maxLineHeight) maxLineHeight = lh
 						})
 						newTableRowSlide.rows.push(newHeadRow)
 						emuTabCurrH += maxLineHeight // TODO: what about margins? dont we need to include cell margin in line height?
@@ -467,7 +471,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 			}
 
 			// 3: set array of words that comprise this line
-			const currLine: TableCell[] = srcCell._lines.shift()
+			const currLine = srcCell._lines?.shift()
 
 			// 4: create new line by adding all words from curr line (or add empty if there are no words to avoid "needs repair" issue triggered when cells have null content)
 			if (Array.isArray(tgtCell.text)) {
@@ -483,7 +487,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 			currCellIdx = currCellIdx < rowCellLines.length - 1 ? currCellIdx + 1 : 0
 
 			// 7: WIP: done?
-			const brent = rowCellLines.map(cell => cell._lines.length).reduce((prev, next) => prev + next)
+			const brent = rowCellLines.map(cell => cell._lines?.length ?? 0).reduce((prev, next) => prev + next)
 			if (brent === 0) isDone = true
 		}
 
@@ -524,9 +528,9 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 	const opts = options || {}
 	opts.slideMargin = opts.slideMargin || opts.slideMargin === 0 ? opts.slideMargin : 0.5
 	let emuSlideTabW = opts.w || pptx.presLayout.width
-	const arrObjTabHeadRows: [TableCell[]?] = []
-	const arrObjTabBodyRows: [TableCell[]?] = []
-	const arrObjTabFootRows: [TableCell[]?] = []
+	const arrObjTabHeadRows: TableRow[] = []
+	const arrObjTabBodyRows: TableRow[] = []
+	const arrObjTabFootRows: TableRow[] = []
 	const arrColW: number[] = []
 	const arrTabColW: number[] = []
 	let arrInchMargins: [number, number, number, number] = [0.5, 0.5, 0.5, 0.5] // TRBL-style
@@ -559,8 +563,8 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 	// STEP 2: Grab table col widths - just find the first availble row, either thead/tbody/tfoot, others may have colspans, who cares, we only need col widths from 1
 	let firstRowCells = document.querySelectorAll(`#${tabEleId} tr:first-child th`)
 	if (firstRowCells.length === 0) firstRowCells = document.querySelectorAll(`#${tabEleId} tr:first-child td`)
-	firstRowCells.forEach((cellEle: Element) => {
-		const cell = cellEle as HTMLTableCellElement
+	firstRowCells.forEach(cell => {
+		if (!(cell instanceof HTMLTableCellElement)) return
 		if (cell.getAttribute('colspan')) {
 			// Guesstimate (divide evenly) col widths
 			// NOTE: both j$query and vanilla selectors return {0} when table is not visible)
@@ -594,8 +598,8 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 	// NOTE: We create 3 arrays instead of one so we can loop over body then show header/footer rows on first and last page
 	const tableParts = ['thead', 'tbody', 'tfoot']
 	tableParts.forEach(part => {
-		document.querySelectorAll(`#${tabEleId} ${part} tr`).forEach((row: Element) => {
-			const htmlRow = row as HTMLTableRowElement
+		document.querySelectorAll(`#${tabEleId} ${part} tr`).forEach(htmlRow => {
+			if (!(htmlRow instanceof HTMLTableRowElement)) return
 			const arrObjTabCells: TableCell[] = []
 			Array.from(htmlRow.cells).forEach(cell => {
 				// A: Get RGB text/bkgd colors
@@ -618,39 +622,40 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 
 				// B: Create option object
 				const cellOpts: TableCellProps = {
-					align: null,
+					align: undefined,
 					bold:
 						!!(window.getComputedStyle(cell).getPropertyValue('font-weight') === 'bold' ||
 							Number(window.getComputedStyle(cell).getPropertyValue('font-weight')) >= 500),
-					border: null,
+					border: undefined,
 					color: rgbToHex(Number(arrRGB1[0]), Number(arrRGB1[1]), Number(arrRGB1[2])),
 					fill: { color: rgbToHex(Number(arrRGB2[0]), Number(arrRGB2[1]), Number(arrRGB2[2])) },
 					fontFace:
 						(window.getComputedStyle(cell).getPropertyValue('font-family') || '').split(',')[0].replace(/"/g, '').replace('inherit', '').replace('initial', '') ||
-						null,
+						(undefined),
 					fontSize: Number(window.getComputedStyle(cell).getPropertyValue('font-size').replace(/[a-z]/gi, '')),
-					margin: null,
-					colspan: Number(cell.getAttribute('colspan')) || null,
-					rowspan: Number(cell.getAttribute('rowspan')) || null,
-					valign: null,
+					margin: undefined,
+					colspan: Number(cell.getAttribute('colspan')) || (undefined),
+					rowspan: Number(cell.getAttribute('rowspan')) || (undefined),
+					valign: undefined,
 				}
 
 				if (['left', 'center', 'right', 'start', 'end'].includes(window.getComputedStyle(cell).getPropertyValue('text-align'))) {
 					const align = window.getComputedStyle(cell).getPropertyValue('text-align').replace('start', 'left').replace('end', 'right')
-					cellOpts.align = align === 'center' ? 'center' : align === 'left' ? 'left' : align === 'right' ? 'right' : null
+					cellOpts.align = align === 'center' ? 'center' : align === 'left' ? 'left' : align === 'right' ? 'right' : (undefined)
 				}
 				if (['top', 'middle', 'bottom'].includes(window.getComputedStyle(cell).getPropertyValue('vertical-align'))) {
 					const valign = window.getComputedStyle(cell).getPropertyValue('vertical-align')
-					cellOpts.valign = valign === 'top' ? 'top' : valign === 'middle' ? 'middle' : valign === 'bottom' ? 'bottom' : null
+					cellOpts.valign = valign === 'top' ? 'top' : valign === 'middle' ? 'middle' : valign === 'bottom' ? 'bottom' : (undefined)
 				}
 
 				// C: Add padding [margin] (if any)
 				// NOTE: Margins translate: px->pt 1:1 (e.g.: a 20px padded cell looks the same in PPTX as 20pt Text Inset/Padding)
 				if (window.getComputedStyle(cell).getPropertyValue('padding-left')) {
-					cellOpts.margin = [0, 0, 0, 0]
+					const margin: [number, number, number, number] = [0, 0, 0, 0]
+					cellOpts.margin = margin
 					const sidesPad = ['padding-top', 'padding-right', 'padding-bottom', 'padding-left']
 					sidesPad.forEach((val, idxs) => {
-						cellOpts.margin[idxs] = Math.round(Number(window.getComputedStyle(cell).getPropertyValue(val).replace(/\D/gi, '')))
+						margin[idxs] = Math.round(Number(window.getComputedStyle(cell).getPropertyValue(val).replace(/\D/gi, '')))
 					})
 				}
 
@@ -661,7 +666,9 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 					window.getComputedStyle(cell).getPropertyValue('border-bottom-width') ||
 					window.getComputedStyle(cell).getPropertyValue('border-left-width')
 				) {
-					cellOpts.border = [null, null, null, null]
+					// all four sides are assigned unconditionally in the loop below
+					const border: [BorderProps, BorderProps, BorderProps, BorderProps] = [{}, {}, {}, {}]
+					cellOpts.border = border
 					const sidesBor = ['top', 'right', 'bottom', 'left']
 					sidesBor.forEach((val, idxb) => {
 						const intBorderW = Math.round(
@@ -672,7 +679,7 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 									.replace('px', '')
 							)
 						)
-						let arrRGB = []
+						let arrRGB: string[] = []
 						arrRGB = window
 							.getComputedStyle(cell)
 							.getPropertyValue('border-' + val + '-color')
@@ -682,7 +689,7 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 							.replace(')', '')
 							.split(',')
 						const strBorderC = rgbToHex(Number(arrRGB[0]), Number(arrRGB[1]), Number(arrRGB[2]))
-						cellOpts.border[idxb] = { pt: intBorderW, color: strBorderC }
+						border[idxb] = { pt: intBorderW, color: strBorderC }
 					})
 				}
 
@@ -712,11 +719,11 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 
 	// STEP 5: Break table into Slides as needed
 	// Pass head-rows as there is an option to add to each table and the parse func needs this data to fulfill that option
-	opts._arrObjTabHeadRows = arrObjTabHeadRows || null
+	opts._arrObjTabHeadRows = arrObjTabHeadRows || (undefined)
 	opts.colW = arrColW
 	getSlidesForTableRows([...arrObjTabHeadRows, ...arrObjTabBodyRows, ...arrObjTabFootRows], opts, pptx.presLayout, masterSlide).forEach((slide, idxTr) => {
 		// A: Create new Slide
-		const newSlide = pptx.addSlide({ masterName: opts.masterSlideName || null })
+		const newSlide = pptx.addSlide({ masterName: opts.masterSlideName || (undefined) })
 
 		// B: DESIGN: Reset `y` to startY or margin after first Slide (ISSUE#43, ISSUE#47, ISSUE#48)
 		if (idxTr === 0) opts.y = opts.y || arrInchMargins[0]

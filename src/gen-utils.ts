@@ -2,8 +2,8 @@
  * PptxGenJS: Utility Methods
  */
 
-import { EMU, REGEX_HEX_COLOR, DEF_FONT_COLOR, ONEPT, SchemeColor, SCHEME_COLORS } from './core-enums'
-import { PresLayout, TextGlowProps, PresSlide, ShapeFillProps, Color, ShapeLineProps, Coord, ShadowProps } from './core-interfaces'
+import { EMU, REGEX_HEX_COLOR, DEF_FONT_COLOR, DEF_TEXT_GLOW, ONEPT, SchemeColor, SCHEME_COLORS } from './core-enums'
+import { PresLayout, TextGlowProps, PresSlide, SlideLayout, ShapeFillProps, Color, ShapeLineProps, Coord, ShadowProps } from './core-interfaces'
 
 /**
  * Translates any type of `x`/`y`/`w`/`h` prop to EMU
@@ -16,7 +16,7 @@ import { PresLayout, TextGlowProps, PresSlide, ShapeFillProps, Color, ShapeLineP
  * @param {PresLayout} layout - presentation layout
  * @returns {number} calculated size
  */
-export function getSmartParseNumber (size: Coord, xyDir: 'X' | 'Y', layout: PresLayout): number {
+export function getSmartParseNumber (size: Coord | undefined, xyDir: 'X' | 'Y', layout: PresLayout): number {
 	// FIRST: Convert string numeric value if reqd
 	if (typeof size === 'string' && !isNaN(Number(size))) size = Number(size)
 
@@ -49,7 +49,9 @@ export function getSmartParseNumber (size: Coord, xyDir: 'X' | 'Y', layout: Pres
  */
 export function getUuid (uuidFormat: string): string {
 	return uuidFormat.replace(/[xy]/g, function (c) {
-		const r = (Math.random() * 16) | 0
+		// Web Crypto API - a global in browsers and in Node >=20 (this package's engines floor).
+		// Mask the low nibble (0-15) - an unbiased reduction (no modulo) for a hex digit.
+		const r = globalThis.crypto.getRandomValues(new Uint8Array(1))[0] & 0x0f
 		const v = c === 'x' ? r : (r & 0x3) | 0x8
 		return v.toString(16)
 	})
@@ -60,7 +62,7 @@ export function getUuid (uuidFormat: string): string {
  * @param {string} xml - XML string to encode
  * @returns {string} escaped XML
  */
-export function encodeXmlEntities (xml: string): string {
+export function encodeXmlEntities (xml: string | undefined): string {
 	// NOTE: Dont use short-circuit eval here as value c/b "0" (zero) etc.!
 	if (typeof xml === 'undefined' || xml == null) return ''
 	return xml.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')
@@ -84,7 +86,7 @@ export function inch2Emu (inches: number | string): number {
  * @param {number|string} pt
  * @returns {number} value in points (`ONEPT`)
  */
-export function valToPts (pt: number | string): number {
+export function valToPts (pt: number | string | undefined): number {
 	const points = Number(pt) || 0
 	return isNaN(points) ? 0 : Math.round(points * ONEPT)
 }
@@ -94,7 +96,7 @@ export function valToPts (pt: number | string): number {
  * @param {number} d degrees
  * @returns {number} calculated `rot` value
  */
-export function convertRotationDegrees (d: number): number {
+export function convertRotationDegrees (d: number | undefined): number {
 	d = d || 0
 	return Math.round((d > 360 ? d - 360 : d) * 60000)
 }
@@ -133,7 +135,7 @@ export function rgbToHex (r: number, g: number, b: number): string {
  * @param {string} innerElements - additional elements that adjust the color and are enclosed by the color element
  * @returns {string} XML string
  */
-export function createColorElement (colorStr: string | SCHEME_COLORS, innerElements?: string): string {
+export function createColorElement (colorStr: string | SCHEME_COLORS | undefined, innerElements?: string): string {
 	let colorVal = (colorStr || '').replace('#', '')
 
 	if (
@@ -166,12 +168,29 @@ export function createColorElement (colorStr: string | SCHEME_COLORS, innerEleme
  * @see http://officeopenxml.com/drwSp-effects.php
  * { size: 8, color: 'FFFFFF', opacity: 0.75 };
  */
-export function createGlowElement (options: TextGlowProps, defaults: TextGlowProps): string {
+/**
+ * Nominal ("coloured") brand for resolved glow options. The symbol is module-private and unexported,
+ * so `ResolvedGlowProps` values can ONLY be produced by `resolveGlowOptions` below - a hand-built
+ * object (even a full `Required<TextGlowProps>`) is not assignable. This statically guarantees that
+ * anything reaching `createGlowElement` has passed through the defaults-merge boundary.
+ */
+const glowBrand: unique symbol = Symbol('resolvedGlow')
+export type ResolvedGlowProps = Required<TextGlowProps> & { readonly [glowBrand]: boolean }
+
+/**
+ * Resolve boundary: merge user glow options over the documented defaults and brand the result. The
+ * only constructor of `ResolvedGlowProps` (no cast - the brand is added by this factory).
+ */
+export function resolveGlowOptions (options: TextGlowProps | undefined): ResolvedGlowProps | undefined {
+	if (!options) return undefined
+	return { ...DEF_TEXT_GLOW, ...options, [glowBrand]: true }
+}
+
+export function createGlowElement (glow: ResolvedGlowProps): string {
 	let strXml = ''
-	const opts = { ...defaults, ...options }
-	const size = Math.round(opts.size * ONEPT)
-	const color = opts.color ?? ''
-	const opacity = Math.round((opts.opacity ?? 0) * 100000)
+	const size = Math.round(glow.size * ONEPT)
+	const color = glow.color
+	const opacity = Math.round(glow.opacity * 100000)
 
 	strXml += `<a:glow rad="${size}">`
 	strXml += createColorElement(color, `<a:alpha val="${opacity}"/>`)
@@ -185,7 +204,7 @@ export function createGlowElement (options: TextGlowProps, defaults: TextGlowPro
  * @param {Color | ShapeFillProps | ShapeLineProps} props fill props
  * @returns XML string
  */
-export function genXmlColorSelection (props: Color | ShapeFillProps | ShapeLineProps): string {
+export function genXmlColorSelection (props: Color | ShapeFillProps | ShapeLineProps | undefined): string {
 	let fillType = 'solid'
 	let colorVal = ''
 	let internalElements = ''
@@ -218,7 +237,7 @@ export function genXmlColorSelection (props: Color | ShapeFillProps | ShapeLineP
  * @param {PresSlide} target - the slide to use
  * @returns {number} count of all current rels plus 1 for the caller to use as its "rId"
  */
-export function getNewRelId (target: PresSlide): number {
+export function getNewRelId (target: PresSlide | SlideLayout): number {
 	return target._rels.length + target._relsChart.length + target._relsMedia.length + 1
 }
 

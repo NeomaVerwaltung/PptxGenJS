@@ -37,9 +37,10 @@ export function encodeSlideMediaRels(layout: PresSlide | SlideLayout): Array<Pro
 	// B: PERF: Mark dupes (same `path`) to avoid loading the same media over-and-over!
 	const unqPaths: string[] = []
 	candidateRels.forEach(rel => {
-		if (!unqPaths.includes(rel.path)) {
+		const relPath = rel.path ?? ''
+		if (!unqPaths.includes(relPath)) {
 			rel.isDuplicate = false
-			unqPaths.push(rel.path)
+			unqPaths.push(relPath)
 		} else {
 			rel.isDuplicate = true
 		}
@@ -53,10 +54,12 @@ export function encodeSlideMediaRels(layout: PresSlide | SlideLayout): Array<Pro
 				(async () => {
 					if (!https) await loadNodeDeps()
 
+					const relPath = rel.path ?? ''
+
 					// ────────────  NODE LOCAL FILE  ────────────
-					if (isNode && fs && rel.path.indexOf('http') !== 0) {
+					if (isNode && fs && relPath.indexOf('http') !== 0) {
 						try {
-							const bitmap = fs.readFileSync(rel.path)
+							const bitmap = fs.readFileSync(relPath)
 							rel.data = Buffer.from(bitmap).toString('base64')
 							candidateRels
 								.filter(dupe => dupe.isDuplicate && dupe.path === rel.path)
@@ -72,9 +75,10 @@ export function encodeSlideMediaRels(layout: PresSlide | SlideLayout): Array<Pro
 					}
 
 					// ────────────  NODE HTTP(S)  ────────────
-					if (isNode && https && rel.path.startsWith('http')) {
+					if (isNode && https && relPath.startsWith('http')) {
+						const httpsMod = https
 						return await new Promise<string>((resolve, reject) => {
-							https.get(rel.path, res => {
+							httpsMod.get(relPath, res => {
 								let raw = ''
 								res.setEncoding('binary') // IMPORTANT: Only binary encoding works
 								res.on('data', chunk => (raw += chunk))
@@ -103,7 +107,7 @@ export function encodeSlideMediaRels(layout: PresSlide | SlideLayout): Array<Pro
 						xhr.onload = () => {
 							const reader = new FileReader()
 							reader.onloadend = () => {
-								rel.data = reader.result as string
+								if (typeof reader.result === 'string') rel.data = reader.result
 								candidateRels
 									.filter(dupe => dupe.isDuplicate && dupe.path === rel.path)
 									.forEach(dupe => (dupe.data = rel.data))
@@ -125,7 +129,7 @@ export function encodeSlideMediaRels(layout: PresSlide | SlideLayout): Array<Pro
 							reject(new Error(`ERROR! Unable to load image (xhr.onerror): ${rel.path}`))
 						}
 						// B: execute request
-						xhr.open('GET', rel.path)
+						xhr.open('GET', relPath)
 						xhr.responseType = 'blob'
 						xhr.send()
 					})
@@ -164,14 +168,24 @@ async function createSvgPngPreview(rel: ISlideRelMedia): Promise<string> {
 		// A: Create
 		const image = new Image()
 
+		// Shared error handler (also wired to `image.onerror`); the reason string is informational only
+		const handleError = (): void => {
+			rel.data = IMG_BROKEN
+			reject(new Error(`ERROR! Unable to load image (image.onerror): ${rel.path}`))
+		}
+
 		// B: Set onload event
 		image.onload = () => {
 			// First: Check for any errors: This is the best method (try/catch wont work, etc.)
 			if (image.width + image.height === 0) {
-				image.onerror('h/w=0')
+				handleError()
 			}
-			let canvas: HTMLCanvasElement = document.createElement('CANVAS') as HTMLCanvasElement
+			const canvas = document.createElement('canvas')
 			const ctx = canvas.getContext('2d')
+			if (!ctx) {
+				handleError()
+				return
+			}
 			canvas.width = image.width
 			canvas.height = image.height
 			ctx.drawImage(image, 0, 0)
@@ -181,56 +195,13 @@ async function createSvgPngPreview(rel: ISlideRelMedia): Promise<string> {
 			try {
 				rel.data = canvas.toDataURL(rel.type)
 				resolve('done')
-			} catch (ex) {
-				image.onerror(ex.toString())
+			} catch (_ex) {
+				handleError()
 			}
-			canvas = null
 		}
-		image.onerror = () => {
-			rel.data = IMG_BROKEN
-			reject(new Error(`ERROR! Unable to load image (image.onerror): ${rel.path}`))
-		}
+		image.onerror = handleError
 
 		// C: Load image
 		image.src = typeof rel.data === 'string' ? rel.data : IMG_BROKEN
 	})
 }
-
-/**
- * FIXME: TODO: currently unused
- * TODO: Should return a Promise
- */
-/*
-function getSizeFromImage (inImgUrl: string): { width: number, height: number } {
-	const sizeOf = typeof require !== 'undefined' ? require('sizeof') : null // NodeJS
-
-	if (sizeOf) {
-		try {
-			const dimensions = sizeOf(inImgUrl)
-			return { width: dimensions.width, height: dimensions.height }
-		} catch (ex) {
-			console.error('ERROR: sizeOf: Unable to load image: ' + inImgUrl)
-			return { width: 0, height: 0 }
-		}
-	} else if (Image && typeof Image === 'function') {
-		// A: Create
-		const image = new Image()
-
-		// B: Set onload event
-		image.onload = () => {
-			// FIRST: Check for any errors: This is the best method (try/catch wont work, etc.)
-			if (image.width + image.height === 0) {
-				return { width: 0, height: 0 }
-			}
-			const obj = { width: image.width, height: image.height }
-			return obj
-		}
-		image.onerror = () => {
-			console.error(`ERROR: image.onload: Unable to load image: ${inImgUrl}`)
-		}
-
-		// C: Load image
-		image.src = inImgUrl
-	}
-}
-*/
