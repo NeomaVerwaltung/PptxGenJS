@@ -3,7 +3,7 @@
  */
 
 import { EMU, REGEX_HEX_COLOR, DEF_FONT_COLOR, DEF_TEXT_GLOW, ONEPT, SchemeColor, SCHEME_COLORS } from './core-enums'
-import { PresLayout, TextGlowProps, ResolvedGlowProps, PresSlide, SlideLayout, ShapeFillProps, Color, ShapeLineProps, Coord, ShadowProps } from './core-interfaces'
+import { PresLayout, TextGlowProps, PresSlide, SlideLayout, ShapeFillProps, Color, ShapeLineProps, Coord, ShadowProps } from './core-interfaces'
 
 /**
  * Translates any type of `x`/`y`/`w`/`h` prop to EMU
@@ -169,13 +169,21 @@ export function createColorElement (colorStr: string | SCHEME_COLORS | undefined
  * { size: 8, color: 'FFFFFF', opacity: 0.75 };
  */
 /**
- * Resolve boundary: merge user glow options over the documented defaults, producing the internal
- * `ResolvedGlowProps` (every field present). The only constructor of `ResolvedGlowProps`, so
- * `createGlowElement` is statically guaranteed to receive fully-defaulted data.
+ * Nominal ("coloured") brand for resolved glow options. The symbol is module-private and unexported,
+ * so `ResolvedGlowProps` values can ONLY be produced by `resolveGlowOptions` below - a hand-built
+ * object (even a full `Required<TextGlowProps>`) is not assignable. This statically guarantees that
+ * anything reaching `createGlowElement` has passed through the defaults-merge boundary.
+ */
+const glowBrand: unique symbol = Symbol('resolvedGlow')
+export type ResolvedGlowProps = Required<TextGlowProps> & { readonly [glowBrand]: boolean }
+
+/**
+ * Resolve boundary: merge user glow options over the documented defaults and brand the result. The
+ * only constructor of `ResolvedGlowProps` (no cast - the brand is added by this factory).
  */
 export function resolveGlowOptions (options: TextGlowProps | undefined): ResolvedGlowProps | undefined {
 	if (!options) return undefined
-	return { ...DEF_TEXT_GLOW, ...options }
+	return { ...DEF_TEXT_GLOW, ...options, [glowBrand]: true }
 }
 
 export function createGlowElement (glow: ResolvedGlowProps): string {

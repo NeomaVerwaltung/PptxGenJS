@@ -19,7 +19,7 @@ import {
 	LETTERS,
 	ONEPT,
 } from './core-enums'
-import { IChartOptsLib, ISlideRelChart, ShadowProps, ResolvedShadowProps, IChartPropsTitle, OptsChartGridLine, IOptsChartData, ChartLineCap } from './core-interfaces'
+import { IChartOptsLib, ISlideRelChart, ShadowProps, IChartPropsTitle, OptsChartGridLine, IOptsChartData, ChartLineCap } from './core-interfaces'
 import { createColorElement, genXmlColorSelection, convertRotationDegrees, encodeXmlEntities, getUuid, valToPts } from './gen-utils'
 import JSZip from 'jszip'
 
@@ -2002,10 +2002,18 @@ function getExcelColName (colIndex: number): string {
  * @return {string} XML
  */
 /**
- * Resolve boundary: merge user shadow options over the documented defaults, producing the internal
- * `ResolvedShadowProps` (every field present). Returns undefined for absent/invalid input. This is the
- * ONLY way to construct a `ResolvedShadowProps`, so `createShadowElement` is statically guaranteed to
- * receive fully-defaulted data.
+ * Nominal ("coloured") brand for resolved shadow options. The symbol is module-private and unexported,
+ * so `ResolvedShadowProps` values can ONLY be produced by `resolveShadowOptions` below - a hand-built
+ * `Required<ShadowProps>` is not assignable. This statically guarantees anything reaching
+ * `createShadowElement` has passed through the defaults-merge boundary.
+ */
+const shadowBrand: unique symbol = Symbol('resolvedShadow')
+type ResolvedShadowProps = Required<ShadowProps> & { readonly [shadowBrand]: boolean }
+
+/**
+ * Resolve boundary: merge user shadow options over the documented defaults and brand the result.
+ * Returns undefined for absent/invalid input. The only constructor of `ResolvedShadowProps` (no cast -
+ * the brand is added by this factory).
  */
 function resolveShadowOptions (options: ShadowProps | undefined): ResolvedShadowProps | undefined {
 	if (!options) return undefined
@@ -2013,7 +2021,7 @@ function resolveShadowOptions (options: ShadowProps | undefined): ResolvedShadow
 		console.warn('`shadow` options must be an object. Ex: `{shadow: {type:\'none\'}}`')
 		return undefined
 	}
-	return { ...DEF_SHAPE_SHADOW, ...options }
+	return { ...DEF_SHAPE_SHADOW, ...options, [shadowBrand]: true }
 }
 
 function createShadowElement (shadow: ResolvedShadowProps | undefined): string {

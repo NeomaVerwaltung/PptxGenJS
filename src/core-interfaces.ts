@@ -171,19 +171,6 @@ export interface ShadowProps {
 	 */
 	rotateWithShape?: boolean
 }
-/**
- * Internal ("resolved") option types.
- *
- * These are distinct from the public input interfaces above: a public interface (e.g. `ShadowProps`)
- * is permissive - most fields are optional so callers can omit them. A `Resolved*` type is what those
- * options look like AFTER defaults have been merged in: every field is present. Emitter functions accept
- * only the resolved type, so the compiler statically guarantees defaults were applied before XML is
- * generated - a value can only reach an emitter by passing through its `resolve*` boundary. There is no
- * runtime brand (that would require a cast); the guarantee is structural (`Required<T>`) plus the fact
- * that only the resolve helpers construct these values.
- */
-export type ResolvedShadowProps = Required<ShadowProps>
-export type ResolvedGlowProps = Required<TextGlowProps>
 // used by: shape, table, text
 export interface ShapeFillProps {
 	/**
