@@ -7,7 +7,7 @@
 
 PptxGenJS is a JavaScript library for generating PowerPoint presentations programmatically. It runs in Node.js, browsers, and bundler-based environments (React, Angular, Vite, Webpack, Electron), and requires no PowerPoint installation or license.
 
-This repository contains the NEOMA-maintained distribution, published as `@neoma/pptxgenjs` and maintained by [NEOMA GmbH](https://github.com/NeomaVerwaltung).
+This repository contains the NEOMA-maintained distribution, published as `@neo-ma/pptxgenjs` and maintained by [NEOMA GmbH](https://github.com/NeomaVerwaltung).
 
 ## Overview
 
@@ -56,11 +56,11 @@ The NEOMA distribution is hardened for production use:
 ## Installation
 
 ```bash
-npm install @neoma/pptxgenjs
+npm install @neo-ma/pptxgenjs
 ```
 
 ```bash
-yarn add @neoma/pptxgenjs
+yarn add @neo-ma/pptxgenjs
 ```
 
 ## Compatibility
@@ -87,7 +87,7 @@ A presentation is created in four steps: instantiate, add a slide, add content, 
 ### Angular/React, ES6, TypeScript
 
 ```typescript
-import pptxgen from "@neoma/pptxgenjs";
+import pptxgen from "@neo-ma/pptxgenjs";
 
 // 1. Create a new Presentation
 let pres = new pptxgen();

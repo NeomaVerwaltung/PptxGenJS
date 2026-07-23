@@ -2,9 +2,9 @@
 title: Migrating from pptxgenjs
 ---
 
-# Migrating from `pptxgenjs` to `@neoma/pptxgenjs`
+# Migrating from `pptxgenjs` to `@neo-ma/pptxgenjs`
 
-`@neoma/pptxgenjs` is a **drop-in replacement** for the original `pptxgenjs` package. The public API,
+`@neo-ma/pptxgenjs` is a **drop-in replacement** for the original `pptxgenjs` package. The public API,
 the default export, and the `PptxGenJS` class are unchanged — the only required change is the package
 name in your install command and imports.
 
@@ -12,22 +12,22 @@ name in your install command and imports.
 
 ```bash
 npm uninstall pptxgenjs
-npm install @neoma/pptxgenjs
+npm install @neo-ma/pptxgenjs
 ```
 
 Or with yarn:
 
 ```bash
 yarn remove pptxgenjs
-yarn add @neoma/pptxgenjs
+yarn add @neo-ma/pptxgenjs
 ```
 
 ::: tip Private registry
-If your organization hosts `@neoma/pptxgenjs` on a private/internal npm registry, point the `@neoma`
+If your organization hosts `@neo-ma/pptxgenjs` on a private/internal npm registry, point the `@neo-ma`
 scope at it once in an `.npmrc` file:
 
 ```ini
-@neoma:registry=https://your-registry.example.com/
+@neo-ma:registry=https://your-registry.example.com/
 ```
 :::
 
@@ -37,14 +37,14 @@ The import specifier is the only code change. The imported value is identical.
 
 ```diff
 - import pptxgen from "pptxgenjs"
-+ import pptxgen from "@neoma/pptxgenjs"
++ import pptxgen from "@neo-ma/pptxgenjs"
 ```
 
 CommonJS:
 
 ```diff
 - const pptxgen = require("pptxgenjs")
-+ const pptxgen = require("@neoma/pptxgenjs")
++ const pptxgen = require("@neo-ma/pptxgenjs")
 ```
 
 Everything after the import stays the same:
@@ -56,7 +56,7 @@ slide.addText("Unchanged API", { x: 1, y: 1, fontSize: 24 })
 await pres.writeFile({ fileName: "Sample.pptx" })
 ```
 
-A project-wide find-and-replace of `"pptxgenjs"` → `"@neoma/pptxgenjs"` is usually the entire migration.
+A project-wide find-and-replace of `"pptxgenjs"` → `"@neo-ma/pptxgenjs"` is usually the entire migration.
 
 ## 3. Update the browser `<script>` tag
 

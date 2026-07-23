@@ -17,7 +17,7 @@ This document describes the release process for the NEOMA distribution of PptxGe
 4. Build the library: npm scripts > `ship`.
 5. Consolidate new type changes from `src/bld/*.ts` into `types/index.d.ts` and update the version in the header comment.
 6. Inspect the headers of the generated `dist/*.js` files.
-7. Update the version in `demos/node/package.json` (its `@neoma/pptxgenjs` dependency is `file:../..`; no dependency bump is required).
+7. Update the version in `demos/node/package.json` (its `@neo-ma/pptxgenjs` dependency is `file:../..`; no dependency bump is required).
 
 ## Pre-release testing
 

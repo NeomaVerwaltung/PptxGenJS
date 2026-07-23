@@ -7,11 +7,11 @@ Install **PptxGenJS** using one of the following methods.
 ### Quick Install (Node-based)
 
 ```bash
-npm install @neoma/pptxgenjs
+npm install @neo-ma/pptxgenjs
 ```
 
 ```bash
-yarn add @neoma/pptxgenjs
+yarn add @neo-ma/pptxgenjs
 ```
 
 ### CDN (Browser Usage)

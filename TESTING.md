@@ -50,11 +50,11 @@ No Vite application is checked in, as a pinned SPA becomes outdated between rele
 npm create vite@latest pptxgenjs-vite-test -- --template react-ts
 cd pptxgenjs-vite-test
 npm install
-npm install /path/to/this/repo   # installs @neoma/pptxgenjs from the local checkout
+npm install /path/to/this/repo   # installs @neo-ma/pptxgenjs from the local checkout
 npm run dev
 ```
 
-1. In a component, `import pptxgen from "@neoma/pptxgenjs"` and export a test slide.
+1. In a component, `import pptxgen from "@neo-ma/pptxgenjs"` and export a test slide.
 2. Verify that IntelliSense autocompletes, for example, `pptxgen.ChartType.` (types resolve correctly).
 3. Export a PowerPoint file and confirm it renders correctly.
 4. Delete the scaffold when finished; nothing is retained.

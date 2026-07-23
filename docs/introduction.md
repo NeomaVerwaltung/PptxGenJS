@@ -8,7 +8,7 @@ title: Introduction
 ![GitHub License](https://img.shields.io/github/license/NeomaVerwaltung/PptxGenJS?style=flat-square)
 
 **PptxGenJS generates PowerPoint (`.pptx`) files from JavaScript** — in Node, the browser, and every
-common framework. This is `@neoma/pptxgenjs`, the NEOMA-maintained fork with a modern build and typed API.
+common framework. This is `@neo-ma/pptxgenjs`, the NEOMA-maintained fork with a modern build and typed API.
 
 If you are migrating from the original `pptxgenjs` package, see the [Migration guide](./migration) — it is
 a drop-in replacement.
@@ -40,7 +40,7 @@ This is the complete API surface. The remaining documentation describes the opti
 ### Hello World
 
 ```typescript
-import pptxgen from "@neoma/pptxgenjs"
+import pptxgen from "@neo-ma/pptxgenjs"
 
 const pres = new pptxgen()
 const slide = pres.addSlide()

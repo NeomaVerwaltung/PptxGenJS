@@ -15,7 +15,7 @@ Import the default export. This is the recommended path for application code —
 your bundler picks the correct build automatically.
 
 ```typescript
-import pptxgen from "@neoma/pptxgenjs"
+import pptxgen from "@neo-ma/pptxgenjs"
 
 const pres = new pptxgen()
 ```
