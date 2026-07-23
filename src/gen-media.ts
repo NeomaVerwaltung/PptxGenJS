@@ -15,12 +15,13 @@ export function encodeSlideMediaRels(layout: PresSlide | SlideLayout): Array<Pro
 	const isNode = typeof process !== 'undefined' && !!process.versions?.node && process.release?.name === 'node'
 	// These will be filled only when we’re in Node
 	let fs: typeof import('node:fs') | undefined
+	let http: typeof import('node:http') | undefined
 	let https: typeof import('node:https') | undefined
 
 	// STEP 2: Lazy-load Node built-ins if needed
 	const loadNodeDeps = isNode
 		? async () => {
-			; ({ default: fs } = await import('node:fs')); ({ default: https } = await import('node:https'))
+			; ({ default: fs } = await import('node:fs')); ({ default: http } = await import('node:http')); ({ default: https } = await import('node:https'))
 		}
 		: async () => { }
 	// Immediately start it when we know we’re in Node
@@ -75,10 +76,22 @@ export function encodeSlideMediaRels(layout: PresSlide | SlideLayout): Array<Pro
 					}
 
 					// ────────────  NODE HTTP(S)  ────────────
-					if (isNode && https && relPath.startsWith('http')) {
-						const httpsMod = https
+					if (isNode && https && http && relPath.startsWith('http')) {
+						const reqMod = relPath.startsWith('https:') ? https : http
 						return await new Promise<string>((resolve, reject) => {
-							httpsMod.get(relPath, res => {
+							const markBroken = (err: Error): void => {
+								rel.data = IMG_BROKEN
+								candidateRels
+									.filter(dupe => dupe.isDuplicate && dupe.path === rel.path)
+									.forEach(dupe => (dupe.data = rel.data))
+								reject(err)
+							}
+							const req = reqMod.get(relPath, res => {
+								if (!res.statusCode || res.statusCode < 200 || res.statusCode > 299) {
+									res.resume() // drain so the socket is freed
+									markBroken(new Error(`ERROR! HTTP status ${res.statusCode} loading image: ${rel.path}`))
+									return
+								}
 								let raw = ''
 								res.setEncoding('binary') // IMPORTANT: Only binary encoding works
 								res.on('data', chunk => (raw += chunk))
@@ -89,14 +102,10 @@ export function encodeSlideMediaRels(layout: PresSlide | SlideLayout): Array<Pro
 										.forEach(dupe => (dupe.data = rel.data))
 									resolve('done')
 								})
-								res.on('error', () => {
-									rel.data = IMG_BROKEN
-									candidateRels
-										.filter(dupe => dupe.isDuplicate && dupe.path === rel.path)
-										.forEach(dupe => (dupe.data = rel.data))
-									reject(new Error(`ERROR! Unable to load image (https.get): ${rel.path}`))
-								})
+								res.on('error', () => markBroken(new Error(`ERROR! Unable to load image (response error): ${rel.path}`)))
 							})
+							// Without this listener a DNS/connection/TLS failure is an uncaught 'error' event that kills the process
+							req.on('error', err => markBroken(new Error(`ERROR! Unable to load image (request error): ${rel.path}\n${String(err)}`)))
 						})
 					}
 
@@ -105,6 +114,15 @@ export function encodeSlideMediaRels(layout: PresSlide | SlideLayout): Array<Pro
 						// A: build request
 						const xhr = new XMLHttpRequest()
 						xhr.onload = () => {
+							// status 0 = non-HTTP schemes (file://); anything outside 2xx is an error page, not image bytes
+							if (xhr.status !== 0 && (xhr.status < 200 || xhr.status > 299)) {
+								rel.data = IMG_BROKEN
+								candidateRels
+									.filter(dupe => dupe.isDuplicate && dupe.path === rel.path)
+									.forEach(dupe => (dupe.data = rel.data))
+								reject(new Error(`ERROR! HTTP status ${xhr.status} loading image: ${rel.path}`))
+								return
+							}
 							const reader = new FileReader()
 							reader.onloadend = () => {
 								if (typeof reader.result === 'string') rel.data = reader.result
@@ -143,16 +161,14 @@ export function encodeSlideMediaRels(layout: PresSlide | SlideLayout): Array<Pro
 	layout._relsMedia
 		.filter(rel => rel.isSvgPng && rel.data)
 		.forEach(rel => {
-			(async () => {
-				if (isNode && !fs) await loadNodeDeps()
-				if (isNode && fs) {
-					// console.log('Sorry, SVG is not supported in Node (more info: https://github.com/gitbrent/PptxGenJS/issues/401)')
-					rel.data = IMG_BROKEN
-					imageProms.push(Promise.resolve('done'))
-				} else {
-					imageProms.push(createSvgPngPreview(rel))
-				}
-			})()
+			// Must push synchronously: the caller copies this array as soon as we return, so an async push would be lost (race)
+			if (isNode) {
+				// SVG preview rendering needs a DOM canvas; not supported in Node (https://github.com/gitbrent/PptxGenJS/issues/401)
+				rel.data = IMG_BROKEN
+				imageProms.push(Promise.resolve('done'))
+			} else {
+				imageProms.push(createSvgPngPreview(rel))
+			}
 		})
 
 	return imageProms

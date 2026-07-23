@@ -173,7 +173,8 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 		type.forEach(obj => {
 			tmpData = tmpData.concat(obj.data)
 		})
-		tmpOpt = data || opt
+		// Multi-type back-compat: options may arrive as the 2nd arg (in `data`'s position) - but never silently discard a real 3rd-arg `opt`
+		tmpOpt = data && !Array.isArray(data) ? (data as unknown as IChartOptsLib) : opt
 	} else {
 		tmpData = data
 		tmpOpt = opt
@@ -282,7 +283,7 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 	correctGridLineOptions(options.catGridLine)
 	correctGridLineOptions(options.valGridLine)
 	correctGridLineOptions(options.serGridLine)
-	if (options.shadow) correctShadowOptions(options.shadow)
+	if (options.shadow) options.shadow = correctShadowOptions(options.shadow)
 
 	// C: Options: plotArea
 	options.showDataTable = options.showDataTable || !options.showDataTable ? options.showDataTable : false
@@ -505,6 +506,7 @@ export function addImageDefinition(target: PresSlide | SlideLayout, opt: ImagePr
 			Target: `../media/image-${target._slideNum}-${target._relsMedia.length + 1}.${strImgExtn}`,
 		})
 		newObject.imageRid = imageRelId + 1
+		imageRelId++ // SVG consumed two rIds - keep the counter on the last used one so a hyperlink rel below gets a fresh rId
 	} else {
 		// PERF: Duplicate media should reuse existing `Target` value and not create an additional copy
 		const dupeItem = target._relsMedia.filter(item => item.path && item.path === strImagePath && item.type === 'image/' + strImgExtn && !item.isDuplicate)[0]
@@ -531,7 +533,7 @@ export function addImageDefinition(target: PresSlide | SlideLayout, opt: ImagePr
 				type: SLIDE_OBJECT_TYPES.hyperlink,
 				data: objHyperlink.slide ? 'slide' : 'dummy',
 				rId: imageRelId,
-				Target: objHyperlink.url || objHyperlink.slide?.toString() || '',
+				Target: objHyperlink.url ? encodeXmlEntities(objHyperlink.url) : objHyperlink.slide?.toString() || '',
 			})
 
 			objHyperlink._rId = imageRelId
@@ -1126,7 +1128,7 @@ export function addTextDefinition(target: PresSlide | SlideLayout, text: TextPro
 		}
 
 		// STEP 3: ROBUST: Set rational values for some shadow props if needed
-		if (itemOpts.shadow) correctShadowOptions(itemOpts.shadow)
+		if (itemOpts.shadow) itemOpts.shadow = correctShadowOptions(itemOpts.shadow)
 
 		return itemOpts
 	}

@@ -251,6 +251,9 @@ export function correctShadowOptions (ShadowProps: ShadowProps): ShadowProps | u
 		return
 	}
 
+	// Work on a copy - never mutate the caller's options object
+	ShadowProps = { ...ShadowProps }
+
 	// OPT: `type`
 	if (ShadowProps.type !== 'outer' && ShadowProps.type !== 'inner' && ShadowProps.type !== 'none') {
 		console.warn('Warning: shadow.type options are `outer`, `inner` or `none`.')

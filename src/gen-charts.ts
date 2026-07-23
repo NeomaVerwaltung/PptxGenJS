@@ -208,7 +208,7 @@ export async function createExcelWorksheet (chartObject: ISlideRelChart, zip: JS
 					if (idx === 0) {
 						strTableXml += `<tableColumn id="${idx + 1}" name="X-Values"/>`
 					} else {
-						strTableXml += `<tableColumn id="${idx + idxColLtr}" name="${obj.name}"/>`
+						strTableXml += `<tableColumn id="${idx + idxColLtr}" name="${encodeXmlEntities(obj.name)}"/>`
 						idxColLtr++
 						strTableXml += `<tableColumn id="${idx + idxColLtr}" name="Size${idx}"/>`
 					}
@@ -220,7 +220,7 @@ export async function createExcelWorksheet (chartObject: ISlideRelChart, zip: JS
 					strTableXml += `<tableColumn id="${idx + 1}" name="${idx === 0 ? 'X-Values' : 'Y-Value '}${idx}"/>`
 				})
 			} else {
-				strTableXml += `<table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" id="1" name="Table1" displayName="Table1" ref="A1:${getExcelColName(data.length + firstDataLabels.length)}${firstDataLabels[0].length + 1}'" totalsRowShown="0">`
+				strTableXml += `<table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" id="1" name="Table1" displayName="Table1" ref="A1:${getExcelColName(data.length + firstDataLabels.length)}${firstDataLabels[0].length + 1}" totalsRowShown="0">`
 				strTableXml += `<tableColumns count="${data.length + firstDataLabels.length}">`
 				firstDataLabels.forEach((_labelsGroup, idx) => {
 					strTableXml += `<tableColumn id="${idx + 1}" name="Column${idx + 1}"/>`
@@ -285,11 +285,13 @@ export async function createExcelWorksheet (chartObject: ISlideRelChart, zip: JS
 					// Add Y-Axis 1->N (idy=0 = Xaxis)
 					let idxColLtr = 2
 					for (let idy = 1; idy < data.length; idy++) {
-						// y-value
-						strSheetXml += `<c r="${getExcelColName(idxColLtr)}${idx + 2}"><v>${(data[idy].values ?? [])[idx] || ''}</v></c>`
+						// y-value (preserve 0, a valid value; `|| ''` would blank it - issue #1430)
+						const yVal = (data[idy].values ?? [])[idx]
+						strSheetXml += `<c r="${getExcelColName(idxColLtr)}${idx + 2}"><v>${yVal || yVal === 0 ? yVal : ''}</v></c>`
 						idxColLtr++
 						// y-size
-						strSheetXml += `<c r="${getExcelColName(idxColLtr)}${idx + 2}"><v>${(data[idy].sizes ?? [])[idx] || ''}</v></c>`
+						const ySize = (data[idy].sizes ?? [])[idx]
+						strSheetXml += `<c r="${getExcelColName(idxColLtr)}${idx + 2}"><v>${ySize || ySize === 0 ? ySize : ''}</v></c>`
 						idxColLtr++
 					}
 					strSheetXml += '</row>'
@@ -1876,7 +1878,7 @@ function makeSerAxis (opts: IChartOptsLib, axisId: string, valAxisId: string): s
 	strXml += `  <c:numFmt formatCode="${encodeXmlEntities(opts.serLabelFormatCode) || 'General'}" sourceLinked="0"/>`
 	strXml += '  <c:majorTickMark val="out"/>'
 	strXml += '  <c:minorTickMark val="none"/>'
-	strXml += `  <c:tickLblPos val="${opts.serAxisLabelPos || opts.barDir === 'col' ? 'low' : 'nextTo'}"/>`
+	strXml += `  <c:tickLblPos val="${opts.serAxisLabelPos || (opts.barDir === 'col' ? 'low' : 'nextTo')}"/>`
 	strXml += '  <c:spPr>'
 	strXml += '    <a:ln w="12700" cap="flat">'
 	strXml += !opts.serAxisLineShow ? '<a:noFill/>' : `<a:solidFill>${createColorElement(opts.serAxisLineColor || DEF_CHART_GRIDLINE.color)}</a:solidFill>`

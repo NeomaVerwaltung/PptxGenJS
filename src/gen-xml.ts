@@ -23,7 +23,6 @@ import {
 	ISlideRelMedia,
 	ObjectOptions,
 	PresSlide,
-	ShadowProps,
 	SlideLayout,
 	TableCell,
 	TableCellProps,
@@ -83,7 +82,7 @@ const ImageSizingXml = {
  * @return {string} XML string with <p:cSld> as the root
  */
 function slideObjectToXml (slide: PresSlide | SlideLayout): string {
-	let strSlideXml: string = slide._name ? '<p:cSld name="' + slide._name + '">' : '<p:cSld>'
+	let strSlideXml: string = slide._name ? '<p:cSld name="' + encodeXmlEntities(slide._name) + '">' : '<p:cSld>'
 	let intTableNum = 1
 
 	// STEP 1: Add background color/image (ensure only a single `<p:bg>` tag is created, ex: when master-baskground has both `color` and `path`)
@@ -523,18 +522,19 @@ function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 
 				// EFFECTS > SHADOW: REF: @see http://officeopenxml.com/drwSp-effects.php
 				if (slideItemObj.options.shadow && slideItemObj.options.shadow.type !== 'none') {
-					slideItemObj.options.shadow.type = slideItemObj.options.shadow.type || 'outer'
-					slideItemObj.options.shadow.blur = valToPts(slideItemObj.options.shadow.blur || 8)
-					slideItemObj.options.shadow.offset = valToPts(slideItemObj.options.shadow.offset || 4)
-					slideItemObj.options.shadow.angle = Math.round((slideItemObj.options.shadow.angle || 270) * 60000)
-					slideItemObj.options.shadow.opacity = Math.round((slideItemObj.options.shadow.opacity || 0.75) * 100000)
-					slideItemObj.options.shadow.color = slideItemObj.options.shadow.color || DEF_TEXT_SHADOW.color
+					// Compute into locals - mutating the stored options would re-apply the unit conversion on every export (corrupting the 2nd one)
+					const shadowType = slideItemObj.options.shadow.type || 'outer'
+					const shadowBlur = valToPts(slideItemObj.options.shadow.blur || 8)
+					const shadowOffset = valToPts(slideItemObj.options.shadow.offset || 4)
+					const shadowAngle = Math.round((slideItemObj.options.shadow.angle || 270) * 60000)
+					const shadowOpacity = Math.round((slideItemObj.options.shadow.opacity || 0.75) * 100000)
+					const shadowColor = slideItemObj.options.shadow.color || DEF_TEXT_SHADOW.color
 
 					strSlideXml += '<a:effectLst>'
-					strSlideXml += ` <a:${slideItemObj.options.shadow.type}Shdw ${slideItemObj.options.shadow.type === 'outer' ? 'sx="100000" sy="100000" kx="0" ky="0" algn="bl" rotWithShape="0"' : ''} blurRad="${slideItemObj.options.shadow.blur}" dist="${slideItemObj.options.shadow.offset}" dir="${slideItemObj.options.shadow.angle}">`
-					strSlideXml += ` <a:srgbClr val="${slideItemObj.options.shadow.color}">`
-					strSlideXml += ` <a:alpha val="${slideItemObj.options.shadow.opacity}"/></a:srgbClr>`
-					strSlideXml += ` </a:${slideItemObj.options.shadow.type}Shdw>`
+					strSlideXml += ` <a:${shadowType}Shdw ${shadowType === 'outer' ? 'sx="100000" sy="100000" kx="0" ky="0" algn="bl" rotWithShape="0"' : ''} blurRad="${shadowBlur}" dist="${shadowOffset}" dir="${shadowAngle}">`
+					strSlideXml += ` <a:srgbClr val="${shadowColor}">`
+					strSlideXml += ` <a:alpha val="${shadowOpacity}"/></a:srgbClr>`
+					strSlideXml += ` </a:${shadowType}Shdw>`
 					strSlideXml += '</a:effectLst>'
 				}
 
@@ -618,18 +618,19 @@ function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 
 				// EFFECTS > SHADOW: REF: @see http://officeopenxml.com/drwSp-effects.php
 				if (slideItemObj.options.shadow && slideItemObj.options.shadow.type !== 'none') {
-					slideItemObj.options.shadow.type = slideItemObj.options.shadow.type || 'outer'
-					slideItemObj.options.shadow.blur = valToPts(slideItemObj.options.shadow.blur || 8)
-					slideItemObj.options.shadow.offset = valToPts(slideItemObj.options.shadow.offset || 4)
-					slideItemObj.options.shadow.angle = Math.round((slideItemObj.options.shadow.angle || 270) * 60000)
-					slideItemObj.options.shadow.opacity = Math.round((slideItemObj.options.shadow.opacity || 0.75) * 100000)
-					slideItemObj.options.shadow.color = slideItemObj.options.shadow.color || DEF_TEXT_SHADOW.color
+					// Compute into locals - mutating the stored options would re-apply the unit conversion on every export (corrupting the 2nd one)
+					const shadowType = slideItemObj.options.shadow.type || 'outer'
+					const shadowBlur = valToPts(slideItemObj.options.shadow.blur || 8)
+					const shadowOffset = valToPts(slideItemObj.options.shadow.offset || 4)
+					const shadowAngle = Math.round((slideItemObj.options.shadow.angle || 270) * 60000)
+					const shadowOpacity = Math.round((slideItemObj.options.shadow.opacity || 0.75) * 100000)
+					const shadowColor = slideItemObj.options.shadow.color || DEF_TEXT_SHADOW.color
 
 					strSlideXml += '<a:effectLst>'
-					strSlideXml += `<a:${slideItemObj.options.shadow.type}Shdw ${slideItemObj.options.shadow.type === 'outer' ? 'sx="100000" sy="100000" kx="0" ky="0" algn="bl" rotWithShape="0"' : ''} blurRad="${slideItemObj.options.shadow.blur}" dist="${slideItemObj.options.shadow.offset}" dir="${slideItemObj.options.shadow.angle}">`
-					strSlideXml += `<a:srgbClr val="${slideItemObj.options.shadow.color}">`
-					strSlideXml += `<a:alpha val="${slideItemObj.options.shadow.opacity}"/></a:srgbClr>`
-					strSlideXml += `</a:${slideItemObj.options.shadow.type}Shdw>`
+					strSlideXml += `<a:${shadowType}Shdw ${shadowType === 'outer' ? 'sx="100000" sy="100000" kx="0" ky="0" algn="bl" rotWithShape="0"' : ''} blurRad="${shadowBlur}" dist="${shadowOffset}" dir="${shadowAngle}">`
+					strSlideXml += `<a:srgbClr val="${shadowColor}">`
+					strSlideXml += `<a:alpha val="${shadowOpacity}"/></a:srgbClr>`
+					strSlideXml += `</a:${shadowType}Shdw>`
 					strSlideXml += '</a:effectLst>'
 				}
 				strSlideXml += '</p:spPr>'
@@ -1868,43 +1869,3 @@ export function makeXmlViewProps (): string {
 	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${CRLF}<p:viewPr xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:normalViewPr horzBarState="maximized"><p:restoredLeft sz="15611"/><p:restoredTop sz="94610"/></p:normalViewPr><p:slideViewPr><p:cSldViewPr snapToGrid="0" snapToObjects="1"><p:cViewPr varScale="1"><p:scale><a:sx n="136" d="100"/><a:sy n="136" d="100"/></p:scale><p:origin x="216" y="312"/></p:cViewPr><p:guideLst/></p:cSldViewPr></p:slideViewPr><p:notesTextViewPr><p:cViewPr><p:scale><a:sx n="1" d="1"/><a:sy n="1" d="1"/></p:scale><p:origin x="0" y="0"/></p:cViewPr></p:notesTextViewPr><p:gridSpacing cx="76200" cy="76200"/></p:viewPr>`
 }
 
-/**
- * Checks shadow options passed by user and performs corrections if needed.
- * @param {ShadowProps} shadowProps - shadow options
- */
-export function correctShadowOptions (shadowProps: ShadowProps): void {
-	if (!shadowProps || typeof shadowProps !== 'object') {
-		// console.warn("`shadow` options must be an object. Ex: `{shadow: {type:'none'}}`")
-		return
-	}
-
-	// OPT: `type`
-	if (shadowProps.type !== 'outer' && shadowProps.type !== 'inner' && shadowProps.type !== 'none') {
-		console.warn('Warning: shadow.type options are `outer`, `inner` or `none`.')
-		shadowProps.type = 'outer'
-	}
-
-	// OPT: `angle`
-	if (shadowProps.angle) {
-		// A: REALITY-CHECK
-		if (isNaN(Number(shadowProps.angle)) || shadowProps.angle < 0 || shadowProps.angle > 359) {
-			console.warn('Warning: shadow.angle can only be 0-359')
-			shadowProps.angle = 270
-		}
-
-		// B: ROBUST: Cast any type of valid arg to int: '12', 12.3, etc. -> 12
-		shadowProps.angle = Math.round(Number(shadowProps.angle))
-	}
-
-	// OPT: `opacity`
-	if (shadowProps.opacity) {
-		// A: REALITY-CHECK
-		if (isNaN(Number(shadowProps.opacity)) || shadowProps.opacity < 0 || shadowProps.opacity > 1) {
-			console.warn('Warning: shadow.opacity can only be 0-1')
-			shadowProps.opacity = 0.75
-		}
-
-		// B: ROBUST: Cast any type of valid arg to int: '12', 12.3, etc. -> 12
-		shadowProps.opacity = Number(shadowProps.opacity)
-	}
-}

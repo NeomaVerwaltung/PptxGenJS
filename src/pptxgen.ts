@@ -563,7 +563,7 @@ export default class PptxGenJS implements IPresentationProps {
 					return await zip.generateAsync({ type: 'nodebuffer', compression: props.compression ? 'DEFLATE' : 'STORE' })
 				} else if (props.outputType) {
 					// B: Node [fs]: Output type user option or default
-					return await zip.generateAsync({ type: props.outputType })
+					return await zip.generateAsync({ type: props.outputType, compression: props.compression ? 'DEFLATE' : 'STORE' })
 				} else {
 					// C: Browser: Output blob as app/ms-pptx
 					return await zip.generateAsync({ type: 'blob', compression: props.compression ? 'DEFLATE' : 'STORE' })

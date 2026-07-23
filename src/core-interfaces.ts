@@ -115,7 +115,10 @@ export interface BorderProps {
 }
 // used by: image, object, text,
 export interface HyperlinkProps {
-	_rId: number
+	/**
+	 * INTERNAL - relationship id, assigned by the library (never set this yourself)
+	 */
+	_rId?: number
 	/**
 	 * Slide number to link to
 	 */
