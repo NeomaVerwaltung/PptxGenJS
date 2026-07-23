@@ -379,7 +379,9 @@ export async function createExcelWorksheet (chartObject: ISlideRelChart, zip: JS
 							strSheetXml += '</c>'
 						}
 						for (let idy = 0; idy < data.length; idy++) {
-							strSheetXml += `<c r="${getExcelColName(firstDataLabels.length + idy + 1)}${idx + 2}"><v>${(data[idy].values ?? [])[idx] || ''}</v></c>`
+							// Preserve 0 (a valid value); `|| ''` would blank it out in the embedded worksheet (issue #1430)
+							const cellVal = (data[idy].values ?? [])[idx]
+							strSheetXml += `<c r="${getExcelColName(firstDataLabels.length + idy + 1)}${idx + 2}"><v>${cellVal || cellVal === 0 ? cellVal : ''}</v></c>`
 						}
 						strSheetXml += '</row>'
 					})
@@ -1585,8 +1587,8 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 			strXml += '      <a:lstStyle/>'
 			strXml += '      <a:p>'
 			strXml += '        <a:pPr>'
-			strXml += `          <a:defRPr sz="1800" b="${opts.dataLabelFontBold ? '1' : '0'}" i="${opts.dataLabelFontItalic ? '1' : '0'}" u="none" strike="noStrike">`
-			strXml += '            <a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:latin typeface="Arial"/>'
+			strXml += `          <a:defRPr sz="${Math.round((opts.dataLabelFontSize || DEF_FONT_SIZE) * 100)}" b="${opts.dataLabelFontBold ? '1' : '0'}" i="${opts.dataLabelFontItalic ? '1' : '0'}" u="none" strike="noStrike">`
+			strXml += `            <a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:latin typeface="${opts.dataLabelFontFace || 'Arial'}"/>`
 			strXml += '          </a:defRPr>'
 			strXml += '        </a:pPr>'
 			strXml += '      </a:p>'
@@ -1682,7 +1684,9 @@ function makeCatAxis (opts: IChartOptsLib, axisId: string, valAxisId: string): s
 	}
 	// NOTE: Adding Val Axis Formatting if scatter or bubble charts
 	if (opts._type === CHART_TYPE.SCATTER || opts._type === CHART_TYPE.BUBBLE || opts._type === CHART_TYPE.BUBBLE3D) {
-		strXml += '  <c:numFmt formatCode="' + (opts.valAxisLabelFormatCode ? encodeXmlEntities(opts.valAxisLabelFormatCode) : 'General') + '" sourceLinked="1"/>'
+		// X (cat) axis: honor catLabelFormatCode so x and y can be formatted independently; fall back to valAxisLabelFormatCode for back-compat (issue #1436)
+		const xAxisFmt = opts.catLabelFormatCode || opts.valAxisLabelFormatCode
+		strXml += '  <c:numFmt formatCode="' + (xAxisFmt ? encodeXmlEntities(xAxisFmt) : 'General') + '" sourceLinked="1"/>'
 	} else {
 		strXml += '  <c:numFmt formatCode="' + (encodeXmlEntities(opts.catLabelFormatCode) || 'General') + '" sourceLinked="1"/>'
 	}

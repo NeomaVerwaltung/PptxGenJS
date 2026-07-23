@@ -51,6 +51,9 @@ import {
 import { getSlidesForTableRows } from './gen-tables'
 import { encodeXmlEntities, getNewRelId, getSmartParseNumber, inch2Emu, valToPts, correctShadowOptions } from './gen-utils'
 
+/** Valid OOXML preset-geometry strings (the values of `SHAPE_TYPE`) - anything else corrupts the file. */
+const VALID_SHAPE_PRESETS = new Set<string>(Object.values(SHAPE_TYPE))
+
 /** Type guard: true when `arr` is a flat (1-level) array rather than a nested one. */
 function isFlatStringArray(arr: unknown): arr is string[] {
 	return Array.isArray(arr) && (arr.length === 0 || !Array.isArray(arr[0]))
@@ -695,6 +698,13 @@ export function addShapeDefinition(target: PresSlide | SlideLayout, shapeName: S
 	// Reality check
 	if (!shapeName) throw new Error('Missing/Invalid shape parameter! Example: `addShape(pptxgen.shapes.LINE, {x:1, y:1, w:1, h:1});`')
 
+	// Validate preset geometry: an invalid preset string (e.g. 'oval' instead of the OOXML preset 'ellipse')
+	// is written verbatim as prst="oval", which PowerPoint cannot parse - it silently drops the shape during
+	// repair. TypeScript's `SHAPE_NAME` catches this at compile time; throw for untyped JS callers. (issue #1449)
+	if (typeof shapeName === 'string' && !VALID_SHAPE_PRESETS.has(shapeName)) {
+		throw new Error(`Invalid shape "${shapeName}" - use a \`pptxgen.ShapeType\` value (ex: \`pptxgen.ShapeType.oval\` = 'ellipse')`)
+	}
+
 	// 1: ShapeLineProps defaults
 	const newLineOpts: ShapeLineProps = {
 		type: options.line.type || 'solid',
@@ -1146,7 +1156,8 @@ export function addPlaceholdersToSlideLayouts(slide: PresSlide): void {
 			// NOTE: Check to ensure a placeholder does not already exist on the Slide
 			// They are created when they have been populated with text (ex: `slide.addText('Hi', { placeholder:'title' });`)
 			if (slide._slideObjects.filter(slideObj => slideObj.options && slideObj.options.placeholder === slideLayoutObj.options?.placeholder).length === 0) {
-				addTextDefinition(slide, [{ text: '' }], slideLayoutObj.options ?? {}, false)
+				// Must be a PLACEHOLDER (not TEXT), else PowerPoint shows a duplicate empty "Click to add text" box (issue #1453)
+				addTextDefinition(slide, [{ text: '' }], slideLayoutObj.options ?? {}, true)
 			}
 		}
 	})

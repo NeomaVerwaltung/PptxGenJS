@@ -90,7 +90,8 @@ function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 	if (slide._bkgdImgRid) {
 		strSlideXml += `<p:bg><p:bgPr><a:blipFill dpi="0" rotWithShape="1"><a:blip r:embed="rId${slide._bkgdImgRid}"><a:lum/></a:blip><a:srcRect/><a:stretch><a:fillRect/></a:stretch></a:blipFill><a:effectLst/></p:bgPr></p:bg>`
 	} else if (slide.background?.color) {
-		strSlideXml += `<p:bg><p:bgPr>${genXmlColorSelection(slide.background)}</p:bgPr></p:bg>`
+		// NOTE: `<a:effectLst/>` is required by PowerPoint (matches image-bg path above); omitting it triggers the repair dialog
+		strSlideXml += `<p:bg><p:bgPr>${genXmlColorSelection(slide.background)}<a:effectLst/></p:bgPr></p:bg>`
 	} else if (!slide.bkgd && slide._name && slide._name === DEF_PRES_LAYOUT_NAME) {
 		// NOTE: Default [white] background is needed on slideMaster1.xml to avoid gray background in Keynote (and Finder previews)
 		strSlideXml += '<p:bg><p:bgRef idx="1001"><a:schemeClr val="bg1"/></p:bgRef></p:bg>'
@@ -320,6 +321,9 @@ function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 
 						let cellMargin = cellOpts.margin === 0 || cellOpts.margin ? cellOpts.margin : DEF_CELL_MARGIN_IN
 						if (!Array.isArray(cellMargin) && typeof cellMargin === 'number') cellMargin = [cellMargin, cellMargin, cellMargin, cellMargin]
+						// Guard against non-number/non-array margins (e.g. object/string) which otherwise yield marL="NaN" and trigger PowerPoint repair
+						if (!Array.isArray(cellMargin)) cellMargin = DEF_CELL_MARGIN_IN as [number, number, number, number]
+						cellMargin = (cellMargin as number[]).map(v => (typeof v === 'number' && !isNaN(v) ? v : 0)) as [number, number, number, number]
 						/** FUTURE: DEPRECATED:
 						 * - Backwards-Compat: Oops! Discovered we were still using points for cell margin before v3.8.0 (UGH!)
 						 * - We cant introduce a breaking change before v4.0, so...
@@ -890,13 +894,12 @@ function genXmlParagraphProperties (textObj: ISlideObject | TextProps, isDefault
 		if (typeof options.bullet === 'object') {
 			if (options.bullet?.indent) bulletMarL = valToPts(options.bullet.indent)
 
-			if (options.bullet.type) {
-				if (options.bullet.type.toString().toLowerCase() === 'number') {
-					paragraphPropXml += ` marL="${options.indentLevel && options.indentLevel > 0 ? bulletMarL + bulletMarL * options.indentLevel : bulletMarL
-					}" indent="-${bulletMarL}"`
-					strXmlBullet = `<a:buSzPct val="100000"/><a:buFont typeface="+mj-lt"/><a:buAutoNum type="${options.bullet.style || 'arabicPeriod'}" startAt="${options.bullet.numberStartAt || options.bullet.startAt || '1'
-					}"/>`
-				}
+			if (options.bullet.type && options.bullet.type.toString().toLowerCase() === 'number') {
+				// NOTE: only `type: 'number'` is a distinct branch; any other `type` (e.g. 'bullet') falls through to the char-bullet cases below (issue #1432)
+				paragraphPropXml += ` marL="${options.indentLevel && options.indentLevel > 0 ? bulletMarL + bulletMarL * options.indentLevel : bulletMarL
+				}" indent="-${bulletMarL}"`
+				strXmlBullet = `<a:buSzPct val="100000"/><a:buFont typeface="+mj-lt"/><a:buAutoNum type="${options.bullet.style || 'arabicPeriod'}" startAt="${options.bullet.numberStartAt || options.bullet.startAt || '1'
+				}"/>`
 			} else if (options.bullet.characterCode) {
 				let bulletCode = `&#x${options.bullet.characterCode};`
 
@@ -1160,8 +1163,10 @@ export function genXmlTextBody (slideObj: ISlideObject | TableCell): string {
 	let tmpTextObjects: TextProps[] = []
 	const arrTextObjects: TextProps[] = []
 
-	// FIRST: Shapes without text, etc. may be sent here during build, but have no text to render so return an empty string
-	if (opts && slideObj._type !== SLIDE_OBJECT_TYPES.tablecell && (typeof slideObj.text === 'undefined' || slideObj.text === null)) return ''
+	// FIRST: Shapes without text still require a `<p:txBody>` child on `<p:sp>` per OOXML; returning '' omits it and triggers PowerPoint repair
+	if (opts && slideObj._type !== SLIDE_OBJECT_TYPES.tablecell && (typeof slideObj.text === 'undefined' || slideObj.text === null)) {
+		return `<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:endParaRPr lang="${opts.lang || 'en-US'}"/></a:p></p:txBody>`
+	}
 
 	// STEP 1: Start textBody
 	let strSlideXml = slideObj._type === SLIDE_OBJECT_TYPES.tablecell ? '<a:txBody>' : '<p:txBody>'
