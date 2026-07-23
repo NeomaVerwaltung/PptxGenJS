@@ -2,7 +2,7 @@
 title: Installation
 ---
 
-Choose your preferred method to install **PptxGenJS**:
+Install **PptxGenJS** using one of the following methods.
 
 ### Quick Install (Node-based)
 
@@ -24,7 +24,7 @@ Use the bundled or minified version via [jsDelivr](https://www.jsdelivr.com/pack
 
 > Includes the sole dependency (JSZip) in one file.
 
-Advanced: Separate Files, Direct Download
+Advanced: separate files, direct download.
 
 ```html
 <script src="PptxGenJS/libs/jszip.min.js"></script>

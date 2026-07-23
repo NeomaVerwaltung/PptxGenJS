@@ -44,8 +44,8 @@ await pres.writeFile({ fileName: "HelloWorld.pptx" })
 
 ## Typed options and autocomplete
 
-Every `addX` method is fully typed, so option objects are checked as you write them and your editor
-autocompletes property names, enum values, and expected types — no need to look them up in the docs.
+Every `addX` method is fully typed. Option objects are checked as you write them, and your editor
+autocompletes property names, enum values, and expected types.
 
 ```typescript
 import pptxgen from "@neoma/pptxgenjs"
@@ -71,5 +71,5 @@ slide.addText("Typed and checked at compile time", textOptions)
 await pres.writeFile({ fileName: "TypedOptions.pptx" })
 ```
 
-That is the whole workflow. Continue with [Installation](./installation), or see the API reference in the
-sidebar for the options each object accepts.
+This completes the basic workflow. Continue with [Installation](./installation), or see the API reference
+in the sidebar for the options each object accepts.

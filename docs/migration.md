@@ -78,7 +78,7 @@ need a separate `@types/pptxgenjs` dependency. If you installed one for the old 
 npm uninstall @types/pptxgenjs
 ```
 
-Editor autocomplete and inline docs work out of the box.
+Editor autocomplete and inline documentation require no additional configuration.
 
 ## What is different from the original
 
@@ -91,8 +91,8 @@ The fork keeps the same version line and API surface, and adds:
 - A **modern build and test suite** (Rollup ESM/CJS builds, typechecks, unit/e2e/snapshot tests run in CI).
 - This **documentation site**, maintained in-repo so it tracks the code.
 
-There are no known breaking API changes relative to `pptxgenjs` 4.x. If you hit a difference in behavior,
-please [open an issue](https://github.com/NeomaVerwaltung/PptxGenJS/issues/new) with a short repro.
+There are no known breaking API changes relative to `pptxgenjs` 4.x. If you encounter a difference in
+behavior, [open an issue](https://github.com/NeomaVerwaltung/PptxGenJS/issues/new) with a short reproduction.
 
 ## Rollback
 

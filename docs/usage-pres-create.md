@@ -33,7 +33,7 @@ of the docs use the `pres` instance created here.
 
 ## Coordinates and colors
 
-Two conventions apply to every object you add to a slide, so it is worth learning them once:
+Two conventions apply to every object added to a slide:
 
 - **Position and size** are given as `x`, `y`, `w`, `h`. Numbers are **inches** from the top-left corner of
   the slide; strings like `"50%"` are a percentage of the slide's width/height. A default slide is

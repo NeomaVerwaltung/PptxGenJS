@@ -2,7 +2,7 @@
 title: Saving Presentations
 ---
 
-Several methods are available when generating a presentation.
+Several methods are available for generating a presentation.
 
 - All methods return a Promise
 
@@ -17,7 +17,7 @@ Save the presentation as a PowerPoint .pptx file.
 
 | Option        | Type    | Default             | Description                                                            |
 | :------------ | :------ | :------------------ | :--------------------------------------------------------------------- |
-| `compression` | boolean | false               | apply zip compression (exports take longer but saves signifcant space) |
+| `compression` | boolean | false               | apply zip compression (exports take longer but save significant space) |
 | `fileName`    | string  | 'Presentation.pptx' | output filename                                                        |
 
 ### Write File Example

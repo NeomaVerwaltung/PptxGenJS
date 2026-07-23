@@ -7,18 +7,18 @@ versions are not maintained.
 
 | Version | Supported |
 | ------- | --------- |
-| 4.x     | ✅        |
-| < 4.0   | ❌        |
+| 4.x     | Yes       |
+| < 4.0   | No        |
 
 ## Reporting a Vulnerability
 
-Please **do not** open a public issue for security problems.
+Do not open a public issue for security problems.
 
-Report privately via GitHub's [security advisory form](https://github.com/NeomaVerwaltung/PptxGenJS/security/advisories/new).
-Include a description, affected version, and a reproduction if possible.
+Report vulnerabilities privately via GitHub's [security advisory form](https://github.com/NeomaVerwaltung/PptxGenJS/security/advisories/new).
+Include a description, the affected version, and a reproduction if possible.
 
-We aim to acknowledge reports within 5 business days and to ship a fix or
-mitigation for confirmed high-severity issues as a priority.
+NEOMA aims to acknowledge reports within 5 business days and treats fixes or
+mitigations for confirmed high-severity issues as a priority.
 
 ## Scope
 

@@ -43,7 +43,7 @@ slide.tableToSlides(htmlElementID, { OPTIONS });
 
 ## HTML to PowerPoint Table Options
 
-Add an `data` attribute to the table's `<th>` tag to manually size columns (inches)
+Add a `data` attribute to the table's `<th>` tag to manually size columns (inches)
 
 - minimum column width can be specified by using the `data-pptx-min-width` attribute
 - fixed column width can be specified by using the `data-pptx-width` attribute
@@ -66,8 +66,8 @@ Example:
 
 ## HTML to PowerPoint Notes
 
-- Your Master Slides should already have defined margins, so a Master Slide name is the only option you'll need most of the time
-- Hidden tables wont auto-size their columns correctly (as the properties are not accurate)
+- Master Slides should already define margins, so a Master Slide name is typically the only option required
+- Hidden tables will not auto-size their columns correctly (the required properties are not accurate)
 
 ## HTML to PowerPoint Examples
 
@@ -97,10 +97,10 @@ pptx.tableToSlides("myHtmlTableID", {
 
 ## HTML to PowerPoint Creative Solutions
 
-Design a Master Slide that already contains: slide layout, margins, logos, etc., then you can produce
-professional looking Presentations with a single line of code which can be embedded into a link or a button:
+Design a Master Slide that already contains the slide layout, margins, and logos. A complete presentation
+can then be produced with a single line of code, embedded in a link or a button.
 
-Add a button to a webpage that will create a Presentation using whatever table data is present:
+Add a button to a webpage that creates a presentation from the table data currently present:
 
 ```html
 <button onclick="{ var pptx=new PptxGenJS(); pptx.tableToSlides('tableId'); pptx.writeFile(); }" type="button">Export to PPTX</button>
@@ -108,5 +108,5 @@ Add a button to a webpage that will create a Presentation using whatever table d
 
 ## SharePoint Integration
 
-Placing a button like this into a WebPart is a great way to add "Export to PowerPoint" functionality
-to SharePoint. (You'd also need to add the PptxGenJS bundle `<script>` in that/another WebPart)
+Placing a button like this into a WebPart is a practical way to add "Export to PowerPoint" functionality
+to SharePoint. The PptxGenJS bundle `<script>` must also be added to that or another WebPart.

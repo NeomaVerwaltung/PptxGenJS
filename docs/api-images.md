@@ -2,7 +2,7 @@
 title: Images
 ---
 
-Images of almost any type can be added to Slides.
+Images of most common types can be added to Slides.
 
 ## Usage
 
@@ -32,12 +32,11 @@ Either provide a URL location or base64 data to create an image.
 
 ### Performance Considerations
 
-It takes CPU time to read and encode images! The more images you include and the larger they are, the more time will be consumed.
+Reading and encoding images consumes CPU time. The more images a presentation includes and the larger they are, the longer generation takes.
 
-- The time needed to read/encode images can be completely eliminated by pre-encoding any images
-- Pre-encode images into a base64 strings and use the `data` option value instead
-- This will both reduce dependencies (who needs another image asset to keep track of?) and provide a performance
-    boost (no time will need to be consumed reading and encoding the image)
+- Eliminate the read/encode time entirely by pre-encoding images
+- Pre-encode images into base64 strings and use the `data` option value instead of `path`
+- This removes the dependency on external image assets and improves performance, since no time is spent reading and encoding the image at generation time
 
 ## Base Properties
 

@@ -37,4 +37,4 @@ See [Slide Methods](./usage-slide-options) for features such as Background and S
 
 ## Slide Masters
 
-Want to use a layout with predefined logos, margins, or styles? See [Slide Masters](./masters) to learn how to create and apply slide masters.
+To use a layout with predefined logos, margins, or styles, see [Slide Masters](./masters) for instructions on creating and applying slide masters.

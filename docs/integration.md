@@ -2,7 +2,7 @@
 title: Integration by Environment
 ---
 
-PptxGenJS can be used in various JavaScript environments. Choose the integration method below that best suits your project setup.
+PptxGenJS can be used in various JavaScript environments. Select the integration method below that matches your project setup.
 
 ## Available Distributions
 
@@ -29,11 +29,11 @@ Reference page includes runnable snippets.
 
 ### Webpack
 
-The pptxgenjs library has been tested with several different framework and bundler combinations
-including Vite and Webpack. While most projects can simply install @neoma/pptxgenjs and go, there are times
-when errors occur.
+The library has been tested with several framework and bundler combinations, including Vite and Webpack.
+Most projects can install @neoma/pptxgenjs without additional configuration; however, build errors can
+occur in some setups.
 
-Here's an example from the latest version of Docusaurus (v3.7) where Webpack (v5) fails during the build process:
+The following example is from Docusaurus v3.7, where Webpack v5 fails during the build process:
 
 ```text
 [ERROR] Client bundle compiled with errors therefore further build is impossible.

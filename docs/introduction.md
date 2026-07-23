@@ -10,12 +10,12 @@ title: Introduction
 **PptxGenJS generates PowerPoint (`.pptx`) files from JavaScript** — in Node, the browser, and every
 common framework. This is `@neoma/pptxgenjs`, the NEOMA-maintained fork with a modern build and typed API.
 
-Coming from the original `pptxgenjs` package? See the [Migration guide](./migration) — it is a drop-in
-replacement.
+If you are migrating from the original `pptxgenjs` package, see the [Migration guide](./migration) — it is
+a drop-in replacement.
 
 ## How the API works
 
-The whole library is one small object model. Understand these three levels and you understand the API:
+The library is built on a small object model with three levels:
 
 ```
 Presentation                 new pptxgen()
@@ -35,7 +35,7 @@ Presentation                 new pptxgen()
    `h` in **inches** (or `%`), and colors are hex strings without `#` (e.g. `"363636"`).
 4. **Save** — `pres.writeFile()` (Node/browser download) or `pres.write(...)` for a Blob/Buffer/base64/stream.
 
-That is the entire surface. The rest of the docs describe the options each `addX` method accepts.
+This is the complete API surface. The remaining documentation describes the options each `addX` method accepts.
 
 ### Hello World
 
@@ -50,8 +50,8 @@ slide.addText("Hello World from PptxGenJS!", { x: 1, y: 1, w: "80%", h: 1, fontS
 await pres.writeFile({ fileName: "HelloWorld.pptx" })
 ```
 
-Because full TypeScript definitions ship with the package, your editor autocompletes every method and
-option — the type defs are the most complete reference there is.
+Full TypeScript definitions ship with the package, so your editor autocompletes every method and
+option. The type definitions are the most complete reference available.
 
 ## Where to go next
 
@@ -74,7 +74,7 @@ File issues or ideas on the [issues page](https://github.com/NeomaVerwaltung/Ppt
 [open a pull request](https://github.com/NeomaVerwaltung/PptxGenJS/pulls). When reporting a problem, include
 a short code snippet that reproduces it. Documentation lives in-repo under
 [`docs/`](https://github.com/NeomaVerwaltung/PptxGenJS/tree/master/docs) — the "Edit this page" link on any
-page takes you straight to its source.
+page leads directly to its source file.
 
 ## Contributors
 

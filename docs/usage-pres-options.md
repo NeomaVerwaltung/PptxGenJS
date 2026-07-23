@@ -57,10 +57,10 @@ pptx.layout = 'LAYOUT_NAME';
 
 ### Custom Slide Layouts
 
-You can create custom layouts of any size!
+Custom layouts of any size are supported.
 
-* Use the `defineLayout()` method to create any size custom layout
-* Multiple layouts are supported. E.g.: create an 'A3' and 'A4', then use as desired
+* Use the `defineLayout()` method to create a custom layout of any size
+* Multiple layouts are supported. For example, define both an 'A3' and an 'A4' layout, then apply whichever is required
 
 ### Custom Slide Layout Example
 
@@ -72,7 +72,7 @@ pptx.defineLayout({ name:'A3', width:16.5, height:11.7 });
 pptx.layout = 'A3';
 ```
 
-> Need to inspect the current layout size?
+> To inspect the current layout size:
 
 ```typescript
 console.log(pptx.presLayout); // { width: 10, height: 5.625 }
@@ -82,7 +82,7 @@ console.log(pptx.presLayout); // { width: 10, height: 5.625 }
 
 ### Text Direction Options
 
-Right-to-Left (RTL) text is supported. Simply set the RTL mode presentation property.
+Right-to-Left (RTL) text is supported. Set the RTL mode presentation property to enable it.
 
 ### Text Direction Examples
 
