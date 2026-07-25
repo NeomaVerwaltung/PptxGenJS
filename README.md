@@ -1,57 +1,23 @@
 # PptxGenJS
 
-![PptxGenJS Sample Slides](https://raw.githubusercontent.com/gitbrent/PptxGenJS/gh-pages/img/readme_banner.png)
-
 ![GitHub Repo stars](https://img.shields.io/github/stars/NeomaVerwaltung/PptxGenJS?style=flat-square)
 ![GitHub License](https://img.shields.io/github/license/NeomaVerwaltung/PptxGenJS?style=flat-square)
 
-PptxGenJS is a JavaScript library for generating PowerPoint presentations programmatically. It runs in Node.js, browsers, and bundler-based environments (React, Angular, Vite, Webpack, Electron), and requires no PowerPoint installation or license.
+PptxGenJS is a JavaScript library for generating PowerPoint presentations programmatically. It runs in Node.js, browsers, and bundler-based environments (React, Angular, Vite, Webpack, Electron), and requires no PowerPoint installation or license. Output is standards-compliant Open Office XML (OOXML), compatible with Microsoft PowerPoint, Apple Keynote, LibreOffice Impress, and Google Slides (via import).
 
-This repository contains the NEOMA-maintained distribution, published as `@neo-ma/pptxgenjs` and maintained by [NEOMA GmbH](https://github.com/NeomaVerwaltung).
+## About this fork
 
-## Overview
-
-The library produces standards-compliant Open Office XML (OOXML) files compatible with:
-
-- Microsoft PowerPoint
-- Apple Keynote
-- LibreOffice Impress
-- Google Slides (via import)
-
-## Features
-
-### Platform support
-
-- All major modern browsers, desktop and mobile
-- Node.js, React, Angular, Vite, and Electron
-- Serverless and edge runtimes (AWS Lambda, Vercel, Cloudflare Workers)
-
-### Slide content
-
-- All major slide objects: text, tables, shapes, images, charts, and media
-- Custom Slide Masters for consistent corporate branding
-- SVG images, animated GIFs, YouTube embeds, right-to-left text, and Asian fonts
-
-### Developer experience
-
-- Minimal API: a complete presentation can be created in four statements
-- Full TypeScript definitions for autocomplete and inline documentation
-- More than 75 demo slides covering every feature and usage pattern
-
-### Output options
-
-- Direct `.pptx` download from the browser with correct MIME handling
-- Export as base64, Blob, Buffer, or Node stream
-- Compression and additional output options for production use
-
-### Production readiness
-
-The NEOMA distribution is hardened for production use:
+This repository is a fork of [gitbrent/PptxGenJS](https://github.com/gitbrent/PptxGenJS), maintained by [NEOMA GmbH](https://neo-ma.de) and published as `@neo-ma/pptxgenjs`. It exists to provide a production-hardened distribution:
 
 - **Strict null-safety** — the entire source compiles under TypeScript `strictNullChecks` with zero non-null assertions (`!`) and zero unchecked `as` casts; null-safety is enforced through explicit types, guard clauses, and validated defaults
 - **Continuous integration** — unit, end-to-end, and golden-file OOXML snapshot tests run on Node.js 20 and 22
 - **Security** — no known vulnerabilities in the published package, [CodeQL](https://github.com/NeomaVerwaltung/PptxGenJS/security/code-scanning) scanning, and a published [security policy](SECURITY.md)
-- **Requires Node.js 20 or newer** — see [CONTRIBUTING.md](CONTRIBUTING.md) for build and test instructions
+
+The public API remains compatible with upstream PptxGenJS; existing code and documentation continue to apply.
+
+## Requirements
+
+- Node.js 20 or newer
 
 ## Installation
 
@@ -63,93 +29,40 @@ npm install @neo-ma/pptxgenjs
 yarn add @neo-ma/pptxgenjs
 ```
 
-## Compatibility
-
-PptxGenJS ships dual ESM and CJS builds with zero runtime dependencies. Bundlers select the correct build automatically via the `exports` field in `package.json`.
-
-Supported environments:
-
-- **Node.js** — backend scripts, APIs, and CLI tools
-- **React / Angular / Vite / Webpack** — import directly; no additional configuration required
-- **Electron** — native applications with full filesystem access
-- **Browser (vanilla JavaScript)** — web applications with direct download support
-- **Serverless / edge functions** — AWS Lambda, Vercel, Cloudflare Workers, and similar platforms
-
-Builds provided:
-
-- **CommonJS**: [`dist/pptxgen.cjs.js`](./dist/pptxgen.cjs.js)
-- **ES Module**: [`dist/pptxgen.es.js`](./dist/pptxgen.es.js)
+The package ships dual ES Module and CommonJS builds with zero runtime dependencies. Bundlers select the correct build automatically via the `exports` field in `package.json`. The `.pptx` output can be delivered as a browser download, base64 string, Blob, Buffer, or Node stream.
 
 ## Quick start
 
 A presentation is created in four steps: instantiate, add a slide, add content, save.
 
-### Angular/React, ES6, TypeScript
-
 ```typescript
 import pptxgen from "@neo-ma/pptxgenjs";
 
-// 1. Create a new Presentation
-let pres = new pptxgen();
+// 1. Create a presentation
+const pres = new pptxgen();
 
-// 2. Add a Slide
-let slide = pres.addSlide();
+// 2. Add a slide
+const slide = pres.addSlide();
 
-// 3. Add one or more objects (Tables, Shapes, Images, Text and Media) to the Slide
-let textboxText = "Hello World from PptxGenJS!";
-let textboxOpts = { x: 1, y: 1, color: "363636" };
-slide.addText(textboxText, textboxOpts);
+// 3. Add content (text, tables, shapes, images, charts, media)
+slide.addText("Quarterly Results", { x: 0.5, y: 0.5, fontSize: 24, bold: true });
+slide.addText("Revenue up 12% year over year", { x: 0.5, y: 1.3, fontSize: 14, color: "363636" });
 
-// 4. Save the Presentation
-pres.writeFile();
+// 4. Write the .pptx file
+await pres.writeFile({ fileName: "quarterly-results.pptx" });
 ```
 
-### Script/Web browser
-
-```javascript
-// 1. Create a new Presentation
-let pres = new PptxGenJS();
-
-// 2. Add a Slide
-let slide = pres.addSlide();
-
-// 3. Add one or more objects (Tables, Shapes, Images, Text and Media) to the Slide
-let textboxText = "Hello World from PptxGenJS!";
-let textboxOpts = { x: 1, y: 1, color: "363636" };
-slide.addText(textboxText, textboxOpts);
-
-// 4. Save the Presentation
-pres.writeFile();
-```
-
-## HTML table conversion
-
-The `tableToSlides` method converts an HTML `<table>` element into one or more formatted slides:
-
-```javascript
-let pptx = new pptxgen();
-pptx.tableToSlides("tableElementId");
-pptx.writeFile({ fileName: "html2pptx-demo.pptx" });
-```
-
-Typical use cases include exporting dashboards, data reports, and tabular content from web applications or BI tools.
-
-See the [HTML-to-PowerPoint guide](https://neomaverwaltung.github.io/PptxGenJS/html-to-powerpoint) for details.
+When loading the library via a `<script>` tag rather than a module import, the constructor is the global `PptxGenJS` (for example, `const pres = new PptxGenJS()`); the remaining steps are identical.
 
 ## Documentation
 
 The complete API reference, tutorials, and integration guides are available at [https://neomaverwaltung.github.io/PptxGenJS](https://neomaverwaltung.github.io/PptxGenJS).
 
-The documentation source is plain Markdown under [`docs/`](docs) and builds with VitePress (`npm run docs:dev` to preview locally). It deploys to GitHub Pages automatically on push to `master`.
+The documentation source is plain Markdown under [`docs/`](docs) and builds with VitePress (`npm run docs:dev` to preview locally). It deploys to GitHub Pages automatically on push to `master`. Runnable command-line examples are available under [`demos/node`](demos/node).
 
 ## Issues and support
 
-Report defects and feature requests on the [issue tracker](https://github.com/NeomaVerwaltung/PptxGenJS/issues/new), or [submit a pull request](https://github.com/NeomaVerwaltung/PptxGenJS/pulls). When reporting an issue, include a code snippet or a link that demonstrates the problem — this [jsFiddle](https://jsfiddle.net/gitbrent/L1uctxm0/) is preconfigured with the latest PptxGenJS build.
-
-Additional resources:
-
-- The Node demo (`demos/node`) contains working examples of every library feature
-- [Questions tagged `PptxGenJS` on Stack Overflow](https://stackoverflow.com/questions/tagged/pptxgenjs?sort=votes&pageSize=50); tag new questions `pptxgenjs`
+Report defects and feature requests on the [issue tracker](https://github.com/NeomaVerwaltung/PptxGenJS/issues/new), or [submit a pull request](https://github.com/NeomaVerwaltung/PptxGenJS/pulls). When reporting an issue, include a code snippet or a link that demonstrates the problem. See [CONTRIBUTING.md](CONTRIBUTING.md) for build and test instructions.
 
 ## Contributors
 
@@ -169,6 +82,6 @@ PowerPoint shape definitions and portions of the XML generation are derived from
 
 ## License
 
-Copyright &copy; 2015-present [Brent Ely](https://github.com/gitbrent/), &copy; 2026-present [NEOMA GmbH](https://github.com/NeomaVerwaltung)
+Copyright &copy; 2015-present [Brent Ely](https://github.com/gitbrent/), &copy; 2026-present [NEOMA GmbH](https://neo-ma.de)
 
 Licensed under the [MIT License](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/LICENSE).

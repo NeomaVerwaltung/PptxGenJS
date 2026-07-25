@@ -3,7 +3,7 @@ sidebar_label: HTML-to-PowerPoint
 title: HTML to PowerPoint
 ---
 
-Reproduces an HTML table into 1 or more slides (auto-paging).
+The `tableToSlides` method reproduces an HTML table across one or more slides (auto-paging).
 
 - Supported cell styling includes background colors, borders, fonts, padding, etc.
 - Slide margin settings can be set using options, or by providing a Master Slide definition
@@ -95,7 +95,7 @@ pptx.tableToSlides("myHtmlTableID", {
 
 ![HTML-to-PowerPoint Presentation](./assets/ex-html-to-powerpoint-2.png)
 
-## HTML to PowerPoint Creative Solutions
+## HTML to PowerPoint Integration Patterns
 
 Design a Master Slide that already contains the slide layout, margins, and logos. A complete presentation
 can then be produced with a single line of code, embedded in a link or a button.
