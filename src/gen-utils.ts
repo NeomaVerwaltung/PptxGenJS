@@ -5,6 +5,60 @@
 import { EMU, REGEX_HEX_COLOR, DEF_FONT_COLOR, DEF_TEXT_GLOW, ONEPT, SchemeColor, SCHEME_COLORS } from './core-enums'
 import { PresLayout, TextGlowProps, PresSlide, SlideLayout, ShapeFillProps, Color, ShapeLineProps, Coord, ShadowProps } from './core-interfaces'
 
+/** friendly `dataLabelPosition` names mapped to their OOXML `c:dLblPos` codes (the codes stay accepted too) */
+const DATA_LABEL_POS_CODES: Record<string, string> = {
+	bottom: 'b',
+	center: 'ctr',
+	left: 'l',
+	right: 'r',
+	top: 't',
+	insideEnd: 'inEnd',
+	insideBase: 'inBase',
+	outsideEnd: 'outEnd',
+	bestFit: 'bestFit',
+}
+
+/**
+ * Resolve a `dataLabelPosition` to the OOXML code valid for this chart type
+ * - a value the chart type does not accept makes PowerPoint declare the file corrupt, so it is dropped
+ * @param {string} position - user value: a friendly name (`'outsideEnd'`) or an OOXML code (`'outEnd'`)
+ * @param {string} chartType - chart type being rendered
+ * @param {string} barGrouping - bar grouping (stacked bars accept fewer positions than clustered)
+ * @returns {string | undefined} OOXML code, or undefined when not valid for this chart type
+ */
+export function resolveDataLabelPosition (position: string, chartType: string, barGrouping?: string): string | undefined {
+	const code = DATA_LABEL_POS_CODES[position] ?? position
+	// REFERENCE: https://docs.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/e2b1697c-7adc-463d-9081-3daef72f656f
+	let valid: string[]
+	switch (chartType) {
+		case 'pie':
+			valid = ['bestFit', 'ctr', 'inEnd', 'outEnd']
+			break
+		case 'bubble':
+		case 'bubble3D':
+		case 'line':
+		case 'scatter':
+			valid = ['b', 'ctr', 'l', 'r', 't']
+			break
+		case 'bar':
+			// stacked bars have no "outside end" to sit against
+			valid = (barGrouping ?? '').includes('tacked') ? ['ctr', 'inBase', 'inEnd'] : ['ctr', 'inBase', 'inEnd', 'outEnd']
+			break
+		default:
+			// area, bar3D, doughnut, radar: PowerPoint takes no `c:dLblPos` at all
+			valid = []
+	}
+
+	if (!valid.includes(code)) {
+		console.warn(
+			`[pptxgenjs] dataLabelPosition '${position}' is not valid for a '${chartType}' chart - ignoring it (valid: ${valid.length > 0 ? valid.join(', ') : 'none'})`
+		)
+		return undefined
+	}
+
+	return code
+}
+
 /**
  * Translates any type of `x`/`y`/`w`/`h` prop to EMU
  * - guaranteed to return a result regardless of undefined, null, etc. (0)

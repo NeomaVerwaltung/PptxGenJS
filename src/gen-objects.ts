@@ -49,7 +49,7 @@ import {
 	TextPropsOptions,
 } from './core-interfaces'
 import { getSlidesForTableRows } from './gen-tables'
-import { encodeXmlEntities, getNewRelId, getSmartParseNumber, inch2Emu, valToPts, correctShadowOptions } from './gen-utils'
+import { encodeXmlEntities, getNewRelId, getSmartParseNumber, inch2Emu, resolveDataLabelPosition, valToPts, correctShadowOptions } from './gen-utils'
 
 /** Valid OOXML preset-geometry strings (the values of `SHAPE_TYPE`) - anything else corrupts the file. */
 const VALID_SHAPE_PRESETS = new Set<string>(Object.values(SHAPE_TYPE))
@@ -234,24 +234,12 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 	if (options.barGrouping?.includes('tacked')) {
 		if (!options.barGapWidthPct) options.barGapWidthPct = 50
 	}
-	// Clean up and validate data label positions
-	// REFERENCE: https://docs.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/e2b1697c-7adc-463d-9081-3daef72f656f?redirectedfrom=MSDN
-	if (options.dataLabelPosition) {
-		if (options._type === CHART_TYPE.AREA || options._type === CHART_TYPE.BAR3D || options._type === CHART_TYPE.DOUGHNUT || options._type === CHART_TYPE.RADAR) { delete options.dataLabelPosition }
-		if (options._type === CHART_TYPE.PIE) {
-			if (!['bestFit', 'ctr', 'inEnd', 'outEnd'].includes(options.dataLabelPosition ?? '')) delete options.dataLabelPosition
-		}
-		if (options._type === CHART_TYPE.BUBBLE || options._type === CHART_TYPE.BUBBLE3D || options._type === CHART_TYPE.LINE || options._type === CHART_TYPE.SCATTER) {
-			if (!['b', 'ctr', 'l', 'r', 't'].includes(options.dataLabelPosition ?? '')) delete options.dataLabelPosition
-		}
-		if (options._type === CHART_TYPE.BAR) {
-			if (!['stacked', 'percentStacked'].includes(options.barGrouping || '')) {
-				if (!['ctr', 'inBase', 'inEnd'].includes(options.dataLabelPosition ?? '')) delete options.dataLabelPosition
-			}
-			if (!['clustered'].includes(options.barGrouping || '')) {
-				if (!['ctr', 'inBase', 'inEnd', 'outEnd'].includes(options.dataLabelPosition ?? '')) delete options.dataLabelPosition
-			}
-		}
+	// Translate friendly data label positions to OOXML codes and drop values the chart type rejects
+	// NOTE: an unsupported `c:dLblPos` makes PowerPoint declare the file corrupt, so it is dropped with a warning
+	// NOTE: multi-type charts carry per-sub-chart options, each normalized by its own pass through here
+	if (options.dataLabelPosition && !Array.isArray(options._type)) {
+		options.dataLabelPosition = resolveDataLabelPosition(options.dataLabelPosition, options._type, options.barGrouping) as typeof options.dataLabelPosition
+		if (!options.dataLabelPosition) delete options.dataLabelPosition
 	}
 	options.dataLabelBkgrdColors = options.dataLabelBkgrdColors || !options.dataLabelBkgrdColors ? options.dataLabelBkgrdColors : false
 	if (!['b', 'l', 'r', 't', 'tr'].includes(options.legendPos || '')) options.legendPos = 'r'

@@ -164,3 +164,26 @@ test('#39: auto-paged tables account for cell margins', async () => {
 
 	assert.ok(pageCount(0.5) > pageCount(0), 'large cell margins did not increase the page count')
 })
+
+test('#28: friendly dataLabelPosition names are translated to OOXML codes', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addChart(pptx.ChartType.bar, [{ name: 'S', labels: ['A'], values: [1] }], { x: 1, y: 1, w: 4, h: 3, showValue: true, dataLabelPosition: 'outsideEnd' })
+
+	assert.ok((await readChart(await writeZip(pptx))).includes('<c:dLblPos val="outEnd"/>'), 'friendly name not translated')
+})
+
+test('#28: a dataLabelPosition invalid for the chart type is dropped with a warning', async () => {
+	const warnings: string[] = []
+	const orig = console.warn
+	console.warn = (msg: string) => warnings.push(msg)
+	try {
+		const pptx = new pptxgen()
+		// 'bestFit' is pie-only - on a bar chart it makes PowerPoint offer to repair the file
+		pptx.addSlide().addChart(pptx.ChartType.bar, [{ name: 'S', labels: ['A'], values: [1] }], { x: 1, y: 1, w: 4, h: 3, showValue: true, dataLabelPosition: 'bestFit' })
+
+		assert.ok(!(await readChart(await writeZip(pptx))).includes('<c:dLblPos'), 'invalid dLblPos was emitted')
+		assert.ok(warnings.some(msg => msg.includes('dataLabelPosition')), `no warning logged: ${warnings.join(' | ')}`)
+	} finally {
+		console.warn = orig
+	}
+})
