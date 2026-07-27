@@ -730,7 +730,7 @@ export default class PptxGenJS implements IPresentationProps {
 
 	/**
 	 * Create a custom Slide Layout in any size
-	 * @param {PresLayout} layout - layout properties
+	 * @param {DefineLayoutProps} layout - layout properties (`width`/`height` or `w`/`h`)
 	 * @example pptx.defineLayout({ name:'A3', width:16.5, height:11.7 });
 	 */
 	defineLayout(layout: DefineLayoutProps): void {
