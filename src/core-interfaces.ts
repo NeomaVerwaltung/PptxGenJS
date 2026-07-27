@@ -499,6 +499,11 @@ export interface ImageProps extends PositionProps, DataOrPathProps, ObjectNamePr
 	flipV?: boolean
 	hyperlink?: HyperlinkProps
 	/**
+	 * Image outline/border (a picture frame)
+	 * @example { color: '696969', width: 2 } // 2pt dim-gray border
+	 */
+	line?: ShapeLineProps
+	/**
 	 * Placeholder type
 	 * - values: 'body' | 'header' | 'footer' | 'title' | et. al.
 	 * @example 'body'
@@ -965,13 +970,6 @@ export interface TableProps extends PositionProps, TextBaseProps, ObjectNameProp
 	 * @example '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}' // "Medium Style 2 - Accent 1"
 	 */
 	tableStyleId?: string
-	/**
-	 * DEV TOOL: Verbose Mode (to console)
-	 * - tell the library to provide an almost ridiculous amount of detail during auto-paging calculations
-	 * @default false // obviously
-	 */
-	verbose?: boolean // Undocumented; shows verbose output
-
 	/**
 	 * @deprecated v3.3.0 - use `autoPageSlideStartY`
 	 */

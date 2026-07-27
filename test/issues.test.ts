@@ -179,3 +179,14 @@ test('#36: tables without style options still emit an empty a:tblPr', async () =
 	pptx.addSlide().addTable([['A', 'B']], { x: 1, y: 1, w: 4 })
 	assert.ok((await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')).includes('<a:tblPr/>'))
 })
+
+test('#35: images accept a line/outline and emit it in the picture spPr', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addImage({ data: PNG_4x2, x: 1, y: 1, w: 2, h: 1, line: { color: 'FF0000', width: 2, dashType: 'dash' } })
+
+	const xml = await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')
+	const pic = /<p:pic>[\s\S]*?<\/p:pic>/.exec(xml)?.[0] ?? ''
+	assert.ok(pic.includes('<a:ln w="25400">'), `picture outline width missing: ${pic}`)
+	assert.ok(pic.includes('<a:srgbClr val="FF0000"/>'), 'picture outline color missing')
+	assert.ok(pic.includes('<a:prstDash val="dash"/>'), 'picture outline dash type missing')
+})
