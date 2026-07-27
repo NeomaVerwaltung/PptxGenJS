@@ -27,6 +27,7 @@ import {
 	SlideLayout,
 	TableCell,
 	TableCellProps,
+	TableProps,
 	TextProps,
 	TextPropsOptions,
 } from './core-interfaces'
@@ -75,6 +76,30 @@ const ImageSizingXml = {
 		const bPerc = Math.round(1e5 * (b / imgSize.h))
 		return `<a:srcRect l="${lPerc}" r="${rPerc}" t="${tPerc}" b="${bPerc}"/><a:stretch/>`
 	},
+}
+
+/**
+ * Create the `a:tblPr` table-style block (banded rows/cols, first/last row/col emphasis, style id)
+ * @param {TableProps} opts - table options
+ * @return {string} XML
+ */
+function genXmlTblPr (opts: TableProps): string {
+	const flags: Array<[string, boolean | undefined]> = [
+		['firstRow', opts.firstRow],
+		['lastRow', opts.lastRow],
+		['firstCol', opts.firstCol],
+		['lastCol', opts.lastCol],
+		['bandRow', opts.bandRow],
+		['bandCol', opts.bandCol],
+	]
+	const attrs = flags
+		.filter(([, val]) => typeof val === 'boolean')
+		.map(([name, val]) => ` ${name}="${val ? 1 : 0}"`)
+		.join('')
+
+	if (!attrs && !opts.tableStyleId) return '<a:tblPr/>'
+	// NOTE: `a:tableStyleId` must be the last child of `a:tblPr` per the schema
+	return opts.tableStyleId ? `<a:tblPr${attrs}><a:tableStyleId>${opts.tableStyleId}</a:tableStyleId></a:tblPr>` : `<a:tblPr${attrs}/>`
 }
 
 /**
@@ -199,11 +224,9 @@ function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 					'</p:nvGraphicFramePr>'
 				strXml += `<p:xfrm><a:off x="${x || (x === 0 ? 0 : EMU)}" y="${y || (y === 0 ? 0 : EMU)}"/><a:ext cx="${cx || (cx === 0 ? 0 : EMU)}" cy="${cy || EMU
 				}"/></p:xfrm>`
-				strXml += '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl><a:tblPr/>'
-				// + '        <a:tblPr bandRow="1"/>';
-				// TODO: Support banded rows, first/last row, etc.
-				// NOTE: Banding, etc. only shows when using a table style! (or set alt row color if banding)
-				// <a:tblPr firstCol="0" firstRow="0" lastCol="0" lastRow="0" bandCol="0" bandRow="1">
+				strXml += '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">'
+				// NOTE: banding/emphasis only renders when a table style is applied - either `tableStyleId` here or a theme default
+				strXml += `<a:tbl>${genXmlTblPr(objTabOpts as TableProps)}`
 
 				// STEP 2: Set column widths
 				// Evenly distribute cols/rows across size provided when applicable (calc them if only overall dimensions were provided)
