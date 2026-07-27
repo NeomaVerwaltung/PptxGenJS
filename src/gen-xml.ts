@@ -78,12 +78,31 @@ const ImageSizingXml = {
 }
 
 /**
+ * Create the `a:effectLst` shadow block for a shape/image
+ * @note pure - unit conversion must NOT be written back to the caller's options object, else a second
+ * export would convert the already-converted values again (issue #20)
+ * @param {ShadowProps} shadow - shadow options as supplied by the caller
+ * @return {string} XML
+ */
+function genXmlShadow (shadow: ShadowProps): string {
+	const type = shadow.type || 'outer'
+	const blur = valToPts(shadow.blur ?? 8)
+	const offset = valToPts(shadow.offset ?? 4)
+	const angle = Math.round((shadow.angle ?? 270) * 60000)
+	const opacity = Math.round((shadow.opacity ?? 0.75) * 100000)
+	const color = shadow.color || DEF_TEXT_SHADOW.color
+	const attrs = type === 'outer' ? 'sx="100000" sy="100000" kx="0" ky="0" algn="bl" rotWithShape="0"' : ''
+
+	return `<a:effectLst><a:${type}Shdw ${attrs} blurRad="${blur}" dist="${offset}" dir="${angle}"><a:srgbClr val="${color}"><a:alpha val="${opacity}"/></a:srgbClr></a:${type}Shdw></a:effectLst>`
+}
+
+/**
  * Transforms a slide or slideLayout to resulting XML string - Creates `ppt/slide*.xml`
  * @param {PresSlide|SlideLayout} slideObject - slide object created within createSlideObject
  * @return {string} XML string with <p:cSld> as the root
  */
 function slideObjectToXml (slide: PresSlide | SlideLayout): string {
-	let strSlideXml: string = slide._name ? '<p:cSld name="' + slide._name + '">' : '<p:cSld>'
+	let strSlideXml: string = slide._name ? `<p:cSld name="${encodeXmlEntities(slide._name)}">` : '<p:cSld>'
 	let intTableNum = 1
 
 	// STEP 1: Add background color/image (ensure only a single `<p:bg>` tag is created, ex: when master-baskground has both `color` and `path`)
@@ -523,19 +542,7 @@ function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 
 				// EFFECTS > SHADOW: REF: @see http://officeopenxml.com/drwSp-effects.php
 				if (slideItemObj.options.shadow && slideItemObj.options.shadow.type !== 'none') {
-					slideItemObj.options.shadow.type = slideItemObj.options.shadow.type || 'outer'
-					slideItemObj.options.shadow.blur = valToPts(slideItemObj.options.shadow.blur || 8)
-					slideItemObj.options.shadow.offset = valToPts(slideItemObj.options.shadow.offset || 4)
-					slideItemObj.options.shadow.angle = Math.round((slideItemObj.options.shadow.angle || 270) * 60000)
-					slideItemObj.options.shadow.opacity = Math.round((slideItemObj.options.shadow.opacity || 0.75) * 100000)
-					slideItemObj.options.shadow.color = slideItemObj.options.shadow.color || DEF_TEXT_SHADOW.color
-
-					strSlideXml += '<a:effectLst>'
-					strSlideXml += ` <a:${slideItemObj.options.shadow.type}Shdw ${slideItemObj.options.shadow.type === 'outer' ? 'sx="100000" sy="100000" kx="0" ky="0" algn="bl" rotWithShape="0"' : ''} blurRad="${slideItemObj.options.shadow.blur}" dist="${slideItemObj.options.shadow.offset}" dir="${slideItemObj.options.shadow.angle}">`
-					strSlideXml += ` <a:srgbClr val="${slideItemObj.options.shadow.color}">`
-					strSlideXml += ` <a:alpha val="${slideItemObj.options.shadow.opacity}"/></a:srgbClr>`
-					strSlideXml += ` </a:${slideItemObj.options.shadow.type}Shdw>`
-					strSlideXml += '</a:effectLst>'
+					strSlideXml += genXmlShadow(slideItemObj.options.shadow)
 				}
 
 				/* TODO: FUTURE: Text wrapping (copied from MS-PPTX export)
@@ -618,19 +625,7 @@ function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 
 				// EFFECTS > SHADOW: REF: @see http://officeopenxml.com/drwSp-effects.php
 				if (slideItemObj.options.shadow && slideItemObj.options.shadow.type !== 'none') {
-					slideItemObj.options.shadow.type = slideItemObj.options.shadow.type || 'outer'
-					slideItemObj.options.shadow.blur = valToPts(slideItemObj.options.shadow.blur || 8)
-					slideItemObj.options.shadow.offset = valToPts(slideItemObj.options.shadow.offset || 4)
-					slideItemObj.options.shadow.angle = Math.round((slideItemObj.options.shadow.angle || 270) * 60000)
-					slideItemObj.options.shadow.opacity = Math.round((slideItemObj.options.shadow.opacity || 0.75) * 100000)
-					slideItemObj.options.shadow.color = slideItemObj.options.shadow.color || DEF_TEXT_SHADOW.color
-
-					strSlideXml += '<a:effectLst>'
-					strSlideXml += `<a:${slideItemObj.options.shadow.type}Shdw ${slideItemObj.options.shadow.type === 'outer' ? 'sx="100000" sy="100000" kx="0" ky="0" algn="bl" rotWithShape="0"' : ''} blurRad="${slideItemObj.options.shadow.blur}" dist="${slideItemObj.options.shadow.offset}" dir="${slideItemObj.options.shadow.angle}">`
-					strSlideXml += `<a:srgbClr val="${slideItemObj.options.shadow.color}">`
-					strSlideXml += `<a:alpha val="${slideItemObj.options.shadow.opacity}"/></a:srgbClr>`
-					strSlideXml += `</a:${slideItemObj.options.shadow.type}Shdw>`
-					strSlideXml += '</a:effectLst>'
+					strSlideXml += genXmlShadow(slideItemObj.options.shadow)
 				}
 				strSlideXml += '</p:spPr>'
 				strSlideXml += '</p:pic>'

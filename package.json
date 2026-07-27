@@ -41,15 +41,15 @@
 		"docs:preview": "vitepress preview docs",
 		"lint": "eslint src test",
 		"typecheck": "tsc --noEmit",
-		"test": "node --import tsx --test test/gen-utils.test.ts test/pptxgen.e2e.test.ts test/snapshot.test.ts test/coverage.test.ts",
-		"test:coverage": "node --import tsx --test --experimental-test-coverage test/gen-utils.test.ts test/pptxgen.e2e.test.ts test/snapshot.test.ts test/coverage.test.ts",
+		"test": "node --import tsx --test test/gen-utils.test.ts test/issues.test.ts test/pptxgen.e2e.test.ts test/snapshot.test.ts test/coverage.test.ts",
+		"test:coverage": "node --import tsx --test --experimental-test-coverage test/gen-utils.test.ts test/issues.test.ts test/pptxgen.e2e.test.ts test/snapshot.test.ts test/coverage.test.ts",
 		"check": "npm run lint && npm run typecheck && npm test",
 		"prepublishOnly": "npm run check"
 	},
 	"browser": {
 		"fs": false,
-		"image-size": false,
 		"node:fs": false,
+		"node:http": false,
 		"node:https": false,
 		"os": false,
 		"path": false

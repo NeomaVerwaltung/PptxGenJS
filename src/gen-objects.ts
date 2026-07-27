@@ -173,7 +173,9 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 		type.forEach(obj => {
 			tmpData = tmpData.concat(obj.data)
 		})
-		tmpOpt = data || opt
+		// NOTE: the legacy multi-type call shape passed the options object as the 2nd arg (data lives inside the specs),
+		// so only fall back to `data` when no real options were supplied (issue #25)
+		tmpOpt = opt && Object.keys(opt).length > 0 ? opt : data
 	} else {
 		tmpData = data
 		tmpOpt = opt
@@ -460,9 +462,8 @@ export function addImageDefinition(target: PresSlide | SlideLayout, opt: ImagePr
 	newObject.image = strImagePath || 'preencoded.png'
 
 	// STEP 3: Set image properties & options
-	// FIXME: Measure actual image when no intWidth/intHeight params passed
-	// ....: This is an async process: we need to make getSizeFromImage use callback, then set H/W...
-	// if ( !intWidth || !intHeight ) { var imgObj = getSizeFromImage(strImagePath);
+	// NOTE: when neither `w` nor `h` is given, the 1x1 inch default below is replaced with the image's
+	// natural size during export (see `applyNaturalImageSizes`) - the bytes aren't loaded yet at this point
 	newObject.options = {
 		x: intPosX || 0,
 		y: intPosY || 0,
@@ -478,6 +479,7 @@ export function addImageDefinition(target: PresSlide | SlideLayout, opt: ImagePr
 		transparency: opt.transparency || 0,
 		objectName,
 		shadow: opt.shadow ? correctShadowOptions(opt.shadow) : undefined,
+		_sizeFromImage: !intWidth && !intHeight,
 	}
 
 	// STEP 4: Add this image to this Slide Rels (rId/rels count spans all slides! Count all images to get next rId)
@@ -505,6 +507,7 @@ export function addImageDefinition(target: PresSlide | SlideLayout, opt: ImagePr
 			Target: `../media/image-${target._slideNum}-${target._relsMedia.length + 1}.${strImgExtn}`,
 		})
 		newObject.imageRid = imageRelId + 1
+		imageRelId++ // NOTE: the SVG branch consumed two rIds - keep the counter on the last one used (issue #19)
 	} else {
 		// PERF: Duplicate media should reuse existing `Target` value and not create an additional copy
 		const dupeItem = target._relsMedia.filter(item => item.path && item.path === strImagePath && item.type === 'image/' + strImgExtn && !item.isDuplicate)[0]
@@ -531,7 +534,7 @@ export function addImageDefinition(target: PresSlide | SlideLayout, opt: ImagePr
 				type: SLIDE_OBJECT_TYPES.hyperlink,
 				data: objHyperlink.slide ? 'slide' : 'dummy',
 				rId: imageRelId,
-				Target: objHyperlink.url || objHyperlink.slide?.toString() || '',
+				Target: encodeXmlEntities(objHyperlink.url || objHyperlink.slide?.toString() || ''),
 			})
 
 			objHyperlink._rId = imageRelId

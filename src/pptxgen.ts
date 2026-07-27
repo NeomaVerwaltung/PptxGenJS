@@ -501,6 +501,11 @@ export default class PptxGenJS implements IPresentationProps {
 
 		// STEP 2: Wait for Promises (if any) then generate the PPTX file
 		return await Promise.all(arrMediaPromises).then(async () => {
+			// A: Size images added without `w`/`h` to their natural dimensions (media bytes are loaded by now)
+			this.slides.forEach(slide => genMedia.applyNaturalImageSizes(slide))
+			this.slideLayouts.forEach(layout => genMedia.applyNaturalImageSizes(layout))
+			genMedia.applyNaturalImageSizes(this.masterSlide)
+
 			// A: Add empty placeholder objects to slides that don't already have them
 			this.slides.forEach(slide => {
 				if (slide._slideLayout) genObj.addPlaceholdersToSlideLayouts(slide)
