@@ -1323,6 +1323,11 @@ declare namespace PptxGenJS {
 		flipV?: boolean
 		hyperlink?: HyperlinkProps
 		/**
+		 * Image outline/border (a picture frame)
+		 * @example { color: '696969', width: 2 } // 2pt dim-gray border
+		 */
+		line?: ShapeLineProps
+		/**
 		 * Placeholder type
 		 * - values: 'body' | 'header' | 'footer' | 'title' | et. al.
 		 * @example 'body'
