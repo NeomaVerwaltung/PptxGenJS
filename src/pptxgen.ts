@@ -564,15 +564,17 @@ export default class PptxGenJS implements IPresentationProps {
 
 			// E: Wait for Promises (if any) then generate the PPTX file
 			return await Promise.all(arrChartPromises).then(async () => {
+				const compression = props.compression ? 'DEFLATE' : 'STORE'
+
 				if (props.outputType === 'STREAM') {
 					// A: stream file
-					return await zip.generateAsync({ type: 'nodebuffer', compression: props.compression ? 'DEFLATE' : 'STORE' })
+					return await zip.generateAsync({ type: 'nodebuffer', compression })
 				} else if (props.outputType) {
 					// B: Node [fs]: Output type user option or default
-					return await zip.generateAsync({ type: props.outputType })
+					return await zip.generateAsync({ type: props.outputType, compression })
 				} else {
 					// C: Browser: Output blob as app/ms-pptx
-					return await zip.generateAsync({ type: 'blob', compression: props.compression ? 'DEFLATE' : 'STORE' })
+					return await zip.generateAsync({ type: 'blob', compression })
 				}
 			})
 		})
@@ -800,7 +802,7 @@ export default class PptxGenJS implements IPresentationProps {
 	 * @param {TableToSlidesProps} options - generation options
 	 */
 	tableToSlides(eleId: string, options: TableToSlidesProps = {}): void {
-		// @note `verbose` option is undocumented; used for verbose output of layout process
+		// @note set the `PPTXGENJS_DEBUG` env var for verbose output of the layout process
 		genTable.genTableToSlides(
 			this,
 			eleId,

@@ -24,9 +24,11 @@ import {
 	ObjectOptions,
 	PresSlide,
 	ShadowProps,
+	ShapeLineProps,
 	SlideLayout,
 	TableCell,
 	TableCellProps,
+	TableProps,
 	TextProps,
 	TextPropsOptions,
 } from './core-interfaces'
@@ -75,6 +77,46 @@ const ImageSizingXml = {
 		const bPerc = Math.round(1e5 * (b / imgSize.h))
 		return `<a:srcRect l="${lPerc}" r="${rPerc}" t="${tPerc}" b="${bPerc}"/><a:stretch/>`
 	},
+}
+
+/**
+ * Create the `a:tblPr` table-style block (banded rows/cols, first/last row/col emphasis, style id)
+ * @param {TableProps} opts - table options
+ * @return {string} XML
+ */
+function genXmlTblPr (opts: TableProps): string {
+	const flags: Array<[string, boolean | undefined]> = [
+		['firstRow', opts.firstRow],
+		['lastRow', opts.lastRow],
+		['firstCol', opts.firstCol],
+		['lastCol', opts.lastCol],
+		['bandRow', opts.bandRow],
+		['bandCol', opts.bandCol],
+	]
+	const attrs = flags
+		.filter(([, val]) => typeof val === 'boolean')
+		.map(([name, val]) => ` ${name}="${val ? 1 : 0}"`)
+		.join('')
+
+	if (!attrs && !opts.tableStyleId) return '<a:tblPr/>'
+	// NOTE: `a:tableStyleId` must be the last child of `a:tblPr` per the schema
+	return opts.tableStyleId ? `<a:tblPr${attrs}><a:tableStyleId>${encodeXmlEntities(opts.tableStyleId)}</a:tableStyleId></a:tblPr>` : `<a:tblPr${attrs}/>`
+}
+
+/**
+ * Create the `a:ln` outline block for a shape/image
+ * @param {ShapeLineProps} line - line options
+ * @return {string} XML
+ */
+function genXmlLine (line: ShapeLineProps): string {
+	let xml = line.width ? `<a:ln w="${valToPts(line.width)}">` : '<a:ln>'
+	if (line.color) xml += genXmlColorSelection(line)
+	if (line.dashType) xml += `<a:prstDash val="${line.dashType}"/>`
+	if (line.beginArrowType) xml += `<a:headEnd type="${line.beginArrowType}"/>`
+	if (line.endArrowType) xml += `<a:tailEnd type="${line.endArrowType}"/>`
+	// FUTURE: `endArrowSize` < a: headEnd type = "arrow" w = "lg" len = "lg" /> 'sm' | 'med' | 'lg'(values are 1 - 9, making a 3x3 grid of w / len possibilities)
+	xml += '</a:ln>'
+	return xml
 }
 
 /**
@@ -199,11 +241,9 @@ function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 					'</p:nvGraphicFramePr>'
 				strXml += `<p:xfrm><a:off x="${x || (x === 0 ? 0 : EMU)}" y="${y || (y === 0 ? 0 : EMU)}"/><a:ext cx="${cx || (cx === 0 ? 0 : EMU)}" cy="${cy || EMU
 				}"/></p:xfrm>`
-				strXml += '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl><a:tblPr/>'
-				// + '        <a:tblPr bandRow="1"/>';
-				// TODO: Support banded rows, first/last row, etc.
-				// NOTE: Banding, etc. only shows when using a table style! (or set alt row color if banding)
-				// <a:tblPr firstCol="0" firstRow="0" lastCol="0" lastRow="0" bandCol="0" bandRow="1">
+				strXml += '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">'
+				// NOTE: banding/emphasis only renders when a table style is applied - either `tableStyleId` here or a theme default
+				strXml += `<a:tbl>${genXmlTblPr(objTabOpts as TableProps)}`
 
 				// STEP 2: Set column widths
 				// Evenly distribute cols/rows across size provided when applicable (calc them if only overall dimensions were provided)
@@ -530,15 +570,7 @@ function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 				strSlideXml += slideItemObj.options.fill ? genXmlColorSelection(slideItemObj.options.fill) : '<a:noFill/>'
 
 				// shape Type: LINE: line color
-				if (slideItemObj.options.line) {
-					strSlideXml += slideItemObj.options.line.width ? `<a:ln w="${valToPts(slideItemObj.options.line.width)}">` : '<a:ln>'
-					if (slideItemObj.options.line.color) strSlideXml += genXmlColorSelection(slideItemObj.options.line)
-					if (slideItemObj.options.line.dashType) strSlideXml += `<a:prstDash val="${slideItemObj.options.line.dashType}"/>`
-					if (slideItemObj.options.line.beginArrowType) strSlideXml += `<a:headEnd type="${slideItemObj.options.line.beginArrowType}"/>`
-					if (slideItemObj.options.line.endArrowType) strSlideXml += `<a:tailEnd type="${slideItemObj.options.line.endArrowType}"/>`
-					// FUTURE: `endArrowSize` < a: headEnd type = "arrow" w = "lg" len = "lg" /> 'sm' | 'med' | 'lg'(values are 1 - 9, making a 3x3 grid of w / len possibilities)
-					strSlideXml += '</a:ln>'
-				}
+				if (slideItemObj.options.line) strSlideXml += genXmlLine(slideItemObj.options.line)
 
 				// EFFECTS > SHADOW: REF: @see http://officeopenxml.com/drwSp-effects.php
 				if (slideItemObj.options.shadow && slideItemObj.options.shadow.type !== 'none') {
@@ -622,6 +654,9 @@ function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 				strSlideXml += `  <a:ext cx="${imgWidth}" cy="${imgHeight}"/>`
 				strSlideXml += ' </a:xfrm>'
 				strSlideXml += ` <a:prstGeom prst="${rounding ? 'ellipse' : 'rect'}"><a:avLst/></a:prstGeom>`
+
+				// OUTLINE: picture border/frame (issue #35)
+				if (slideItemObj.options.line) strSlideXml += genXmlLine(slideItemObj.options.line)
 
 				// EFFECTS > SHADOW: REF: @see http://officeopenxml.com/drwSp-effects.php
 				if (slideItemObj.options.shadow && slideItemObj.options.shadow.type !== 'none') {
@@ -1363,11 +1398,15 @@ export function genXmlPlaceholder (placeholderObj: ISlideObject | undefined): st
 
 	const placeholderIdx = placeholderObj.options?._placeholderIdx ? placeholderObj.options._placeholderIdx : ''
 	const placeholderTyp = placeholderObj.options?._placeholderType ? placeholderObj.options._placeholderType : ''
-	const placeholderType: string = placeholderTyp && PLACEHOLDER_TYPES[placeholderTyp] ? (PLACEHOLDER_TYPES[placeholderTyp]).toString() : ''
+	// NOTE: accept both the friendly name ('image', 'table') and the OOXML code it maps to ('pic', 'tbl').
+	// The old code looked the mapped code back up in the enum, which only ever hit for the types whose
+	// name and code are identical - that is why picture/chart/table placeholders never got a `type` (issue #33).
+	const placeholderCodes: string[] = Object.values(PLACEHOLDER_TYPES)
+	const placeholderType: string = PLACEHOLDER_TYPES[placeholderTyp]?.toString() ?? (placeholderCodes.includes(placeholderTyp) ? placeholderTyp : '')
 
 	return `<p:ph
 		${placeholderIdx ? ' idx="' + placeholderIdx.toString() + '"' : ''}
-		${placeholderType && PLACEHOLDER_TYPES[placeholderType] ? ` type="${placeholderType}"` : ''}
+		${placeholderType ? ` type="${placeholderType}"` : ''}
 		${placeholderObj.text && placeholderObj.text.length > 0 ? ' hasCustomPrompt="1"' : ''}
 		/>`
 }
