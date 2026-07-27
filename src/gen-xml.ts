@@ -99,7 +99,7 @@ function genXmlTblPr (opts: TableProps): string {
 
 	if (!attrs && !opts.tableStyleId) return '<a:tblPr/>'
 	// NOTE: `a:tableStyleId` must be the last child of `a:tblPr` per the schema
-	return opts.tableStyleId ? `<a:tblPr${attrs}><a:tableStyleId>${opts.tableStyleId}</a:tableStyleId></a:tblPr>` : `<a:tblPr${attrs}/>`
+	return opts.tableStyleId ? `<a:tblPr${attrs}><a:tableStyleId>${encodeXmlEntities(opts.tableStyleId)}</a:tableStyleId></a:tblPr>` : `<a:tblPr${attrs}/>`
 }
 
 /**
