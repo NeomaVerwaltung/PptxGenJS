@@ -2019,9 +2019,12 @@ declare namespace PptxGenJS {
 		 */
 		values?: number[]
 		/**
-		 * Override `chartColors`
+		 * Series color - overrides the `chartColors` cycle for this series only
+		 * - hex color or the string `'transparent'`
+		 * - pie/doughnut charts colour each data point rather than each series: use `chartColors` for those
+		 * @example 'FF0000' // this series is red, the rest follow `chartColors`
 		 */
-		//color?: string // TODO: WIP: (Pull #727)
+		color?: string
 	}
 	export interface OptsChartGridLine {
 		/**
