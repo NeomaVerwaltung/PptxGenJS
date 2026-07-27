@@ -57,7 +57,6 @@ export function encodeSlideMediaRels(layout: PresSlide | SlideLayout): Array<Pro
 	const isNode = typeof process !== 'undefined' && !!process.versions?.node && process.release?.name === 'node'
 	// These will be filled only when we’re in Node
 	let fs: typeof import('node:fs') | undefined
-	let http: typeof import('node:http') | undefined
 	let https: typeof import('node:https') | undefined
 	let http: typeof import('node:http') | undefined
 

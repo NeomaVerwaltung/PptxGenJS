@@ -23,6 +23,7 @@ import {
 	ISlideRelMedia,
 	ObjectOptions,
 	PresSlide,
+	ShadowProps,
 	SlideLayout,
 	TableCell,
 	TableCellProps,
