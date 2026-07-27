@@ -2500,6 +2500,10 @@ declare namespace PptxGenJS {
 			| { line: ShapeProps }
 			| { rect: ShapeProps }
 			| { text: TextProps }
+			/** any of the 180+ shape types (`line`/`rect` above are shorthands) */
+			| { shape: { type: SHAPE_NAME, options?: ShapeProps } }
+			| { table: { rows: TableRow[], options?: TableProps } }
+			| { media: MediaProps }
 			| {
 				placeholder: {
 					options: PlaceholderProps
