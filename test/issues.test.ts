@@ -164,3 +164,14 @@ test('#39: auto-paged tables account for cell margins', async () => {
 
 	assert.ok(pageCount(0.5) > pageCount(0), 'large cell margins did not increase the page count')
 })
+
+test('#31: `compression` is honoured for every outputType, not just STREAM', async () => {
+	const build = async (compression: boolean): Promise<number> => {
+		const pptx = new pptxgen()
+		// repetitive text compresses well, so the two sizes are clearly different
+		pptx.addSlide().addText('compress me '.repeat(500), { x: 0.5, y: 0.5, w: 9, h: 5 })
+		return ((await pptx.write({ outputType: 'nodebuffer', compression })) as Buffer).byteLength
+	}
+
+	assert.ok(await build(true) < await build(false), '`compression: true` was ignored for outputType: nodebuffer')
+})
