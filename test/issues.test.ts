@@ -164,3 +164,25 @@ test('#39: auto-paged tables account for cell margins', async () => {
 
 	assert.ok(pageCount(0.5) > pageCount(0), 'large cell margins did not increase the page count')
 })
+
+test('#29: BorderProps accepts `width` (points) alongside the deprecated `pt`', async () => {
+	const cellXml = async (border: Record<string, unknown>): Promise<string> => {
+		const pptx = new pptxgen()
+		pptx.addSlide().addTable([[{ text: 'A', options: { border: [border, border, border, border] } }]], { x: 1, y: 1, w: 4 })
+		return await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')
+	}
+
+	assert.equal(await cellXml({ color: 'FF0000', width: 3 }), await cellXml({ color: 'FF0000', pt: 3 }), '`width` and `pt` produced different borders')
+	assert.ok((await cellXml({ color: 'FF0000', width: 3 })).includes('w="38100"'), '3pt border not emitted')
+})
+
+test('#29: defineLayout accepts `w`/`h` as aliases of `width`/`height`', () => {
+	const pptx = new pptxgen()
+	pptx.defineLayout({ name: 'A3_WH', width: 16.5, height: 11.7 })
+	pptx.defineLayout({ name: 'A3_SHORT', w: 16.5, h: 11.7 })
+
+	pptx.layout = 'A3_WH'
+	const viaWidth = { w: pptx.presLayout.width, h: pptx.presLayout.height }
+	pptx.layout = 'A3_SHORT'
+	assert.deepEqual({ w: pptx.presLayout.width, h: pptx.presLayout.height }, viaWidth)
+})

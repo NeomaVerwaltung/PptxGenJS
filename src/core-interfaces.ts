@@ -106,9 +106,15 @@ export interface BorderProps {
 
 	// TODO: add `transparency` prop to Borders (0-100%)
 
-	// TODO: add `width` - deprecate `pt`
+	/**
+	 * Border width (points)
+	 * - same name and unit as `ShapeLineProps.width`
+	 * @default 1
+	 */
+	width?: number
 	/**
 	 * Border size (points)
+	 * @deprecated v4.1.0 - use `width`
 	 * @default 1
 	 */
 	pt?: number
@@ -1735,6 +1741,24 @@ export interface PresLayout {
 	name: string
 	width: number
 	height: number
+}
+/**
+ * Argument to `defineLayout()` - dimensions may be given as `width`/`height` or as `w`/`h`
+ */
+export interface DefineLayoutProps {
+	/**
+	 * Layout name
+	 * @example 'A3'
+	 */
+	name: string
+	/** Layout width (inches) - or use `w` */
+	width?: number
+	/** Layout height (inches) - or use `h` */
+	height?: number
+	/** Layout width (inches) - alias of `width` */
+	w?: number
+	/** Layout height (inches) - alias of `height` */
+	h?: number
 }
 export interface SlideNumberProps extends PositionProps, TextBaseProps {
 	/**
