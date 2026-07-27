@@ -1,9 +1,9 @@
 # Submission Guidelines
 
-- Only modify the `src/*.ts` files (do not submit `dist` or `src/bld` files)
-- New and updated properties must be added to `src/core-interfaces.ts` and `types/index.d.ts`
-- New and updated features must be included in the corresponding `demos/modules/*.mjs` file
-- Review previously accepted changes for examples on what to provide
+- Modify only the `src/*.ts` files (do not submit `dist` or `src/bld` files)
+- Add new and updated properties to `src/core-interfaces.ts` and `types/index.d.ts`
+- Include new and updated features in the corresponding `demos/modules/*.mjs` file
+- Review previously accepted changes for examples of what to provide
 
 ## Change Summary
 <!--- Required: Provide a general summary of your changes -->
@@ -36,4 +36,4 @@
 
 ## Screenshots / Sample Code (if appropriate)
 
-Thanks for your contribution!
+Thank you for your contribution.

@@ -2,7 +2,7 @@
 title: Saving Presentations
 ---
 
-Several methods are available when generating a presentation.
+Several methods are available for generating a presentation.
 
 - All methods return a Promise
 
@@ -17,7 +17,7 @@ Save the presentation as a PowerPoint .pptx file.
 
 | Option        | Type    | Default             | Description                                                            |
 | :------------ | :------ | :------------------ | :--------------------------------------------------------------------- |
-| `compression` | boolean | false               | apply zip compression (exports take longer but saves signifcant space) |
+| `compression` | boolean | false               | apply zip compression (exports take longer but save significant space) |
 | `fileName`    | string  | 'Presentation.pptx' | output filename                                                        |
 
 ### Write File Example
@@ -76,7 +76,7 @@ Stream the generated file in an HTTP response (shown here with Express):
 
 ```typescript
 import express from "express"
-import pptxgen from "@neoma/pptxgenjs"
+import pptxgen from "@neo-ma/pptxgenjs"
 
 const app = express()
 
@@ -118,7 +118,7 @@ pptx.writeFile({ fileName: "PptxGenJS-Browser-2" });
 ### In Node.js
 
 ```typescript
-import pptxgen from "@neoma/pptxgenjs"
+import pptxgen from "@neo-ma/pptxgenjs"
 
 // Presentation 1:
 let pptx = new pptxgen()
@@ -132,7 +132,7 @@ await pptx.writeFile({ fileName: "PptxGenJS-Node-2.pptx" })
 ```
 
 ```typescript
-import pptxgen from "@neoma/pptxgenjs";
+import pptxgen from "@neo-ma/pptxgenjs";
 
 // Presentation 1:
 let pptx1 = new pptxgen();

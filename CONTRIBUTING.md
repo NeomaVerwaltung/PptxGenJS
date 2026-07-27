@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve PptxGenJS.
+This document describes how to set up a development environment and submit changes to the NEOMA distribution of PptxGenJS. Contributions are welcome and reviewed by the maintainers.
 
 ## Development setup
 

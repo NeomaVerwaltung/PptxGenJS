@@ -4,7 +4,7 @@ title: Slide Sections
 
 Sections group slides in PowerPoint's slide navigator, giving long decks a collapsible outline (for
 example "Intro", "Financials", "Appendix"). They are organizational only — they do not change how slides
-render. Reach for them when a presentation is large enough that named groups help reviewers navigate it.
+render. Use them when a presentation is large enough that named groups help reviewers navigate it.
 
 ## Syntax
 
@@ -25,7 +25,7 @@ pptx.addSection({ title: "Charts", order: 3 })
 ## Section Example
 
 ```typescript
-import pptxgen from "@neoma/pptxgenjs";
+import pptxgen from "@neo-ma/pptxgenjs";
 let pptx = new pptxgen();
 
 // STEP 1: Create a section

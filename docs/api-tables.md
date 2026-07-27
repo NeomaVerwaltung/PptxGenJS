@@ -102,7 +102,7 @@ slide.addTable(rows, { w: 9, rowH: 1, align: "left", fontFace: "Arial" });
 
 ## Table Auto-Paging
 
-Auto-paging will create new slides as table rows overflow, doing the magical work for you.
+Auto-paging creates new slides automatically as table rows overflow the current slide.
 
 ### Table Auto-Paging Options (`ITableOptions`)
 
@@ -123,16 +123,16 @@ Auto-paging will create new slides as table rows overflow, doing the magical wor
 - `autoPageLineWeight`: adjusts the calculated height of lines. If too much empty space is left under each table,
     then increase line weight value. Conversely, if the tables are overflowing the bottom of the Slides, then
     reduce the line weight value. Also helpful when using some fonts that do not have the usual golden ratio.
-- `newSlideStartY`: provides the ability to specify where new tables will be placed on new Slides. For example,
-    you may place a table halfway down a Slide, but you wouldn't that to be the starting location for subsequent
-    tables. Use this option to ensure there is no wasted space and to guarantee a professional look.
+- `newSlideStartY`: specifies where continuation tables are placed on new Slides. For example, a table may
+    start halfway down the first Slide, but that position is usually not desirable for the continuation tables
+    on subsequent Slides. Use this option to avoid wasted space and keep the layout consistent.
 
 ### Auto-Paging Usage Notes
 
 - New slides will be created as tables overflow. The table will start at either `newSlideStartY` (if present) or the Slide's top `margin`
 - Tables will retain their existing `x`, `w`, and `colW` values as they are rendered onto subsequent Slides
-- Auto-paging is not an exact science! Try using different values for `autoPageCharWeight`/`autoPageLineWeight` and slide margin
-- Very small and very large font sizes cause tables to over/under-flow, be sure to adjust the char and line properties
+- Auto-paging is an approximation. Adjust `autoPageCharWeight`/`autoPageLineWeight` and the slide margin until the result is acceptable
+- Very small and very large font sizes cause tables to over- or under-flow; adjust the char and line weight properties accordingly
 - There are many examples of auto-paging in the `examples` folder
 
 ## Examples

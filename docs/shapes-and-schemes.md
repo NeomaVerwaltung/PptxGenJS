@@ -5,9 +5,9 @@ title: Shapes and Schemes
 ## PowerPoint Shape Types
 
 The library ships every built-in PowerPoint shape — over 180 of them (rectangles, ovals, arrows, callouts,
-stars, connectors, and more), courtesy of the [officegen project](https://github.com/Ziv-Barber/officegen).
-Shapes are enumerated on the instance as `pptx.ShapeType`, so your editor autocompletes the full list as you
-type — that is the fastest way to discover them. The complete enum also lives in
+stars, connectors, and more), originally provided by the [officegen project](https://github.com/Ziv-Barber/officegen).
+Shapes are enumerated on the instance as `pptx.ShapeType`; editor autocompletion on this enum is the fastest
+way to discover the available shapes. The complete enum is also defined in
 [`index.d.ts`](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/types/index.d.ts).
 
 Add a shape with `slide.addShape(type, options)`. The options control fill, line, and position:
