@@ -1758,6 +1758,50 @@ declare namespace PptxGenJS {
 		 */
 		rowH?: number | number[]
 		/**
+		 * Apply special formatting to the first row (header emphasis)
+		 * - only renders when a table style is in effect (see `tableStyleId`)
+		 * @default false
+		 */
+		firstRow?: boolean
+		/**
+		 * Apply special formatting to the last row (totals emphasis)
+		 * @default false
+		 */
+		lastRow?: boolean
+		/**
+		 * Apply special formatting to the first column
+		 * @default false
+		 */
+		firstCol?: boolean
+		/**
+		 * Apply special formatting to the last column
+		 * @default false
+		 */
+		lastCol?: boolean
+		/**
+		 * Band (alternate the fill of) the rows
+		 * @default false
+		 */
+		bandRow?: boolean
+		/**
+		 * Band (alternate the fill of) the columns
+		 * @default false
+		 */
+		bandCol?: boolean
+		/**
+		 * Table style id (GUID of a built-in PowerPoint table style)
+		 * - required for `bandRow`/`firstRow`/etc. to have a visible effect
+		 * @example '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}' // "Medium Style 2 - Accent 1"
+		 */
+		tableStyleId?: string
+		/**
+		 * DEV TOOL: Verbose Mode (to console)
+		 * - tell the library to provide an almost ridiculous amount of detail during auto-paging calculations
+		 * @default false // obviously
+		 */
+		verbose?: boolean // Undocumented; shows verbose output
+
+		/**
 		 * @deprecated v3.3.0 - use `autoPageSlideStartY`
 		 */
 		newSlideStartY?: number
