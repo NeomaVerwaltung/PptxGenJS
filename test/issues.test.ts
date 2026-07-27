@@ -164,3 +164,17 @@ test('#39: auto-paged tables account for cell margins', async () => {
 
 	assert.ok(pageCount(0.5) > pageCount(0), 'large cell margins did not increase the page count')
 })
+
+test('#37: a per-series color overrides the chartColors cycle', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addChart(pptx.ChartType.bar, [
+		{ name: 'A', labels: ['Q1'], values: [1] },
+		{ name: 'B', labels: ['Q1'], values: [2], color: 'FF0000' },
+	], { x: 1, y: 1, w: 4, h: 3 })
+
+	const xml = await readChart(await writeZip(pptx))
+	const sers = [...xml.matchAll(/<c:ser>[\s\S]*?<\/c:ser>/g)].map(match => match[0])
+	assert.equal(sers.length, 2)
+	assert.ok(sers[1].includes('<a:srgbClr val="FF0000"/>'), 'series color override not applied')
+	assert.ok(!sers[0].includes('<a:srgbClr val="FF0000"/>'), 'override leaked into the other series')
+})
