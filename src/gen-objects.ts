@@ -479,7 +479,6 @@ export function addImageDefinition(target: PresSlide | SlideLayout, opt: ImagePr
 		transparency: opt.transparency || 0,
 		objectName,
 		shadow: opt.shadow ? correctShadowOptions(opt.shadow) : undefined,
-		line: opt.line,
 		_sizeFromImage: !intWidth && !intHeight,
 	}
 

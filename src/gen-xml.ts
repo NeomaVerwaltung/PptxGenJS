@@ -24,7 +24,6 @@ import {
 	ObjectOptions,
 	PresSlide,
 	ShadowProps,
-	ShapeLineProps,
 	SlideLayout,
 	TableCell,
 	TableCellProps,
@@ -76,22 +75,6 @@ const ImageSizingXml = {
 		const bPerc = Math.round(1e5 * (b / imgSize.h))
 		return `<a:srcRect l="${lPerc}" r="${rPerc}" t="${tPerc}" b="${bPerc}"/><a:stretch/>`
 	},
-}
-
-/**
- * Create the `a:ln` outline block for a shape/image
- * @param {ShapeLineProps} line - line options
- * @return {string} XML
- */
-function genXmlLine (line: ShapeLineProps): string {
-	let xml = line.width ? `<a:ln w="${valToPts(line.width)}">` : '<a:ln>'
-	if (line.color) xml += genXmlColorSelection(line)
-	if (line.dashType) xml += `<a:prstDash val="${line.dashType}"/>`
-	if (line.beginArrowType) xml += `<a:headEnd type="${line.beginArrowType}"/>`
-	if (line.endArrowType) xml += `<a:tailEnd type="${line.endArrowType}"/>`
-	// FUTURE: `endArrowSize` < a: headEnd type = "arrow" w = "lg" len = "lg" /> 'sm' | 'med' | 'lg'(values are 1 - 9, making a 3x3 grid of w / len possibilities)
-	xml += '</a:ln>'
-	return xml
 }
 
 /**
@@ -547,7 +530,15 @@ function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 				strSlideXml += slideItemObj.options.fill ? genXmlColorSelection(slideItemObj.options.fill) : '<a:noFill/>'
 
 				// shape Type: LINE: line color
-				if (slideItemObj.options.line) strSlideXml += genXmlLine(slideItemObj.options.line)
+				if (slideItemObj.options.line) {
+					strSlideXml += slideItemObj.options.line.width ? `<a:ln w="${valToPts(slideItemObj.options.line.width)}">` : '<a:ln>'
+					if (slideItemObj.options.line.color) strSlideXml += genXmlColorSelection(slideItemObj.options.line)
+					if (slideItemObj.options.line.dashType) strSlideXml += `<a:prstDash val="${slideItemObj.options.line.dashType}"/>`
+					if (slideItemObj.options.line.beginArrowType) strSlideXml += `<a:headEnd type="${slideItemObj.options.line.beginArrowType}"/>`
+					if (slideItemObj.options.line.endArrowType) strSlideXml += `<a:tailEnd type="${slideItemObj.options.line.endArrowType}"/>`
+					// FUTURE: `endArrowSize` < a: headEnd type = "arrow" w = "lg" len = "lg" /> 'sm' | 'med' | 'lg'(values are 1 - 9, making a 3x3 grid of w / len possibilities)
+					strSlideXml += '</a:ln>'
+				}
 
 				// EFFECTS > SHADOW: REF: @see http://officeopenxml.com/drwSp-effects.php
 				if (slideItemObj.options.shadow && slideItemObj.options.shadow.type !== 'none') {
@@ -631,9 +622,6 @@ function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 				strSlideXml += `  <a:ext cx="${imgWidth}" cy="${imgHeight}"/>`
 				strSlideXml += ' </a:xfrm>'
 				strSlideXml += ` <a:prstGeom prst="${rounding ? 'ellipse' : 'rect'}"><a:avLst/></a:prstGeom>`
-
-				// OUTLINE: picture border/frame (issue #35)
-				if (slideItemObj.options.line) strSlideXml += genXmlLine(slideItemObj.options.line)
 
 				// EFFECTS > SHADOW: REF: @see http://officeopenxml.com/drwSp-effects.php
 				if (slideItemObj.options.shadow && slideItemObj.options.shadow.type !== 'none') {
