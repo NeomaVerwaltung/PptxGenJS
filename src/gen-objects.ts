@@ -236,9 +236,10 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 	}
 	// Translate friendly data label positions to OOXML codes and drop values the chart type rejects
 	// NOTE: an unsupported `c:dLblPos` makes PowerPoint declare the file corrupt, so it is dropped with a warning
-	// NOTE: multi-type charts carry per-sub-chart options, each normalized by its own pass through here
-	if (options.dataLabelPosition && !Array.isArray(options._type)) {
-		options.dataLabelPosition = resolveDataLabelPosition(options.dataLabelPosition, options._type, options.barGrouping) as typeof options.dataLabelPosition
+	// NOTE: a multi-type chart has no single type to validate against, so only the name translation applies there
+	if (options.dataLabelPosition) {
+		const chartType = Array.isArray(options._type) ? undefined : options._type
+		options.dataLabelPosition = resolveDataLabelPosition(options.dataLabelPosition, chartType, options.barGrouping) as typeof options.dataLabelPosition
 		if (!options.dataLabelPosition) delete options.dataLabelPosition
 	}
 	options.dataLabelBkgrdColors = options.dataLabelBkgrdColors || !options.dataLabelBkgrdColors ? options.dataLabelBkgrdColors : false

@@ -22,12 +22,15 @@ const DATA_LABEL_POS_CODES: Record<string, string> = {
  * Resolve a `dataLabelPosition` to the OOXML code valid for this chart type
  * - a value the chart type does not accept makes PowerPoint declare the file corrupt, so it is dropped
  * @param {string} position - user value: a friendly name (`'outsideEnd'`) or an OOXML code (`'outEnd'`)
- * @param {string} chartType - chart type being rendered
+ * @param {string} chartType - chart type being rendered, or undefined for a multi-type chart (translate only)
  * @param {string} barGrouping - bar grouping (stacked bars accept fewer positions than clustered)
  * @returns {string | undefined} OOXML code, or undefined when not valid for this chart type
  */
-export function resolveDataLabelPosition (position: string, chartType: string, barGrouping?: string): string | undefined {
+export function resolveDataLabelPosition (position: string, chartType?: string, barGrouping?: string): string | undefined {
 	const code = DATA_LABEL_POS_CODES[position] ?? position
+
+	// a multi-type chart has no single type to validate against - each sub-chart validates its own options
+	if (!chartType) return code
 	// REFERENCE: https://docs.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/e2b1697c-7adc-463d-9081-3daef72f656f
 	let valid: string[]
 	switch (chartType) {
