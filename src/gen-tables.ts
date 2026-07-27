@@ -95,7 +95,7 @@ function parseTextToLines(cell: TableCell, colWidth: number): TableCell[][] {
 			}
 
 			if (cell.options?.breakLine) {
-				debugLog(`inputCells: new line > ${JSON.stringify(newLine)}`)
+				if (isDebugEnabled()) debugLog(`inputCells: new line > ${JSON.stringify(newLine)}`)
 				inputLines1.push(newLine)
 				newLine = []
 			}
@@ -249,7 +249,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 			else if (!isNaN(tableProps.slideMargin)) arrInchMargins = [tableProps.slideMargin, tableProps.slideMargin, tableProps.slideMargin, tableProps.slideMargin]
 		}
 
-		debugLog(`| arrInchMargins .................................. = [${arrInchMargins.join(', ')}]`)
+		if (isDebugEnabled()) debugLog(`| arrInchMargins .................................. = [${arrInchMargins.join(', ')}]`)
 	}
 
 	// STEP 2: Calculate number of columns
@@ -262,19 +262,19 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 			const cellOpts = cell.options || null
 			numCols += Number(cellOpts?.colspan ? cellOpts.colspan : 1)
 		})
-		debugLog(`| numCols ......................................... = ${numCols}`)
+		if (isDebugEnabled()) debugLog(`| numCols ......................................... = ${numCols}`)
 	}
 
 	// STEP 3: Calculate width using tableProps.colW if possible
 	if (!tablePropW && tableProps.colW) {
 		tableCalcW = Array.isArray(tableProps.colW) ? tableProps.colW.reduce((p, n) => p + n) * EMU : tableProps.colW * numCols || 0
-		debugLog(`| tableCalcW ...................................... = ${tableCalcW / EMU}`)
+		if (isDebugEnabled()) debugLog(`| tableCalcW ...................................... = ${tableCalcW / EMU}`)
 	}
 
 	// STEP 4: Calculate usable width now that total usable space is known (`emuSlideTabW`)
 	{
 		emuSlideTabW = tableCalcW || inch2Emu((tablePropX ? tablePropX / EMU : arrInchMargins[1]) + arrInchMargins[3])
-		debugLog(`| emuSlideTabW .................................... = ${(emuSlideTabW / EMU).toFixed(1)}`)
+		if (isDebugEnabled()) debugLog(`| emuSlideTabW .................................... = ${(emuSlideTabW / EMU).toFixed(1)}`)
 	}
 
 	// STEP 5: Calculate column widths if not provided (emuSlideTabW will be used below to determine lines-per-col)
@@ -333,7 +333,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 		// C: Calc usable vertical space/table height. Set default value first, adjust below when necessary.
 		calcSlideTabH()
 		emuTabCurrH += maxCellMarTopEmu + maxCellMarBtmEmu // Start row height with margins
-		if (iRow === 0) debugLog(`| SLIDE [${tableRowSlides.length}]: emuSlideTabH ...... = ${(emuSlideTabH / EMU).toFixed(1)} `)
+		if (isDebugEnabled() && iRow === 0) debugLog(`| SLIDE [${tableRowSlides.length}]: emuSlideTabH ...... = ${(emuSlideTabH / EMU).toFixed(1)} `)
 
 		// D: --==[[ BUILD DATA SET ]]==-- (iterate over cells: split text into lines[], set `lineHeight`)
 		row.forEach((cell, iCell) => {
@@ -406,7 +406,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 		 *  | line-1 | line-1 | line-1 | line-1 |
 		 *  |--------|--------|--------|--------|
 		 */
-		debugLog(`\n| SLIDE [${tableRowSlides.length}]: ROW [${iRow}]: START...`)
+		if (isDebugEnabled()) debugLog(`\n| SLIDE [${tableRowSlides.length}]: ROW [${iRow}]: START...`)
 		let currCellIdx = 0
 		let emuLineMaxH = 0
 		let isDone = false
@@ -445,7 +445,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 
 				// E: Calc usable vertical space/table height now as we may still be in the same row and code above ("C: Calc usable vertical space/table height.") calc may now be invalid
 				calcSlideTabH()
-				debugLog(`| SLIDE [${tableRowSlides.length}]: emuSlideTabH ...... = ${(emuSlideTabH / EMU).toFixed(1)} `)
+				if (isDebugEnabled()) debugLog(`| SLIDE [${tableRowSlides.length}]: emuSlideTabH ...... = ${(emuSlideTabH / EMU).toFixed(1)} `)
 
 				// F: reset current table height for this new Slide, starting the row off with its cell margins
 				emuTabCurrH = maxCellMarTopEmu + maxCellMarBtmEmu
@@ -707,7 +707,7 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 					arrObjTabFootRows.push(arrObjTabCells)
 					break
 				default:
-					debugLog(`table parsing: unexpected table part: ${part}`)
+					console.warn(`table parsing: unexpected table part: ${part}`)
 					break
 			}
 		})
@@ -724,7 +724,7 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 		// B: DESIGN: Reset `y` to startY or margin after first Slide (ISSUE#43, ISSUE#47, ISSUE#48)
 		if (idxTr === 0) opts.y = opts.y || arrInchMargins[0]
 		if (idxTr > 0) opts.y = opts.autoPageSlideStartY || opts.newSlideStartY || arrInchMargins[0]
-		debugLog(`| opts.autoPageSlideStartY: ${opts.autoPageSlideStartY} / arrInchMargins[0]: ${arrInchMargins[0]} => opts.y = ${opts.y}`)
+		if (isDebugEnabled()) debugLog(`| opts.autoPageSlideStartY: ${opts.autoPageSlideStartY} / arrInchMargins[0]: ${arrInchMargins[0]} => opts.y = ${opts.y}`)
 
 		// C: Add table to Slide
 		newSlide.addTable(slide.rows, { x: opts.x || arrInchMargins[3], y: opts.y, w: Number(emuSlideTabW) / EMU, colW: arrColW, autoPage: false })
