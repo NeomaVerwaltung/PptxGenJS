@@ -499,6 +499,11 @@ export interface ImageProps extends PositionProps, DataOrPathProps, ObjectNamePr
 	flipV?: boolean
 	hyperlink?: HyperlinkProps
 	/**
+	 * Image outline/border (a picture frame)
+	 * @example { color: '696969', width: 2 } // 2pt dim-gray border
+	 */
+	line?: ShapeLineProps
+	/**
 	 * Placeholder type
 	 * - values: 'body' | 'header' | 'footer' | 'title' | et. al.
 	 * @example 'body'
@@ -929,12 +934,42 @@ export interface TableProps extends PositionProps, TextBaseProps, ObjectNameProp
 	 */
 	rowH?: number | number[]
 	/**
-	 * DEV TOOL: Verbose Mode (to console)
-	 * - tell the library to provide an almost ridiculous amount of detail during auto-paging calculations
-	 * @default false // obviously
+	 * Apply special formatting to the first row (header emphasis)
+	 * - only renders when a table style is in effect (see `tableStyleId`)
+	 * @default false
 	 */
-	verbose?: boolean // Undocumented; shows verbose output
-
+	firstRow?: boolean
+	/**
+	 * Apply special formatting to the last row (totals emphasis)
+	 * @default false
+	 */
+	lastRow?: boolean
+	/**
+	 * Apply special formatting to the first column
+	 * @default false
+	 */
+	firstCol?: boolean
+	/**
+	 * Apply special formatting to the last column
+	 * @default false
+	 */
+	lastCol?: boolean
+	/**
+	 * Band (alternate the fill of) the rows
+	 * @default false
+	 */
+	bandRow?: boolean
+	/**
+	 * Band (alternate the fill of) the columns
+	 * @default false
+	 */
+	bandCol?: boolean
+	/**
+	 * Table style id (GUID of a built-in PowerPoint table style)
+	 * - required for `bandRow`/`firstRow`/etc. to have a visible effect
+	 * @example '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}' // "Medium Style 2 - Accent 1"
+	 */
+	tableStyleId?: string
 	/**
 	 * @deprecated v3.3.0 - use `autoPageSlideStartY`
 	 */

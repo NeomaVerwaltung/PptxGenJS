@@ -178,3 +178,29 @@ test('#37: a per-series color overrides the chartColors cycle', async () => {
 	assert.ok(sers[1].includes('<a:srgbClr val="FF0000"/>'), 'series color override not applied')
 	assert.ok(!sers[0].includes('<a:srgbClr val="FF0000"/>'), 'override leaked into the other series')
 })
+
+test('#36: table style flags and style id are emitted in a:tblPr', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addTable([['A', 'B']], { x: 1, y: 1, w: 4, bandRow: true, firstRow: true, tableStyleId: '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}' })
+
+	const xml = await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')
+	assert.ok(xml.includes('<a:tblPr firstRow="1" bandRow="1">'), `tblPr flags missing: ${/<a:tblPr[\s\S]*?tblPr>/.exec(xml)?.[0] ?? xml}`)
+	assert.ok(xml.includes('<a:tableStyleId>{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}</a:tableStyleId>'), 'table style id missing')
+})
+
+test('#36: tables without style options still emit an empty a:tblPr', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addTable([['A', 'B']], { x: 1, y: 1, w: 4 })
+	assert.ok((await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')).includes('<a:tblPr/>'))
+})
+
+test('#35: images accept a line/outline and emit it in the picture spPr', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addImage({ data: PNG_4x2, x: 1, y: 1, w: 2, h: 1, line: { color: 'FF0000', width: 2, dashType: 'dash' } })
+
+	const xml = await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')
+	const pic = /<p:pic>[\s\S]*?<\/p:pic>/.exec(xml)?.[0] ?? ''
+	assert.ok(pic.includes('<a:ln w="25400">'), `picture outline width missing: ${pic}`)
+	assert.ok(pic.includes('<a:srgbClr val="FF0000"/>'), 'picture outline color missing')
+	assert.ok(pic.includes('<a:prstDash val="dash"/>'), 'picture outline dash type missing')
+})
