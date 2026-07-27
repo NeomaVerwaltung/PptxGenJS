@@ -499,6 +499,11 @@ export interface ImageProps extends PositionProps, DataOrPathProps, ObjectNamePr
 	flipV?: boolean
 	hyperlink?: HyperlinkProps
 	/**
+	 * Image outline/border (a picture frame)
+	 * @example { color: '696969', width: 2 } // 2pt dim-gray border
+	 */
+	line?: ShapeLineProps
+	/**
 	 * Placeholder type
 	 * - values: 'body' | 'header' | 'footer' | 'title' | et. al.
 	 * @example 'body'
@@ -929,12 +934,42 @@ export interface TableProps extends PositionProps, TextBaseProps, ObjectNameProp
 	 */
 	rowH?: number | number[]
 	/**
-	 * DEV TOOL: Verbose Mode (to console)
-	 * - tell the library to provide an almost ridiculous amount of detail during auto-paging calculations
-	 * @default false // obviously
+	 * Apply special formatting to the first row (header emphasis)
+	 * - only renders when a table style is in effect (see `tableStyleId`)
+	 * @default false
 	 */
-	verbose?: boolean // Undocumented; shows verbose output
-
+	firstRow?: boolean
+	/**
+	 * Apply special formatting to the last row (totals emphasis)
+	 * @default false
+	 */
+	lastRow?: boolean
+	/**
+	 * Apply special formatting to the first column
+	 * @default false
+	 */
+	firstCol?: boolean
+	/**
+	 * Apply special formatting to the last column
+	 * @default false
+	 */
+	lastCol?: boolean
+	/**
+	 * Band (alternate the fill of) the rows
+	 * @default false
+	 */
+	bandRow?: boolean
+	/**
+	 * Band (alternate the fill of) the columns
+	 * @default false
+	 */
+	bandCol?: boolean
+	/**
+	 * Table style id (GUID of a built-in PowerPoint table style)
+	 * - required for `bandRow`/`firstRow`/etc. to have a visible effect
+	 * @example '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}' // "Medium Style 2 - Accent 1"
+	 */
+	tableStyleId?: string
 	/**
 	 * @deprecated v3.3.0 - use `autoPageSlideStartY`
 	 */
@@ -1179,9 +1214,12 @@ export interface OptsChartData {
 	 */
 	values?: number[]
 	/**
-	 * Override `chartColors`
+	 * Series color - overrides the `chartColors` cycle for this series only
+	 * - hex color or the string `'transparent'`
+	 * - pie/doughnut charts colour each data point rather than each series: use `chartColors` for those
+	 * @example 'FF0000' // this series is red, the rest follow `chartColors`
 	 */
-	// color?: string // TODO: WIP: (Pull #727)
+	color?: string
 }
 // Used internally, probably shouldn't be used by end users
 export interface IOptsChartData extends OptsChartData {
@@ -1454,8 +1492,16 @@ export interface IChartPropsAxisVal {
 	valLabelFormatCode?: string
 }
 export interface IChartPropsChartBar {
-	bar3DShape?: string
-	barDir?: string
+	/**
+	 * 3D bar shape
+	 * @default 'box'
+	 */
+	bar3DShape?: 'box' | 'cone' | 'coneToMax' | 'cylinder' | 'pyramid' | 'pyramidToMax'
+	/**
+	 * Bar direction - horizontal bars or vertical columns
+	 * @default 'col'
+	 */
+	barDir?: 'bar' | 'col'
 	barGapDepthPct?: number
 	/**
 	 * MS-PPT > Format chart > Format Data Point > Series Options >  "Gap Width"
@@ -1464,7 +1510,11 @@ export interface IChartPropsChartBar {
 	 * @default 150
 	 */
 	barGapWidthPct?: number
-	barGrouping?: string
+	/**
+	 * Bar grouping
+	 * @default 'clustered'
+	 */
+	barGrouping?: 'clustered' | 'percentStacked' | 'stacked' | 'standard'
 	/**
 	 * MS-PPT > Format chart > Format Data Point > Series Options >  "Series Overlap"
 	 * - overlap (percent)
@@ -1564,7 +1614,17 @@ export interface IChartPropsDataLabel {
 	 */
 	dataLabelFormatCode?: string
 	dataLabelFormatScatter?: 'custom' | 'customXY' | 'XY'
-	dataLabelPosition?: 'b' | 'bestFit' | 'ctr' | 'l' | 'r' | 't' | 'inEnd' | 'outEnd'
+	/**
+	 * Data label position
+	 * - friendly names are translated to their OOXML codes; the codes themselves are still accepted
+	 * - valid values differ per chart type: a value the chart type does not support is dropped with a
+	 *   console warning rather than producing a file PowerPoint asks to repair
+	 * @example 'outsideEnd' // bar/column, pie
+	 * @example 'top' // line, scatter, radar
+	 */
+	dataLabelPosition?:
+	| 'bottom' | 'center' | 'left' | 'right' | 'top' | 'insideEnd' | 'insideBase' | 'outsideEnd' | 'bestFit'
+	| 'b' | 'ctr' | 'l' | 'r' | 't' | 'inEnd' | 'inBase' | 'outEnd'
 }
 export interface IChartPropsDataTable {
 	dataTableFontSize?: number
@@ -1755,6 +1815,10 @@ export interface SlideMasterProps {
 	| { line: ShapeProps }
 	| { rect: ShapeProps }
 	| { text: TextProps }
+	/** any of the 180+ shape types (`line`/`rect` above are shorthands) */
+	| { shape: { type: SHAPE_NAME, options?: ShapeProps } }
+	| { table: { rows: TableRow[], options?: TableProps } }
+	| { media: MediaProps }
 	| {
 		placeholder: {
 			options: PlaceholderProps
