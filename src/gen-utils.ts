@@ -5,6 +5,27 @@
 import { EMU, REGEX_HEX_COLOR, DEF_FONT_COLOR, DEF_TEXT_GLOW, ONEPT, SchemeColor, SCHEME_COLORS } from './core-enums'
 import { PresLayout, TextGlowProps, PresSlide, SlideLayout, ShapeFillProps, Color, ShapeLineProps, Coord, ShadowProps } from './core-interfaces'
 
+/** debug namespace, used for both the log prefix and the `NODE_DEBUG` section name */
+const DEBUG_NS = 'pptxgenjs'
+
+/**
+ * Whether verbose diagnostics are enabled
+ * - set `PPTXGENJS_DEBUG=1`, or include `pptxgenjs` in Node's `NODE_DEBUG`
+ * @returns {boolean} debug enabled
+ */
+export function isDebugEnabled (): boolean {
+	if (typeof process === 'undefined' || !process.env) return false
+	return Boolean(process.env.PPTXGENJS_DEBUG) || (process.env.NODE_DEBUG ?? '').split(/[\s,]+/).includes(DEBUG_NS)
+}
+
+/**
+ * Log a diagnostic message (no-op unless debug is enabled)
+ * @param {unknown[]} args - console.debug arguments
+ */
+export function debugLog (...args: unknown[]): void {
+	if (isDebugEnabled()) console.debug(`[${DEBUG_NS}]`, ...args)
+}
+
 /**
  * Translates any type of `x`/`y`/`w`/`h` prop to EMU
  * - guaranteed to return a result regardless of undefined, null, etc. (0)
