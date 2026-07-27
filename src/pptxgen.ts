@@ -795,7 +795,7 @@ export default class PptxGenJS implements IPresentationProps {
 	 * @param {TableToSlidesProps} options - generation options
 	 */
 	tableToSlides(eleId: string, options: TableToSlidesProps = {}): void {
-		// @note `verbose` option is undocumented; used for verbose output of layout process
+		// @note set the `PPTXGENJS_DEBUG` env var for verbose output of the layout process
 		genTable.genTableToSlides(
 			this,
 			eleId,

@@ -8,12 +8,18 @@ import { getSmartParseNumber, inch2Emu, rgbToHex, valToPts } from './gen-utils'
 import PptxGenJS from './pptxgen'
 
 /**
+ * Verbose auto-paging diagnostics (to console).
+ * Enable with the `PPTXGENJS_DEBUG` env var - this is library diagnostics config, not a per-table option.
+ */
+const DEBUG = typeof process !== 'undefined' && Boolean(process.env?.PPTXGENJS_DEBUG)
+
+/**
  * Break cell text into lines based upon table column width (e.g.: Magic Happens Here(tm))
  * @param {TableCell} cell - table cell
  * @param {number} colWidth - table column width (inches)
  * @return {TableRow[]} - cell's text objects grouped into lines
  */
-function parseTextToLines(cell: TableCell, colWidth: number, verbose?: boolean): TableCell[][] {
+function parseTextToLines(cell: TableCell, colWidth: number): TableCell[][] {
 	// FYI: CPL = Width / (font-size / font-constant)
 	// FYI: CHAR:2.3, colWidth:10, fontSize:12 => CPL=138, (actual chars per line in PPT)=145 [14.5 CPI]
 	// FYI: CHAR:2.3, colWidth:7 , fontSize:12 => CPL= 97, (actual chars per line in PPT)=100 [14.3 CPI]
@@ -61,7 +67,7 @@ function parseTextToLines(cell: TableCell, colWidth: number, verbose?: boolean):
 	} else if (Array.isArray(cell.text)) {
 		inputCells = cell.text
 	}
-	if (verbose) {
+	if (DEBUG) {
 		console.log('[1/4] inputCells')
 		inputCells.forEach((cell, idx) => console.log(`[1/4] [${idx + 1}] cell: ${JSON.stringify(cell)}`))
 		// console.log('...............................................\n\n')
@@ -95,7 +101,7 @@ function parseTextToLines(cell: TableCell, colWidth: number, verbose?: boolean):
 			}
 
 			if (cell.options?.breakLine) {
-				if (verbose) console.log(`inputCells: new line > ${JSON.stringify(newLine)}`)
+				if (DEBUG) console.log(`inputCells: new line > ${JSON.stringify(newLine)}`)
 				inputLines1.push(newLine)
 				newLine = []
 			}
@@ -107,7 +113,7 @@ function parseTextToLines(cell: TableCell, colWidth: number, verbose?: boolean):
 			newLine = []
 		}
 	})
-	if (verbose) {
+	if (DEBUG) {
 		console.log(`[2/4] inputLines1 (${inputLines1.length})`)
 		inputLines1.forEach((line, idx) => console.log(`[2/4] [${idx + 1}] line: ${JSON.stringify(line)}`))
 		// console.log('...............................................\n\n')
@@ -130,7 +136,7 @@ function parseTextToLines(cell: TableCell, colWidth: number, verbose?: boolean):
 			inputLines2.push(lineCells)
 		})
 	})
-	if (verbose) {
+	if (DEBUG) {
 		console.log(`[3/4] inputLines2 (${inputLines2.length})`)
 		inputLines2.forEach(line => console.log(`[3/4] line: ${JSON.stringify(line)}`))
 		// console.log('...............................................\n\n')
@@ -145,7 +151,7 @@ function parseTextToLines(cell: TableCell, colWidth: number, verbose?: boolean):
 			const wordText = word.text ?? ''
 			// A: create new line when horizontal space is exhausted
 			if (strCurrLine.length + wordText.length > CPL) {
-				// if (verbose) console.log(`STEP 4: New line added: (${strCurrLine.length} + ${word.text.length} > ${CPL})`);
+				// if (DEBUG) console.log(`STEP 4: New line added: (${strCurrLine.length} + ${word.text.length} > ${CPL})`);
 				parsedLines.push(lineCells)
 				lineCells = []
 				strCurrLine = ''
@@ -161,7 +167,7 @@ function parseTextToLines(cell: TableCell, colWidth: number, verbose?: boolean):
 		// Flush buffer: Only create a line when there's text to avoid empty row
 		if (lineCells.length > 0) parsedLines.push(lineCells)
 	})
-	if (verbose) {
+	if (DEBUG) {
 		console.log(`[4/4] parsedLines (${parsedLines.length})`)
 		parsedLines.forEach((line, idx) => console.log(`[4/4] [Line ${idx + 1}]:\n${JSON.stringify(line)}`))
 		console.log('...............................................\n\n')
@@ -214,7 +220,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 		}
 	}
 
-	if (tableProps.verbose) {
+	if (DEBUG) {
 		console.log('[[VERBOSE MODE]]')
 		console.log('|-- TABLE PROPS --------------------------------------------------------|')
 		console.log(`| presLayout.width ................................ = ${(presLayout.width / EMU).toFixed(1)}`)
@@ -249,7 +255,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 			else if (!isNaN(tableProps.slideMargin)) arrInchMargins = [tableProps.slideMargin, tableProps.slideMargin, tableProps.slideMargin, tableProps.slideMargin]
 		}
 
-		if (tableProps.verbose) console.log(`| arrInchMargins .................................. = [${arrInchMargins.join(', ')}]`)
+		if (DEBUG) console.log(`| arrInchMargins .................................. = [${arrInchMargins.join(', ')}]`)
 	}
 
 	// STEP 2: Calculate number of columns
@@ -262,19 +268,19 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 			const cellOpts = cell.options || null
 			numCols += Number(cellOpts?.colspan ? cellOpts.colspan : 1)
 		})
-		if (tableProps.verbose) console.log(`| numCols ......................................... = ${numCols}`)
+		if (DEBUG) console.log(`| numCols ......................................... = ${numCols}`)
 	}
 
 	// STEP 3: Calculate width using tableProps.colW if possible
 	if (!tablePropW && tableProps.colW) {
 		tableCalcW = Array.isArray(tableProps.colW) ? tableProps.colW.reduce((p, n) => p + n) * EMU : tableProps.colW * numCols || 0
-		if (tableProps.verbose) console.log(`| tableCalcW ...................................... = ${tableCalcW / EMU}`)
+		if (DEBUG) console.log(`| tableCalcW ...................................... = ${tableCalcW / EMU}`)
 	}
 
 	// STEP 4: Calculate usable width now that total usable space is known (`emuSlideTabW`)
 	{
 		emuSlideTabW = tableCalcW || inch2Emu((tablePropX ? tablePropX / EMU : arrInchMargins[1]) + arrInchMargins[3])
-		if (tableProps.verbose) console.log(`| emuSlideTabW .................................... = ${(emuSlideTabW / EMU).toFixed(1)}`)
+		if (DEBUG) console.log(`| emuSlideTabW .................................... = ${(emuSlideTabW / EMU).toFixed(1)}`)
 	}
 
 	// STEP 5: Calculate column widths if not provided (emuSlideTabW will be used below to determine lines-per-col)
@@ -333,7 +339,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 		// C: Calc usable vertical space/table height. Set default value first, adjust below when necessary.
 		calcSlideTabH()
 		emuTabCurrH += maxCellMarTopEmu + maxCellMarBtmEmu // Start row height with margins
-		if (tableProps.verbose && iRow === 0) console.log(`| SLIDE [${tableRowSlides.length}]: emuSlideTabH ...... = ${(emuSlideTabH / EMU).toFixed(1)} `)
+		if (DEBUG && iRow === 0) console.log(`| SLIDE [${tableRowSlides.length}]: emuSlideTabH ...... = ${(emuSlideTabH / EMU).toFixed(1)} `)
 
 		// D: --==[[ BUILD DATA SET ]]==-- (iterate over cells: split text into lines[], set `lineHeight`)
 		row.forEach((cell, iCell) => {
@@ -363,7 +369,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 			}
 
 			// E-4: Create lines based upon available column width
-			newCell._lines = parseTextToLines(cell, totalColW, false)
+			newCell._lines = parseTextToLines(cell, totalColW)
 
 			// E-5: Add cell to array
 			rowCellLines.push(newCell)
@@ -406,7 +412,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 		 *  | line-1 | line-1 | line-1 | line-1 |
 		 *  |--------|--------|--------|--------|
 		 */
-		if (tableProps.verbose) console.log(`\n| SLIDE [${tableRowSlides.length}]: ROW [${iRow}]: START...`)
+		if (DEBUG) console.log(`\n| SLIDE [${tableRowSlides.length}]: ROW [${iRow}]: START...`)
 		let currCellIdx = 0
 		let emuLineMaxH = 0
 		let isDone = false
@@ -422,7 +428,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 
 			// 2: create a new slide if there is insufficient room for the current row
 			if (emuTabCurrH + emuLineMaxH > emuSlideTabH) {
-				if (tableProps.verbose) {
+				if (DEBUG) {
 					console.log('\n|-----------------------------------------------------------------------|')
 					// prettier-ignore
 					console.log(`|-- NEW SLIDE CREATED (currTabH+currLineH > maxH) => ${(emuTabCurrH / EMU).toFixed(2)} + ${((srcCell._lineHeight ?? 0) / EMU).toFixed(2)} > ${emuSlideTabH / EMU}`)
@@ -445,7 +451,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 
 				// E: Calc usable vertical space/table height now as we may still be in the same row and code above ("C: Calc usable vertical space/table height.") calc may now be invalid
 				calcSlideTabH()
-				if (tableProps.verbose) console.log(`| SLIDE [${tableRowSlides.length}]: emuSlideTabH ...... = ${(emuSlideTabH / EMU).toFixed(1)} `)
+				if (DEBUG) console.log(`| SLIDE [${tableRowSlides.length}]: emuSlideTabH ...... = ${(emuSlideTabH / EMU).toFixed(1)} `)
 
 				// F: reset current table height for this new Slide, starting the row off with its cell margins
 				emuTabCurrH = maxCellMarTopEmu + maxCellMarBtmEmu
@@ -492,7 +498,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 		// F: Flush/capture row buffer before it resets at the top of this loop
 		if (currTableRow.length > 0) newTableRowSlide.rows.push(currTableRow)
 
-		if (tableProps.verbose) {
+		if (DEBUG) {
 			console.log(
 				`- SLIDE [${tableRowSlides.length}]: ROW [${iRow}]: ...COMPLETE ...... emuTabCurrH = ${(emuTabCurrH / EMU).toFixed(2)} ( emuSlideTabH = ${(
 					emuSlideTabH / EMU
@@ -504,7 +510,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 	// STEP 7: Flush buffer / add final slide
 	tableRowSlides.push(newTableRowSlide)
 
-	if (tableProps.verbose) {
+	if (DEBUG) {
 		console.log('\n|================================================|')
 		console.log(`| FINAL: tableRowSlides.length = ${tableRowSlides.length}`)
 		tableRowSlides.forEach(slide => console.log(slide))
@@ -548,7 +554,7 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 	}
 	emuSlideTabW = (opts.w ? inch2Emu(opts.w) : pptx.presLayout.width) - inch2Emu(arrInchMargins[1] + arrInchMargins[3])
 
-	if (opts.verbose) {
+	if (DEBUG) {
 		console.log('[[VERBOSE MODE]]')
 		console.log('|-- `tableToSlides` ----------------------------------------------------|')
 		console.log(`| tableProps.h .................................... = ${opts.h}`)
@@ -586,7 +592,7 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 		const intSetWidth = Number(colSelector?.getAttribute('data-pptx-width')) || 0
 		arrColW.push(intSetWidth || (intMinWidth > intCalcWidth ? intMinWidth : intCalcWidth))
 	})
-	if (opts.verbose) {
+	if (DEBUG) {
 		console.log(`| arrColW ......................................... = [${arrColW.join(', ')}]`)
 	}
 
@@ -724,7 +730,7 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 		// B: DESIGN: Reset `y` to startY or margin after first Slide (ISSUE#43, ISSUE#47, ISSUE#48)
 		if (idxTr === 0) opts.y = opts.y || arrInchMargins[0]
 		if (idxTr > 0) opts.y = opts.autoPageSlideStartY || opts.newSlideStartY || arrInchMargins[0]
-		if (opts.verbose) console.log(`| opts.autoPageSlideStartY: ${opts.autoPageSlideStartY} / arrInchMargins[0]: ${arrInchMargins[0]} => opts.y = ${opts.y}`)
+		if (DEBUG) console.log(`| opts.autoPageSlideStartY: ${opts.autoPageSlideStartY} / arrInchMargins[0]: ${arrInchMargins[0]} => opts.y = ${opts.y}`)
 
 		// C: Add table to Slide
 		newSlide.addTable(slide.rows, { x: opts.x || arrInchMargins[3], y: opts.y, w: Number(emuSlideTabW) / EMU, colW: arrColW, autoPage: false })

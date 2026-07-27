@@ -929,13 +929,6 @@ export interface TableProps extends PositionProps, TextBaseProps, ObjectNameProp
 	 */
 	rowH?: number | number[]
 	/**
-	 * DEV TOOL: Verbose Mode (to console)
-	 * - tell the library to provide an almost ridiculous amount of detail during auto-paging calculations
-	 * @default false // obviously
-	 */
-	verbose?: boolean // Undocumented; shows verbose output
-
-	/**
 	 * @deprecated v3.3.0 - use `autoPageSlideStartY`
 	 */
 	newSlideStartY?: number
