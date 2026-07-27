@@ -724,7 +724,10 @@ export enum MASTER_OBJECTS {
 	'chart' = 'chart',
 	'image' = 'image',
 	'line' = 'line',
+	'media' = 'media',
 	'rect' = 'rect',
+	'shape' = 'shape',
+	'table' = 'table',
 	'text' = 'text',
 	'placeholder' = 'placeholder',
 }

@@ -165,6 +165,29 @@ test('#39: auto-paged tables account for cell margins', async () => {
 	assert.ok(pageCount(0.5) > pageCount(0), 'large cell margins did not increase the page count')
 })
 
+test('#32: masters accept any shape type, tables and media', async () => {
+	const pptx = new pptxgen()
+	pptx.defineSlideMaster({
+		title: 'RICH_MASTER',
+		objects: [
+			{ shape: { type: pptx.ShapeType.triangle, options: { x: 0.5, y: 0.5, w: 1, h: 1, fill: { color: '00AA00' } } } },
+			{ table: { rows: [['A', 'B']], options: { x: 2, y: 0.5, w: 4 } } },
+			{ media: { type: 'audio', data: 'audio/mp3;base64,QQ==', x: 7, y: 0.5, w: 1, h: 1 } },
+		],
+	})
+	pptx.addSlide({ masterName: 'RICH_MASTER' })
+
+	const zip = await writeZip(pptx)
+	// layout1 is the built-in DEFAULT layout; the defined master gets its own
+	const idx = (await Promise.all([1, 2].map(async num => await readPart(zip, `ppt/slideLayouts/slideLayout${num}.xml`)))).findIndex(xml => xml.includes('RICH_MASTER')) + 1
+	assert.ok(idx > 0, 'no layout generated for the defined master')
+	const layout = await readPart(zip, `ppt/slideLayouts/slideLayout${idx}.xml`)
+	assert.ok(layout.includes('prst="triangle"'), 'shape not rendered on the master layout')
+	assert.ok(layout.includes('<a:tbl>'), 'table not rendered on the master layout')
+	assert.ok(layout.includes('<a:videoFile'), 'media not rendered on the master layout')
+	assert.match(await readPart(zip, `ppt/slideLayouts/_rels/slideLayout${idx}.xml.rels`), /media\/media/, 'media rel missing from the layout')
+})
+
 test('#28: friendly dataLabelPosition names are translated to OOXML codes', async () => {
 	const pptx = new pptxgen()
 	pptx.addSlide().addChart(pptx.ChartType.bar, [{ name: 'S', labels: ['A'], values: [1] }], { x: 1, y: 1, w: 4, h: 3, showValue: true, dataLabelPosition: 'outsideEnd' })
