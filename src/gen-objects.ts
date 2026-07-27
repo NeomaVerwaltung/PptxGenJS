@@ -323,12 +323,14 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 	options.chartColorsOpacity = options.chartColorsOpacity && !isNaN(options.chartColorsOpacity) ? options.chartColorsOpacity : undefined
 	// DEPRECATED: v3.11.0 - use `plotArea.border` vvv
 	options.border = options.border && typeof options.border === 'object' ? options.border : undefined
-	if (options.border && (!options.border.pt || isNaN(options.border.pt))) options.border.pt = DEF_CHART_BORDER.pt
+	if (options.border) options.border.pt = options.border.width ?? (!options.border.pt || isNaN(options.border.pt) ? DEF_CHART_BORDER.pt : options.border.pt)
 	if (options.border && (!options.border.color || typeof options.border.color !== 'string')) options.border.color = DEF_CHART_BORDER.color
 	// DEPRECATED: (remove above in v4.0) ^^^
 	options.plotArea = options.plotArea || {}
 	options.plotArea.border = options.plotArea.border && typeof options.plotArea.border === 'object' ? options.plotArea.border : undefined
-	if (options.plotArea.border && (!options.plotArea.border.pt || isNaN(options.plotArea.border.pt))) options.plotArea.border.pt = DEF_CHART_BORDER.pt
+	if (options.plotArea.border) {
+		options.plotArea.border.pt = options.plotArea.border.width ?? (!options.plotArea.border.pt || isNaN(options.plotArea.border.pt) ? DEF_CHART_BORDER.pt : options.plotArea.border.pt)
+	}
 	if (options.plotArea.border && (!options.plotArea.border.color || typeof options.plotArea.border.color !== 'string')) { options.plotArea.border.color = DEF_CHART_BORDER.color }
 	if (options.border) options.plotArea.border = options.border // @deprecated [[remove in v4.0]]
 	options.plotArea.fill = options.plotArea.fill || { color: undefined, transparency: undefined }
@@ -339,13 +341,13 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 	if (options.chartArea.border) {
 		options.chartArea.border = {
 			color: options.chartArea.border.color || DEF_CHART_BORDER.color,
-			pt: options.chartArea.border.pt || DEF_CHART_BORDER.pt,
+			pt: options.chartArea.border.width ?? options.chartArea.border.pt ?? DEF_CHART_BORDER.pt,
 		}
 	}
 	options.chartArea.roundedCorners = typeof options.chartArea.roundedCorners === 'boolean' ? options.chartArea.roundedCorners : true
 	//
 	options.dataBorder = options.dataBorder && typeof options.dataBorder === 'object' ? options.dataBorder : undefined
-	if (options.dataBorder && (!options.dataBorder.pt || isNaN(options.dataBorder.pt))) options.dataBorder.pt = 0.75
+	if (options.dataBorder) options.dataBorder.pt = options.dataBorder.width ?? (!options.dataBorder.pt || isNaN(options.dataBorder.pt) ? 0.75 : options.dataBorder.pt)
 	if (options.dataBorder && options.dataBorder.color) {
 		const borderColor = options.dataBorder.color
 		const isHexColor = typeof borderColor === 'string' && borderColor.length === 6 && /^[0-9A-Fa-f]{6}$/.test(borderColor)
@@ -839,7 +841,7 @@ export function addTableDefinition(
 					cellBorder[idx] = {
 						type: cellBorder[idx].type || DEF_CELL_BORDER.type,
 						color: cellBorder[idx].color || DEF_CELL_BORDER.color,
-						pt: typeof cellBorder[idx].pt === 'number' ? cellBorder[idx].pt : DEF_CELL_BORDER.pt,
+						pt: cellBorder[idx].width ?? (typeof cellBorder[idx].pt === 'number' ? cellBorder[idx].pt : DEF_CELL_BORDER.pt),
 					}
 				})
 
@@ -872,7 +874,7 @@ export function addTableDefinition(
 		const optBorder = opt.border
 		;[0, 1, 2, 3].forEach(idx => {
 			optBorder[idx] = optBorder[idx]
-				? { type: optBorder[idx].type || DEF_CELL_BORDER.type, color: optBorder[idx].color || DEF_CELL_BORDER.color, pt: optBorder[idx].pt || DEF_CELL_BORDER.pt }
+				? { type: optBorder[idx].type || DEF_CELL_BORDER.type, color: optBorder[idx].color || DEF_CELL_BORDER.color, pt: optBorder[idx].width ?? optBorder[idx].pt ?? DEF_CELL_BORDER.pt }
 				: { type: 'none' }
 		})
 	}

@@ -129,7 +129,7 @@ declare class PptxGenJS {
 	 * @param {PresLayout} layout an object with user-defined w/h
 	 * @example pptx.defineLayout({ name:'A3', width:16.5, height:11.7 });
 	 */
-	defineLayout(layout: PptxGenJS.PresLayout): void
+	defineLayout(layout: PptxGenJS.DefineLayoutProps): void
 	/**
 	 * Create a new slide master [layout] for the Presentation
 	 * @param {SlideMasterProps} props layout definition
@@ -934,9 +934,15 @@ declare namespace PptxGenJS {
 
 		// TODO: add `transparency` prop to Borders (0-100%)
 
-		// TODO: add `width` - deprecate `pt`
+		/**
+		 * Border width (points)
+		 * - same name and unit as `ShapeLineProps.width`
+		 * @default 1
+		 */
+		width?: number
 		/**
 		 * Border size (points)
+		 * @deprecated v4.1.0 - use `width`
 		 * @default 1
 		 */
 		pt?: number
@@ -2547,6 +2553,24 @@ declare namespace PptxGenJS {
 		name: string
 		width: number
 		height: number
+	}
+	/**
+	 * Argument to `defineLayout()` - dimensions may be given as `width`/`height` or as `w`/`h`
+	 */
+	export interface DefineLayoutProps {
+		/**
+		 * Layout name
+		 * @example 'A3'
+		 */
+		name: string
+		/** Layout width (inches) - or use `w` */
+		width?: number
+		/** Layout height (inches) - or use `h` */
+		height?: number
+		/** Layout width (inches) - alias of `width` */
+		w?: number
+		/** Layout height (inches) - alias of `height` */
+		h?: number
 	}
 	export interface SlideNumberProps extends PositionProps, TextBaseProps {
 		/**

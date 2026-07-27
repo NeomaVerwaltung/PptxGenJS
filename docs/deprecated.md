@@ -2,6 +2,18 @@
 title: Deprecated
 ---
 
+## Planned for the next major
+
+Naming and unit inconsistencies that cannot be fixed without breaking existing decks
+(tracked in issue #29). Non-breaking halves of these have already shipped:
+
+| Area | Today | Planned |
+| --- | --- | --- |
+| Stroke thickness | `BorderProps.pt` (points) vs `ShapeLineProps.width` (points) | `width` everywhere; `pt` is deprecated and still honoured |
+| Layout dimensions | `defineLayout({ name, width, height })` | `w`/`h` accepted today; `width`/`height` remain supported |
+| `margin` | inches on table cells, points on slide numbers | inches everywhere |
+| Alignment | `HAlign`/`VAlign` strings vs the exported `TEXT_HALIGN`/`TEXT_VALIGN` OOXML enums | one vocabulary - the string unions |
+
 ## Version 3.0 Breaking Changes
 
 Please see the [Version 3.0 Migration Guide](https://github.com/gitbrent/PptxGenJS/wiki/Version-3.0-Migration-Guide)
