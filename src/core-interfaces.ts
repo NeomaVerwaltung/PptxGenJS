@@ -1492,8 +1492,16 @@ export interface IChartPropsAxisVal {
 	valLabelFormatCode?: string
 }
 export interface IChartPropsChartBar {
-	bar3DShape?: string
-	barDir?: string
+	/**
+	 * 3D bar shape
+	 * @default 'box'
+	 */
+	bar3DShape?: 'box' | 'cone' | 'coneToMax' | 'cylinder' | 'pyramid' | 'pyramidToMax'
+	/**
+	 * Bar direction - horizontal bars or vertical columns
+	 * @default 'col'
+	 */
+	barDir?: 'bar' | 'col'
 	barGapDepthPct?: number
 	/**
 	 * MS-PPT > Format chart > Format Data Point > Series Options >  "Gap Width"
@@ -1502,7 +1510,11 @@ export interface IChartPropsChartBar {
 	 * @default 150
 	 */
 	barGapWidthPct?: number
-	barGrouping?: string
+	/**
+	 * Bar grouping
+	 * @default 'clustered'
+	 */
+	barGrouping?: 'clustered' | 'percentStacked' | 'stacked' | 'standard'
 	/**
 	 * MS-PPT > Format chart > Format Data Point > Series Options >  "Series Overlap"
 	 * - overlap (percent)
@@ -1602,7 +1614,17 @@ export interface IChartPropsDataLabel {
 	 */
 	dataLabelFormatCode?: string
 	dataLabelFormatScatter?: 'custom' | 'customXY' | 'XY'
-	dataLabelPosition?: 'b' | 'bestFit' | 'ctr' | 'l' | 'r' | 't' | 'inEnd' | 'outEnd'
+	/**
+	 * Data label position
+	 * - friendly names are translated to their OOXML codes; the codes themselves are still accepted
+	 * - valid values differ per chart type: a value the chart type does not support is dropped with a
+	 *   console warning rather than producing a file PowerPoint asks to repair
+	 * @example 'outsideEnd' // bar/column, pie
+	 * @example 'top' // line, scatter, radar
+	 */
+	dataLabelPosition?:
+	| 'bottom' | 'center' | 'left' | 'right' | 'top' | 'insideEnd' | 'insideBase' | 'outsideEnd' | 'bestFit'
+	| 'b' | 'ctr' | 'l' | 'r' | 't' | 'inEnd' | 'inBase' | 'outEnd'
 }
 export interface IChartPropsDataTable {
 	dataTableFontSize?: number
