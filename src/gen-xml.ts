@@ -1363,11 +1363,15 @@ export function genXmlPlaceholder (placeholderObj: ISlideObject | undefined): st
 
 	const placeholderIdx = placeholderObj.options?._placeholderIdx ? placeholderObj.options._placeholderIdx : ''
 	const placeholderTyp = placeholderObj.options?._placeholderType ? placeholderObj.options._placeholderType : ''
-	const placeholderType: string = placeholderTyp && PLACEHOLDER_TYPES[placeholderTyp] ? (PLACEHOLDER_TYPES[placeholderTyp]).toString() : ''
+	// NOTE: accept both the friendly name ('image', 'table') and the OOXML code it maps to ('pic', 'tbl').
+	// The old code looked the mapped code back up in the enum, which only ever hit for the types whose
+	// name and code are identical - that is why picture/chart/table placeholders never got a `type` (issue #33).
+	const placeholderCodes: string[] = Object.values(PLACEHOLDER_TYPES)
+	const placeholderType: string = PLACEHOLDER_TYPES[placeholderTyp]?.toString() ?? (placeholderCodes.includes(placeholderTyp) ? placeholderTyp : '')
 
 	return `<p:ph
 		${placeholderIdx ? ' idx="' + placeholderIdx.toString() + '"' : ''}
-		${placeholderType && PLACEHOLDER_TYPES[placeholderType] ? ` type="${placeholderType}"` : ''}
+		${placeholderType ? ` type="${placeholderType}"` : ''}
 		${placeholderObj.text && placeholderObj.text.length > 0 ? ' hasCustomPrompt="1"' : ''}
 		/>`
 }
