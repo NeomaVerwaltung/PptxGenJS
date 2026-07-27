@@ -165,6 +165,32 @@ test('#39: auto-paged tables account for cell margins', async () => {
 	assert.ok(pageCount(0.5) > pageCount(0), 'large cell margins did not increase the page count')
 })
 
+test('#33: picture/chart/table placeholders emit their `p:ph` type on the layout', async () => {
+	const pptx = new pptxgen()
+	pptx.defineSlideMaster({
+		title: 'PH_MASTER',
+		objects: [
+			{ placeholder: { options: { name: 'pic1', type: 'pic', x: 0.5, y: 0.5, w: 3, h: 2 }, text: '' } },
+			{ placeholder: { options: { name: 'chart1', type: 'chart', x: 4, y: 0.5, w: 3, h: 2 }, text: '' } },
+			{ placeholder: { options: { name: 'tbl1', type: 'tbl', x: 0.5, y: 3, w: 3, h: 2 }, text: '' } },
+		],
+	})
+	const slide = pptx.addSlide({ masterName: 'PH_MASTER' })
+	slide.addImage({ data: PNG_4x2, placeholder: 'pic1' })
+
+	const zip = await writeZip(pptx)
+	const layouts = await Promise.all([1, 2].map(async num => await readPart(zip, `ppt/slideLayouts/slideLayout${num}.xml`)))
+	const layout = layouts.find(xml => xml.includes('PH_MASTER')) ?? ''
+	for (const type of ['pic', 'chart', 'tbl']) {
+		assert.match(layout, new RegExp(`type="${type}"`), `${type} placeholder has no p:ph type`)
+	}
+
+	// the image placed into the picture placeholder inherits its position and references the placeholder
+	const pic = /<p:pic>[\s\S]*?<\/p:pic>/.exec(await readPart(zip, 'ppt/slides/slide1.xml'))?.[0] ?? ''
+	assert.match(pic, /type="pic"/, 'slide image does not reference the picture placeholder')
+	assert.ok(pic.includes(`<a:off x="${Math.round(0.5 * 914400)}"`), 'slide image did not inherit the placeholder position')
+})
+
 test('#32: masters accept any shape type, tables and media', async () => {
 	const pptx = new pptxgen()
 	pptx.defineSlideMaster({
