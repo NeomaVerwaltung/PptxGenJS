@@ -147,7 +147,8 @@ export async function createExcelWorksheet (chartObject: ISlideRelChart, zip: JS
 			} else if (chartObject.opts._type === CHART_TYPE.SCATTER) {
 				strSharedStrings += `<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${data.length}" uniqueCount="${data.length}">`
 			} else if (IS_MULTI_CAT_AXES) {
-				let totCount = data.length
+				// series names + every non-blank label + the leading blank string (emitted below)
+				let totCount = data.length + 1
 				firstDataLabels.forEach(arrLabel => (totCount += arrLabel.filter(label => label && label !== '').length))
 				strSharedStrings += `<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${totCount}" uniqueCount="${totCount}">`
 				strSharedStrings += '<si><t/></si>'
@@ -208,7 +209,7 @@ export async function createExcelWorksheet (chartObject: ISlideRelChart, zip: JS
 					if (idx === 0) {
 						strTableXml += `<tableColumn id="${idx + 1}" name="X-Values"/>`
 					} else {
-						strTableXml += `<tableColumn id="${idx + idxColLtr}" name="${obj.name}"/>`
+						strTableXml += `<tableColumn id="${idx + idxColLtr}" name="${encodeXmlEntities(obj.name)}"/>`
 						idxColLtr++
 						strTableXml += `<tableColumn id="${idx + idxColLtr}" name="Size${idx}"/>`
 					}
@@ -220,7 +221,7 @@ export async function createExcelWorksheet (chartObject: ISlideRelChart, zip: JS
 					strTableXml += `<tableColumn id="${idx + 1}" name="${idx === 0 ? 'X-Values' : 'Y-Value '}${idx}"/>`
 				})
 			} else {
-				strTableXml += `<table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" id="1" name="Table1" displayName="Table1" ref="A1:${getExcelColName(data.length + firstDataLabels.length)}${firstDataLabels[0].length + 1}'" totalsRowShown="0">`
+				strTableXml += `<table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" id="1" name="Table1" displayName="Table1" ref="A1:${getExcelColName(data.length + firstDataLabels.length)}${firstDataLabels[0].length + 1}" totalsRowShown="0">`
 				strTableXml += `<tableColumns count="${data.length + firstDataLabels.length}">`
 				firstDataLabels.forEach((_labelsGroup, idx) => {
 					strTableXml += `<tableColumn id="${idx + 1}" name="Column${idx + 1}"/>`
@@ -238,6 +239,7 @@ export async function createExcelWorksheet (chartObject: ISlideRelChart, zip: JS
 		// worksheets/sheet1.xml
 		{
 			let strSheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+			const arrMergeRefs: string[] = [] // multi-cat axes only: vertical merges for the outer label columns
 			strSheetXml +=
 				'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="x14ac" xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac">'
 
@@ -246,7 +248,7 @@ export async function createExcelWorksheet (chartObject: ISlideRelChart, zip: JS
 			} else if (chartObject.opts._type === CHART_TYPE.SCATTER) {
 				strSheetXml += `<dimension ref="A1:${getExcelColName(data.length)}${firstDataValues.length + 1}"/>`
 			} else {
-				strSheetXml += `<dimension ref="A1:${getExcelColName(data.length + 1)}${firstDataValues.length + 1}"/>`
+				strSheetXml += `<dimension ref="A1:${getExcelColName(data.length + firstDataLabels.length)}${firstDataValues.length + 1}"/>`
 			}
 
 			strSheetXml += '<sheetViews><sheetView tabSelected="1" workbookViewId="0"><selection activeCell="B1" sqref="B1"/></sheetView></sheetViews>'
@@ -285,11 +287,14 @@ export async function createExcelWorksheet (chartObject: ISlideRelChart, zip: JS
 					// Add Y-Axis 1->N (idy=0 = Xaxis)
 					let idxColLtr = 2
 					for (let idy = 1; idy < data.length; idy++) {
+						// NOTE: Preserve 0 (a valid value); `|| ''` would blank it out in the embedded worksheet (issue #1430)
+						const yVal = (data[idy].values ?? [])[idx]
+						const ySize = (data[idy].sizes ?? [])[idx]
 						// y-value
-						strSheetXml += `<c r="${getExcelColName(idxColLtr)}${idx + 2}"><v>${(data[idy].values ?? [])[idx] || ''}</v></c>`
+						strSheetXml += `<c r="${getExcelColName(idxColLtr)}${idx + 2}"><v>${typeof yVal === 'number' ? yVal : ''}</v></c>`
 						idxColLtr++
 						// y-size
-						strSheetXml += `<c r="${getExcelColName(idxColLtr)}${idx + 2}"><v>${(data[idy].sizes ?? [])[idx] || ''}</v></c>`
+						strSheetXml += `<c r="${getExcelColName(idxColLtr)}${idx + 2}"><v>${typeof ySize === 'number' ? ySize : ''}</v></c>`
 						idxColLtr++
 					}
 					strSheetXml += '</row>'
@@ -386,17 +391,16 @@ export async function createExcelWorksheet (chartObject: ISlideRelChart, zip: JS
 						strSheetXml += '</row>'
 					})
 				} else {
-					// A: create header row
+					// A: create header row: one blank cell per label level, then one cell per series
 					strSheetXml += `<row r="1" spans="1:${data.length + firstDataLabels.length}">`
 					for (let idx = 0; idx < firstDataLabels.length; idx++) {
 						strSheetXml += `<c r="${getExcelColName(idx + 1)}1" t="s"><v>0</v></c>`
 					}
-					for (let idx = firstDataLabels.length - 1; idx < data.length + firstDataLabels.length - 1; idx++) {
-						strSheetXml += `<c r="${getExcelColName(idx + firstDataLabels.length)}1" t="s"><v>${idx}</v></c>` // NOTE: use `t="s"` for label cols!
+					for (let idx = 0; idx < data.length; idx++) {
+						strSheetXml += `<c r="${getExcelColName(firstDataLabels.length + idx + 1)}1" t="s"><v>${idx + 1}</v></c>` // NOTE: use `t="s"` for label cols!
 					}
 					strSheetXml += '</row>'
 
-					// FIXME: 20220524 (v3.11.0)
 					/**
 					 * @example INPUT
 					 * const LABELS = [
@@ -459,54 +463,69 @@ export async function createExcelWorksheet (chartObject: ISlideRelChart, zip: JS
 					const TOT_SER = data.length
 					const TOT_CAT = firstDataLabels[0].length
 					const TOT_LVL = firstDataLabels.length
-					// Iterate across labels/cats as these are the <row>'s
+					/**
+					 * Label groups outermost-first, matching both the column order (col 1 = outermost level)
+					 * and the shared-strings order written above (blank, series names, then labels in this order).
+					 * const LABELS_REVERSED = [
+					 *   ["Mech",     "",     "", "Elec",     "",     "", "Hydr",     "",     ""],
+					 *   ["Gear", "Berg", "Motr", "Swch", "Plug", "Cord", "Pump", "Leak", "Seal"],
+					 * ]
+					 */
+					const revLabelGroups = firstDataLabels.slice().reverse()
+
+					// A: Map each label cell to its shared-string index (blank=0, series names=1..TOT_SER, labels follow)
+					let nextStrIdx = TOT_SER + 1
+					const arrLabelStrIdx = revLabelGroups.map(labelsGroup => {
+						const grpIdx = new Map<number, number>()
+						labelsGroup.forEach((label, idx) => {
+							if (label) grpIdx.set(idx, nextStrIdx++)
+						})
+						return grpIdx
+					})
+
+					// B: Collect vertical merges - an outer label spans until the next non-blank label in its group
+					revLabelGroups.forEach((labelsGroup, idy) => {
+						if (idy === TOT_LVL - 1) return // innermost level: one label per row, never merged
+						for (let idx = 0; idx < TOT_CAT; idx++) {
+							if (!labelsGroup[idx]) continue
+							let idxEnd = idx + 1
+							while (idxEnd < TOT_CAT && !labelsGroup[idxEnd]) idxEnd++
+							if (idxEnd - idx > 1) {
+								const colLtr = getExcelColName(idy + 1)
+								arrMergeRefs.push(`${colLtr}${idx + 2}:${colLtr}${idxEnd + 1}`)
+							}
+							idx = idxEnd - 1
+						}
+					})
+
+					// C: Iterate across labels/cats as these are the <row>'s
 					for (let idx = 0; idx < TOT_CAT; idx++) {
-						// A: start row
 						strSheetXml += `<row r="${idx + 2}" spans="1:${TOT_SER + TOT_LVL}">`
 
-						// WIP: FIXME:
-						// B: add a col for each label/cat
-						let totLabels = TOT_SER
-						const revLabelGroups = firstDataLabels.slice().reverse()
-						revLabelGroups.forEach((labelsGroup, idy) => {
-							/**
-						     * const LABELS_REVERSED = [
-						     *   ["Mech",     "",     "", "Elec",     "",     "", "Hydr",     "",     ""],
-						     *   ["Gear", "Berg", "Motr", "Swch", "Plug", "Cord", "Pump", "Leak", "Seal"],
-						     * ];
-						     */
-							const colLabel = labelsGroup[idx]
-							if (colLabel) {
-								const totGrpLbls = idy === 0 ? 1 : revLabelGroups[idy - 1].filter(label => label && label !== '').length // get unique label so we can add to get proper shared-string #
-								totLabels += totGrpLbls
-								strSheetXml += `<c r="${getExcelColName(idx + 1 + idy)}${idx + 2}" t="s"><v>${totLabels}</v></c>`
-							}
+						// C-1: add a col for each label level (blank labels are covered by the merge above)
+						arrLabelStrIdx.forEach((grpIdx, idy) => {
+							const strIdx = grpIdx.get(idx)
+							if (strIdx !== undefined) strSheetXml += `<c r="${getExcelColName(idy + 1)}${idx + 2}" t="s"><v>${strIdx}</v></c>`
 						})
 
-						// WIP: FIXME:
-						// C: add a col for each data value
+						// C-2: add a col for each data value
 						for (let idy = 0; idy < TOT_SER; idy++) {
-							strSheetXml += `<c r="${getExcelColName(TOT_LVL + idy + 1)}${idx + 2}"><v>${(data[idy].values ?? [])[idx] || 0}</v></c>`
+							// NOTE: Preserve 0 (a valid value); `|| ''` would blank it out in the embedded worksheet (issue #1430)
+							const cellVal = (data[idy].values ?? [])[idx]
+							strSheetXml += `<c r="${getExcelColName(TOT_LVL + idy + 1)}${idx + 2}"><v>${typeof cellVal === 'number' ? cellVal : ''}</v></c>`
 						}
 
-						// D: Done
 						strSheetXml += '</row>'
 					}
-					// console.log(strSheetXml) // WIP: CHECK:
-					// console.log(`---CHECK ABOVE---------------------`)
 				}
 			}
 			strSheetXml += '</sheetData>'
 
-			/* FIXME: support multi-level
-            if (IS_MULTI_CAT_AXES) {
-				strSheetXml += '<mergeCells count="3">'
-				strSheetXml += ' <mergeCell ref="A2:A4"/>'
-				strSheetXml += ' <mergeCell ref="A10:A12"/>'
-				strSheetXml += ' <mergeCell ref="A5:A9"/>'
+			if (arrMergeRefs.length > 0) {
+				strSheetXml += `<mergeCells count="${arrMergeRefs.length}">`
+				arrMergeRefs.forEach(ref => (strSheetXml += `<mergeCell ref="${ref}"/>`))
 				strSheetXml += '</mergeCells>'
-            }
-            */
+			}
 
 			strSheetXml += '<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>'
 			// Link the `table1.xml` file to define an actual Table in Excel
@@ -1876,7 +1895,7 @@ function makeSerAxis (opts: IChartOptsLib, axisId: string, valAxisId: string): s
 	strXml += `  <c:numFmt formatCode="${encodeXmlEntities(opts.serLabelFormatCode) || 'General'}" sourceLinked="0"/>`
 	strXml += '  <c:majorTickMark val="out"/>'
 	strXml += '  <c:minorTickMark val="none"/>'
-	strXml += `  <c:tickLblPos val="${opts.serAxisLabelPos || opts.barDir === 'col' ? 'low' : 'nextTo'}"/>`
+	strXml += `  <c:tickLblPos val="${opts.serAxisLabelPos || (opts.barDir === 'col' ? 'low' : 'nextTo')}"/>`
 	strXml += '  <c:spPr>'
 	strXml += '    <a:ln w="12700" cap="flat">'
 	strXml += !opts.serAxisLineShow ? '<a:noFill/>' : `<a:solidFill>${createColorElement(opts.serAxisLineColor || DEF_CHART_GRIDLINE.color)}</a:solidFill>`
