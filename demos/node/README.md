@@ -10,14 +10,14 @@ Generate a simple presentation.
 node demo.js
 ```
 
-Generate a presentation with all demo objects (like the browser demo).
+Generate a presentation containing all demo objects (equivalent to the browser demo).
 
 ```bash
 node demo.js All
 ```
 
-Generate a presentation with selected demo objects (e.g.: 'Table', 'Text', etc.).
-(See `../common/demos.js` for all tests)
+Generate a presentation containing selected demo objects (e.g. 'Table', 'Text').
+See `../common/demos.js` for the full list of tests.
 
 ```bash
 node demo.js Text
@@ -33,4 +33,4 @@ The `demo_stream.js` file requires the `express` package to demonstrate streamin
 node demo_stream.js
 ```
 
-Then visit `http://localhost:3000/` on a local web browser to download the streamed file.
+Then open `http://localhost:3000/` in a local web browser to download the streamed file.

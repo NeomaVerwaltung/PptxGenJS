@@ -2,8 +2,50 @@
  * PptxGenJS: Media Methods
  */
 
-import { IMG_BROKEN } from './core-enums'
+import { imageSize } from 'image-size'
+import { IMG_BROKEN, SLIDE_OBJECT_TYPES } from './core-enums'
 import { PresSlide, SlideLayout, ISlideRelMedia } from './core-interfaces'
+
+/** Images are measured in pixels; PowerPoint slide dimensions are inches at 96 DPI */
+const IMAGE_DPI = 96
+
+/**
+ * Decode a base64 (or data-url) string into bytes, in Node or the browser
+ */
+function base64ToBytes(strData: string): Uint8Array {
+	const idxHdr = strData.indexOf('base64,')
+	const strB64 = idxHdr > -1 ? strData.substring(idxHdr + 'base64,'.length) : strData
+
+	if (typeof Buffer !== 'undefined') return new Uint8Array(Buffer.from(strB64, 'base64'))
+
+	const strBin = atob(strB64)
+	const bytes = new Uint8Array(strBin.length)
+	for (let idx = 0; idx < strBin.length; idx++) bytes[idx] = strBin.charCodeAt(idx)
+	return bytes
+}
+
+/**
+ * Size images added without `w`/`h` to their natural dimensions (issue #34)
+ * @note must run after `encodeSlideMediaRels` has resolved - it reads the encoded image bytes
+ * @param {PresSlide | SlideLayout} layout - slide layout
+ */
+export function applyNaturalImageSizes(layout: PresSlide | SlideLayout): void {
+	layout._slideObjects
+		.filter(obj => obj._type === SLIDE_OBJECT_TYPES.image && obj.options?._sizeFromImage)
+		.forEach(obj => {
+			const strData = layout._relsMedia.find(rel => rel.rId === obj.imageRid)?.data
+			if (!obj.options || typeof strData !== 'string' || !strData || strData === IMG_BROKEN) return
+			try {
+				const dims = imageSize(base64ToBytes(strData))
+				if (dims.width && dims.height) {
+					obj.options.w = dims.width / IMAGE_DPI
+					obj.options.h = dims.height / IMAGE_DPI
+				}
+			} catch (_ex) {
+				// Unreadable/unsupported image: keep the 1x1 inch default
+			}
+		})
+}
 
 /**
  * Encode Image/Audio/Video into base64
@@ -17,11 +59,12 @@ export function encodeSlideMediaRels(layout: PresSlide | SlideLayout): Array<Pro
 	let fs: typeof import('node:fs') | undefined
 	let http: typeof import('node:http') | undefined
 	let https: typeof import('node:https') | undefined
+	let http: typeof import('node:http') | undefined
 
 	// STEP 2: Lazy-load Node built-ins if needed
 	const loadNodeDeps = isNode
 		? async () => {
-			; ({ default: fs } = await import('node:fs')); ({ default: http } = await import('node:http')); ({ default: https } = await import('node:https'))
+			; ({ default: fs } = await import('node:fs')); ({ default: https } = await import('node:https')); ({ default: http } = await import('node:http'))
 		}
 		: async () => { }
 	// Immediately start it when we know we’re in Node
@@ -77,19 +120,20 @@ export function encodeSlideMediaRels(layout: PresSlide | SlideLayout): Array<Pro
 
 					// ────────────  NODE HTTP(S)  ────────────
 					if (isNode && https && http && relPath.startsWith('http')) {
-						const reqMod = relPath.startsWith('https:') ? https : http
+						const httpMod = relPath.startsWith('http://') ? http : https
 						return await new Promise<string>((resolve, reject) => {
-							const markBroken = (err: Error): void => {
+							const fail = (msg: string): void => {
 								rel.data = IMG_BROKEN
 								candidateRels
 									.filter(dupe => dupe.isDuplicate && dupe.path === rel.path)
 									.forEach(dupe => (dupe.data = rel.data))
-								reject(err)
+								reject(new Error(msg))
 							}
-							const req = reqMod.get(relPath, res => {
-								if (!res.statusCode || res.statusCode < 200 || res.statusCode > 299) {
+							const req = httpMod.get(relPath, res => {
+								const status = res.statusCode ?? 0
+								if (status < 200 || status > 299) {
 									res.resume() // drain so the socket is freed
-									markBroken(new Error(`ERROR! HTTP status ${res.statusCode} loading image: ${rel.path}`))
+									fail(`ERROR! Unable to load image (HTTP ${status}): ${rel.path}`)
 									return
 								}
 								let raw = ''
@@ -102,10 +146,10 @@ export function encodeSlideMediaRels(layout: PresSlide | SlideLayout): Array<Pro
 										.forEach(dupe => (dupe.data = rel.data))
 									resolve('done')
 								})
-								res.on('error', () => markBroken(new Error(`ERROR! Unable to load image (response error): ${rel.path}`)))
+								res.on('error', () => fail(`ERROR! Unable to load image (response): ${rel.path}`))
 							})
-							// Without this listener a DNS/connection/TLS failure is an uncaught 'error' event that kills the process
-							req.on('error', err => markBroken(new Error(`ERROR! Unable to load image (request error): ${rel.path}\n${String(err)}`)))
+							// NOTE: without this, a DNS/TLS/connection failure emits an unhandled 'error' and kills the process
+							req.on('error', ex => fail(`ERROR! Unable to load image (request): ${rel.path}\n${String(ex)}`))
 						})
 					}
 
@@ -161,9 +205,9 @@ export function encodeSlideMediaRels(layout: PresSlide | SlideLayout): Array<Pro
 	layout._relsMedia
 		.filter(rel => rel.isSvgPng && rel.data)
 		.forEach(rel => {
-			// Must push synchronously: the caller copies this array as soon as we return, so an async push would be lost (race)
+			// NOTE: must push synchronously - the caller snapshots this array as soon as we return
 			if (isNode) {
-				// SVG preview rendering needs a DOM canvas; not supported in Node (https://github.com/gitbrent/PptxGenJS/issues/401)
+				// SVG is not supported in Node (more info: https://github.com/gitbrent/PptxGenJS/issues/401)
 				rel.data = IMG_BROKEN
 				imageProms.push(Promise.resolve('done'))
 			} else {

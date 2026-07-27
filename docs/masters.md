@@ -4,19 +4,16 @@ title: Masters and Placeholders
 
 ## Slide Masters
 
-Generating sample slides like those shown in the Examples section are great for demonstrating library features,
-but the reality is most of us will be required to produce presentations that have a certain design or
-corporate branding.
+Most production presentations must follow a defined design or corporate branding. PptxGenJS supports this
+through Slide Master Layouts, which are defined as plain objects and applied to slides, allowing a Master
+Slide to be created entirely in code.
 
-PptxGenJS allows you to define Slide Master Layouts via objects that can then be used to provide branding
-functionality. This enables you to easily create a Master Slide using code.
+Create a Slide Master by calling the `defineSlideMaster()` method with an options object (the same style
+used for Slides). Once defined, pass the Master title to `addSlide()` and that Slide will use the Layout
+previously defined.
 
-Slide Masters are created by calling the `defineSlideMaster()` method along with an options object
-(same style used in Slides). Once defined, you can pass the Master title to `addSlide()` and that Slide will
-use the Layout previously defined.
-
-The defined Masters become first-class Layouts in the exported PowerPoint presentation and can be changed
-via View > Slide Master and will affect the Slides created using that layout.
+Defined Masters become first-class Layouts in the exported PowerPoint presentation. They can be edited via
+View > Slide Master, and such edits affect all Slides created with that layout.
 
 ## Properties
 
@@ -51,8 +48,8 @@ via View > Slide Master and will affect the Slides created using that layout.
 
 ### NOTES
 
-- Slide Number: more props are available that shown above - `SlideNumberProps` inherits from [TextProps](./api-text)
-- Pre-encode your images (base64) and add the string as the optional data key/val (see `bkgd` above)
+- Slide Number: more props are available than shown above - `SlideNumberProps` inherits from [TextProps](./api-text)
+- Pre-encode images (base64) and add the string as the optional data key/val (see `bkgd` above)
 
 ## Examples
 

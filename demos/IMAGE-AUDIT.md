@@ -1,11 +1,11 @@
 # Demo Image Asset Audit
 
-> ## ✅ Status: REMEDIATED (2026-06-24)
-> The **31 flagged images** (🔴 + 🟡 below) and the entire **`demos/common/media/`** folder (10 audio/video files)
-> were removed from the working tree (`git rm`). The 🔴/🟡 tables below are retained as the **record of what was removed**.
-> Only 🟢 project/generic/scaffold assets remain.
+> ## Status: REMEDIATED (2026-06-24)
+> The **31 flagged images** (high-risk and medium-risk items below) and the entire **`demos/common/media/`** folder (10 audio/video files)
+> were removed from the working tree (`git rm`). The high-risk and medium-risk tables below are retained as the **record of what was removed**.
+> Only the low-risk project/generic/scaffold assets remain.
 >
-> ⚠️ **History caveat:** these files still exist in **git history** (most originate in upstream `gitbrent/PptxGenJS`,
+> **History caveat:** these files still exist in **git history** (most originate in upstream `gitbrent/PptxGenJS`,
 > which retains them permanently in its public history regardless of this fork).
 >
 > **Decision (2026-06-24): current state accepted for now.** HEAD is clean; no history rewrite performed.
@@ -16,17 +16,17 @@
 > Some demo code still references the removed files (local and via upstream raw URLs); those demo slides will fail to
 > load images. Demos are local-only dev fixtures and not published, so this does not affect the library or consumers.
 
-> Compliance + metadata inventory of images under `demos/`. Generated 2026-06-24.
+> Compliance and metadata inventory of images under `demos/`. Generated 2026-06-24.
 > Dimensions/size/format are mechanical (via `image-size`); **Risk** and **Source** are human assessment.
 >
-> ⚠️ These assets are **demo-only**. They are NOT part of the published package
+> Note: these assets are **demo-only**. They are NOT part of the published package
 > (`files: ["dist","types"]` excludes them) — see the note at the bottom. This audit
 > covers the risk of **hosting the demo app** or **sharing the repo source**.
 >
 > Caveat: removing a file from the working tree does not remove it from **git history**.
 > A full scrub requires history rewrite (git-filter-repo / BFG).
 
-## 🔴 High risk — identifiable third-party IP / trademarks
+## High risk — identifiable third-party IP / trademarks
 
 | File | Dimensions | Size | Fmt | Why unsafe |
 | --- | --- | ---: | --- | --- |
@@ -48,7 +48,7 @@
 | `common/images/cc_copyremix.gif` | 351×359 | 41.2 KB | gif | Creative Commons campaign asset |
 | `common/images/cc_dj.gif` | 208×166 | 5.4 KB | gif | Creative Commons campaign asset |
 
-## 🟡 Medium risk — unattributed photos / GIFs (no license on file)
+## Medium risk — unattributed photos / GIFs (no license on file)
 
 | File | Dimensions | Size | Fmt | Notes |
 | --- | --- | ---: | --- | --- |
@@ -65,7 +65,7 @@
 | `common/images/peace4.png` | 400×400 | 188.1 KB | png | Unattributed graphic |
 | `common/images/unite.png` | 331×291 | 170.1 KB | png | Unattributed graphic |
 
-## 🟢 Likely safe — project's own / generic test assets
+## Likely safe — project's own / generic test assets
 
 | File | Dimensions | Size | Fmt |
 | --- | --- | ---: | --- |
@@ -82,10 +82,10 @@
 | `common/images/brokenImage.png` | 200×238 | 3.8 KB | png |
 | `node/assets/image.png` | 192×192 | 8.4 KB | png |
 
-## ⚠️ Media (audio/video) — higher copyright risk than images
+## Media (audio/video) — higher copyright risk than images
 
 `demos/common/media/` holds `earth-big.mp4` (17 MB), `sample-hd.m4v`, `sample.{avi,mov,mpg,m4v,mp4,mp3,wav,aif}`.
-Audio/video most likely carries copyrighted **music/footage** — not dimension-audited here, but should get the same provenance review.
+Audio/video most likely carries copyrighted **music/footage** — not dimension-audited here, but should receive the same provenance review.
 
 ## Distribution note
 

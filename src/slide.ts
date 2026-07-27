@@ -9,7 +9,6 @@ import {
 	HexColor,
 	IChartMulti,
 	IChartOpts,
-	IChartOptsLib,
 	IOptsChartData,
 	ISlideObject,
 	ISlideRel,
@@ -28,6 +27,14 @@ import {
 	TextPropsOptions,
 } from './core-interfaces'
 import * as genObj from './gen-objects'
+
+/**
+ * Copy caller-supplied options so the library never mutates objects it does not own (issue #20)
+ * @note shallow by design - the generators rewrite top-level props only (nested props are read, not written)
+ */
+function cloneOpts<T extends object> (options?: T): T {
+	return { ...(options ?? {}) } as T
+}
 
 export default class Slide {
 	private readonly _setSlideNum: (value: SlideNumberProps) => void
@@ -166,11 +173,7 @@ export default class Slide {
 	 */
 	addChart(type: CHART_NAME | IChartMulti[], data: IOptsChartData[], options?: IChartOpts): Slide {
 		// FUTURE: TODO-VERSION-4: Remove first arg - only take data and opts, with "type" required on opts
-		// Set `_type` on IChartOptsLib as its what is used as object is passed around
-		// (clone so the caller's options object is never mutated and stays reusable)
-		const optionsWithType: IChartOptsLib = { ...options }
-		optionsWithType._type = type
-		genObj.addChartDefinition(this, type, data, optionsWithType)
+		genObj.addChartDefinition(this, type, Array.isArray(data) ? data.map(item => ({ ...item })) : data, cloneOpts(options))
 		return this
 	}
 
@@ -180,7 +183,7 @@ export default class Slide {
 	 * @return {Slide} this Slide
 	 */
 	addImage(options: ImageProps): Slide {
-		genObj.addImageDefinition(this, { ...options })
+		genObj.addImageDefinition(this, cloneOpts(options))
 		return this
 	}
 
@@ -190,7 +193,7 @@ export default class Slide {
 	 * @return {Slide} this Slide
 	 */
 	addMedia(options: MediaProps): Slide {
-		genObj.addMediaDefinition(this, { ...options })
+		genObj.addMediaDefinition(this, cloneOpts(options))
 		return this
 	}
 
@@ -217,7 +220,7 @@ export default class Slide {
 		// <script./> => `pptx.shapes.RECTANGLE` [string] "rect" ... shapeName['name'] = 'rect'
 		// TypeScript => `pptxgen.shapes.RECTANGLE` [string] "rect" ... shapeName = 'rect'
 		// let shapeNameDecode = typeof shapeName === 'object' && shapeName['name'] ? shapeName['name'] : shapeName
-		genObj.addShapeDefinition(this, shapeName, { ...options })
+		genObj.addShapeDefinition(this, shapeName, cloneOpts(options))
 		return this
 	}
 
@@ -229,7 +232,7 @@ export default class Slide {
 	 */
 	addTable(tableRows: TableRow[], options?: TableProps): Slide {
 		// FUTURE: we pass `this` - we dont need to pass layouts - they can be read from this!
-		this._newAutoPagedSlides = genObj.addTableDefinition(this, tableRows, { ...options }, this._slideLayout, this._presLayout, this.addSlide, this.getSlide)
+		this._newAutoPagedSlides = genObj.addTableDefinition(this, tableRows, cloneOpts(options), this._slideLayout, this._presLayout, this.addSlide, this.getSlide)
 		return this
 	}
 
@@ -241,7 +244,7 @@ export default class Slide {
 	 */
 	addText(text: string | TextProps[], options?: TextPropsOptions): Slide {
 		const textParam = typeof text === 'string' || typeof text === 'number' ? [{ text, options }] : text
-		genObj.addTextDefinition(this, textParam, { ...options }, false)
+		genObj.addTextDefinition(this, textParam, cloneOpts(options), false)
 		return this
 	}
 }

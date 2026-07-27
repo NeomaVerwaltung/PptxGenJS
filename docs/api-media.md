@@ -30,8 +30,8 @@ Either provide a URL location or base64 data along with type to create media.
 
 - Video (mpg, mov, mp4, m4v, et al.); Audio (mp3, wav, et al.); (see [Video and Audio file formats supported in PowerPoint](https://support.office.com/en-us/article/Video-and-audio-file-formats-supported-in-PowerPoint-d8b12450-26db-4c7b-a5c1-593d3418fb59#OperatingSystem=Windows))
 - YouTube videos can be viewed using Microsoft 365/Office 365 (they may show errors on older desktop PowerPoint versions)
-- Other online video sites may be supported as well (some users have reported non-YouTube sites that worked)
-- Not all platforms support all formats! MacOS can show MPG files whereas Windows probably will not, and some AVI files may work and some may not. Video codecs are weird and painful like that.
+- Other online video sites may be supported as well (users have reported non-YouTube sites that worked)
+- Not all platforms support all formats. For example, macOS can play MPG files while Windows typically cannot, and AVI support varies by codec. Verify playback on the target platform before distributing a presentation.
 
 ## Properties
 

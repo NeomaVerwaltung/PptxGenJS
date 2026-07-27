@@ -2,7 +2,7 @@
 title: Charts
 ---
 
-Charts of almost any type can be added to Slides, including combo and 3D charts.
+Charts of most types can be added to Slides, including combo and 3D charts.
 
 ![PptxGenJS Chart Samples](./assets/demo-all-charts.png)
 
@@ -38,7 +38,7 @@ slide.addChart(pres.ChartType.line, dataChartAreaLine, { x: 1, y: 1, w: 8, h: 4 
 - Combo charts have a different function signature than standard. There are two parameters:
   - `chartTypes`: Array of objects, each with `type`, `data`, and `options` objects.
   - `options`: Standard options as used with single charts. Can include axes options.
-- Columns makes the most sense in general. Line charts cannot be rotated to match up with horizontal bars (a PowerPoint limitation).
+- Column charts are the most suitable choice in general. Line charts cannot be rotated to match up with horizontal bars (a PowerPoint limitation).
 - Can optionally have a secondary value axis.
 - If there is secondary value axis, a secondary category axis is required in order to render, but currently always uses the primary labels. It is recommended to use `catAxisHidden: true` on the secondary category axis.
 - Standard options are used, and the chart-type-options are mixed in to each.

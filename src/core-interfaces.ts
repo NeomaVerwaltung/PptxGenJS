@@ -116,7 +116,8 @@ export interface BorderProps {
 // used by: image, object, text,
 export interface HyperlinkProps {
 	/**
-	 * INTERNAL - relationship id, assigned by the library (never set this yourself)
+	 * Relationship id - set by the library during export
+	 * @internal
 	 */
 	_rId?: number
 	/**
@@ -1773,6 +1774,8 @@ export interface SlideMasterProps {
 export interface ObjectOptions extends ImageProps, PositionProps, ShapeProps, TableCellProps, TextPropsOptions {
 	_placeholderIdx?: number
 	_placeholderType?: PLACEHOLDER_TYPE
+	/** image added without `w`/`h`: size it from the image itself during export @internal */
+	_sizeFromImage?: boolean
 
 	cx?: Coord
 	cy?: Coord

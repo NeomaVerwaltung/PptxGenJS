@@ -445,11 +445,10 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 
 				// E: Calc usable vertical space/table height now as we may still be in the same row and code above ("C: Calc usable vertical space/table height.") calc may now be invalid
 				calcSlideTabH()
-				emuTabCurrH += maxCellMarTopEmu + maxCellMarBtmEmu // Start row height with margins
 				if (tableProps.verbose) console.log(`| SLIDE [${tableRowSlides.length}]: emuSlideTabH ...... = ${(emuSlideTabH / EMU).toFixed(1)} `)
 
-				// F: reset current table height for this new Slide
-				emuTabCurrH = 0
+				// F: reset current table height for this new Slide, starting the row off with its cell margins
+				emuTabCurrH = maxCellMarTopEmu + maxCellMarBtmEmu
 
 				// G: handle repeat headers option /or/ Add new empty row to continue current lines into
 				if ((tableProps.addHeaderToEach || tableProps.autoPageRepeatHeader) && tableProps._arrObjTabHeadRows) {
@@ -462,11 +461,10 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 							if (lh > maxLineHeight) maxLineHeight = lh
 						})
 						newTableRowSlide.rows.push(newHeadRow)
-						emuTabCurrH += maxLineHeight // TODO: what about margins? dont we need to include cell margin in line height?
+						emuTabCurrH += maxLineHeight + maxCellMarTopEmu + maxCellMarBtmEmu // repeated header rows carry cell margins too
 					})
 				}
 
-				// WIP: NEW: TEST THIS!!
 				tgtCell = currTableRow[currCellIdx]
 			}
 
@@ -582,9 +580,10 @@ export function genTableToSlides(pptx: PptxGenJS, tabEleId: string, options: Tab
 	// STEP 3: Calc/Set column widths by using same column width percent from HTML table
 	arrTabColW.forEach((colW, idxW) => {
 		const intCalcWidth = Number(((Number(emuSlideTabW) * ((colW / intTabW) * 100)) / 100 / EMU).toFixed(2))
-		const colHeader = document.querySelector(`#${tabEleId} thead tr:first-child th:nth-child(${idxW + 1})`)
-		const intMinWidth = Number(colHeader?.getAttribute('data-pptx-min-width')) || 0
-		const intSetWidth = Number(colHeader?.getAttribute('data-pptx-width')) || 0
+		const colSelector = document.querySelector(`#${tabEleId} thead tr:first-child th:nth-child(${idxW + 1})`)
+		// NOTE: a missing attribute yields null -> keep 0 so the calculated width is used (issue #24)
+		const intMinWidth = Number(colSelector?.getAttribute('data-pptx-min-width')) || 0
+		const intSetWidth = Number(colSelector?.getAttribute('data-pptx-width')) || 0
 		arrColW.push(intSetWidth || (intMinWidth > intCalcWidth ? intMinWidth : intCalcWidth))
 	})
 	if (opts.verbose) {
