@@ -4,6 +4,10 @@ This document describes how to manually verify PptxGenJS across supported platfo
 
 The automated suite (`npm run check`) covers linting, type checks, and unit/e2e/snapshot tests. The manual steps below validate real runtimes and bundlers.
 
+> **Note:** the checked-in `demos/` workspace was removed (issue #8). The manual tests below scaffold a throwaway
+> project per platform instead, so nothing has to be kept current in this repository. Demos may return later in a
+> form that carries no third-party assets.
+
 Procedure:
 
 1. Run `npm run ship`.
@@ -21,24 +25,33 @@ Procedure:
 
 Purpose: validate the CommonJS build in a pure Node environment.
 
-### CLI tests
-
 ```bash
-cd demos/node
-npm run demo
-npm run demo-all
+mkdir /tmp/pptxgenjs-node-test && cd /tmp/pptxgenjs-node-test
+npm init -y
+npm install /path/to/this/repo   # installs @neo-ma/pptxgenjs from the local checkout
 ```
 
-1. Confirm the console output and the exported PPTX files are correct.
+Create `demo.cjs`:
+
+```js
+const pptxgen = require('@neo-ma/pptxgenjs')
+const pptx = new pptxgen()
+const slide = pptx.addSlide()
+slide.addText('Node CJS smoke test', { x: 1, y: 1, w: 6, h: 1, fontSize: 24, color: '0088CC' })
+slide.addChart(pptx.ChartType.bar, [{ name: 'Sales', labels: ['Q1', 'Q2'], values: [10, 20] }], { x: 1, y: 2.5, w: 6, h: 3 })
+slide.addTable([['A', 'B'], ['1', '2']], { x: 1, y: 6, w: 6 })
+pptx.writeFile({ fileName: 'node-test.pptx' }).then(name => console.log(`wrote ${name}`))
+```
+
+1. Run `node demo.cjs` and confirm the console output.
+2. Open `node-test.pptx` in PowerPoint: it must open without a repair prompt and render correctly.
 
 ### Stream test
 
-```bash
-npm run demo-stream
-```
+Swap the write call for `pptx.stream()` and serve the returned buffer from a small HTTP handler.
 
 1. Confirm the streamed PPTX download is correct.
-2. Open the [stream URL](http://192.168.254.x:3000/) on a mobile device and verify the download.
+2. Open the stream URL on a mobile device and verify the download.
 
 ## Vite + TypeScript tests
 
@@ -68,4 +81,4 @@ Record the result of each test before release:
 | pptxgen.es.js  | Webpack 4 | SPFx (v1.16.1) project |        |
 | pptxgen.es.js  | Webpack 5 | SPFx (v1.19.1) project |        |
 | pptxgen.es.js  | Rollup 4  | Vite (v6) scaffold     |        |
-| pptxgen.cjs.js | Node/CJS  | Node demo              |        |
+| pptxgen.cjs.js | Node/CJS  | Node scaffold          |        |

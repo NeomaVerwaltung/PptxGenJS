@@ -58,7 +58,7 @@ When loading the library via a `<script>` tag rather than a module import, the c
 
 The complete API reference, tutorials, and integration guides are available at [https://neomaverwaltung.github.io/PptxGenJS](https://neomaverwaltung.github.io/PptxGenJS).
 
-The documentation source is plain Markdown under [`docs/`](docs) and builds with VitePress (`npm run docs:dev` to preview locally). It deploys to GitHub Pages automatically on push to `master`. Runnable command-line examples are available under [`demos/node`](demos/node).
+The documentation source is plain Markdown under [`docs/`](docs) and builds with VitePress (`npm run docs:dev` to preview locally). It deploys to GitHub Pages automatically on push to `master`.
 
 ## Issues and support
 
