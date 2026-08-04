@@ -20,14 +20,14 @@ jobs:
           cache: npm
           registry-url: https://registry.npmjs.org
       - run: npm ci
+      # dist/ is not committed (issue #16) - `npm ci` builds it via `prepare`. Verify before publishing,
+      # so an incomplete build fails the job instead of shipping to npm and then failing on the upload.
+      - name: Verify built dist files exist
+        run: ls -l dist/pptxgen.bundle.js dist/pptxgen.min.js dist/pptxgen.cjs.js dist/pptxgen.es.js
       - name: Verify tag matches package.json version
         run: test "v$(node -p "require('./package.json').version")" = "${GITHUB_REF_NAME}"
       - run: npm install -g npm@latest # trusted publishing needs npm >= 11.5
       - run: npm publish --provenance --access public
-      # dist/ is not committed (issue #16) - `npm ci` builds it via `prepare`, and the
-      # bundles are attached here so direct-download consumers get them without a build
-      - name: Verify built dist files exist
-        run: ls -l dist/pptxgen.bundle.js dist/pptxgen.min.js dist/pptxgen.cjs.js dist/pptxgen.es.js
       - name: Create release with the built bundles attached
         run: >
           gh release create "$GITHUB_REF_NAME" --generate-notes
