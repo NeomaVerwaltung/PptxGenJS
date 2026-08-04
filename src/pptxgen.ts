@@ -80,6 +80,7 @@ import {
 } from './core-enums'
 import {
 	AddSlideProps,
+	CompressionLevel,
 	DefineLayoutProps,
 	IPresentationProps,
 	PresLayout,
@@ -99,6 +100,7 @@ import * as genObj from './gen-objects'
 import * as genMedia from './gen-media'
 import * as genTable from './gen-tables'
 import * as genXml from './gen-xml'
+import { warnDeprecatedOnce } from './gen-utils'
 
 const VERSION = '4.0.1'
 
@@ -227,6 +229,20 @@ export default class PptxGenJS implements IPresentationProps {
 		return this._rtlMode
 	}
 
+	/**
+	 * Zip compression for exported files - document config applied by every export method
+	 * @default 'none'
+	 * @since v4.1.0
+	 */
+	private _compression: CompressionLevel
+	public set compression(value: CompressionLevel) {
+		this._compression = value
+	}
+
+	public get compression(): CompressionLevel {
+		return this._compression
+	}
+
 	/** master slide layout object */
 	private readonly _masterSlide: PresSlide
 	public get masterSlide(): PresSlide {
@@ -342,6 +358,7 @@ export default class PptxGenJS implements IPresentationProps {
 			height: this.LAYOUTS[DEF_PRES_LAYOUT].height,
 		}
 		this._rtlMode = false
+		this._compression = 'none'
 		//
 		this._slideLayouts = [
 			{
@@ -564,17 +581,24 @@ export default class PptxGenJS implements IPresentationProps {
 
 			// E: Wait for Promises (if any) then generate the PPTX file
 			return await Promise.all(arrChartPromises).then(async () => {
-				const compression = props.compression ? 'DEFLATE' : 'STORE'
+				// Effective level: deprecated per-call boolean (when given) overrides the presentation-level setting
+				let level = this._compression
+				if (typeof props.compression === 'boolean') {
+					warnDeprecatedOnce('write-compression', '`compression` on write()/writeFile()/stream() is deprecated - set it once on the presentation instead: `pptx.compression = "none" | "fast" | "best"`')
+					level = props.compression ? 'best' : 'none'
+				}
+				const compression = level === 'none' ? 'STORE' : 'DEFLATE'
+				const compressionOptions = { level: level === 'fast' ? 1 : 9 } // ignored by JSZip when STORE
 
 				if (props.outputType === 'STREAM') {
 					// A: stream file
-					return await zip.generateAsync({ type: 'nodebuffer', compression })
+					return await zip.generateAsync({ type: 'nodebuffer', compression, compressionOptions })
 				} else if (props.outputType) {
 					// B: Node [fs]: Output type user option or default
-					return await zip.generateAsync({ type: props.outputType, compression })
+					return await zip.generateAsync({ type: props.outputType, compression, compressionOptions })
 				} else {
 					// C: Browser: Output blob as app/ms-pptx
-					return await zip.generateAsync({ type: 'blob', compression })
+					return await zip.generateAsync({ type: 'blob', compression, compressionOptions })
 				}
 			})
 		})
@@ -602,7 +626,8 @@ export default class PptxGenJS implements IPresentationProps {
 	async write(props?: WriteProps | WRITE_OUTPUT_TYPE): Promise<string | ArrayBuffer | Blob | Buffer | Uint8Array> {
 		// DEPRECATED: @deprecated v3.5.0 - outputType - [[remove in v4.0.0]]
 		const propsOutpType: WRITE_OUTPUT_TYPE | undefined = typeof props === 'object' ? props?.outputType : props
-		const propsCompress = typeof props === 'object' && props?.compression ? props.compression : false
+		// Leave undefined when not passed so the presentation-level `compression` setting applies
+		const propsCompress = typeof props === 'object' ? props?.compression : undefined
 
 		return await this.exportPresentation({
 			compression: propsCompress,
@@ -626,7 +651,7 @@ export default class PptxGenJS implements IPresentationProps {
 			console.warn('[WARNING] writeFile(string) is deprecated - pass { fileName } instead.')
 		}
 		const writeProps: WriteFileProps = typeof props === 'string' ? { fileName: props } : (props ?? {})
-		const { fileName: rawName = 'Presentation.pptx', compression = false } = writeProps
+		const { fileName: rawName = 'Presentation.pptx', compression } = writeProps
 		const fileName = rawName.toLowerCase().endsWith('.pptx') ? rawName : `${rawName}.pptx`
 
 		// STEP 3: Get the binary/Blob from exportPresentation()

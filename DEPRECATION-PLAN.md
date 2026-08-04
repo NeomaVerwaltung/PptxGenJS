@@ -36,6 +36,12 @@ their runtime shims in src/gen-objects.ts (lines 332–334, 732–738, 1081):
 Fix F2: pass the compression option in the explicit-outputType branch too, so all
 three `zip.generateAsync` calls behave the same. One-line change + one test.
 
+> **Status 2026-08-04**: Phase 1 shipped (PR #50). Phase 2 shipped: `pptx.compression`
+> enum, per-call boolean deprecated with one-time warning, warn-once on all v3.x shims
+> (`line` string, `lineSize/lineDash/lineHead/lineTail`, chart `border`/`fill`, `bkgd`,
+> `strike: true`). Phase 3 remains for the next major. The breaking remainder of
+> issue #29 (margin inches-vs-points, alignment vocab collapse) is folded into Phase 3.
+
 ### Phase 2 — deprecate, don't break (next minor)
 1. Move compression to presentation-level config and kill the boolean in one move:
    `new PptxGenJS({ compression: 'none' | 'fast' | 'best' })` (maps to STORE /
@@ -54,6 +60,9 @@ three `zip.generateAsync` calls behave the same. One-line change + one test.
 2. Remove string/union overloads of `write()` / `writeFile()` — options object only.
 3. Delete all F4 aliases from interfaces and their shims in gen-objects.ts.
 4. Normalize `strike` to enum-only (`'dblStrike' | 'sngStrike'`), map `true` removed.
+5. Issue #29 remainder: standardize `margin` on inches everywhere (SlideNumberProps is
+   points today), remove `BorderProps.pt`, collapse the alignment vocab to the public
+   string unions and internalize `TEXT_HALIGN`/`TEXT_VALIGN`.
 5. Ship a MIGRATION.md table: old prop → new prop (the `@deprecated` JSDoc tags
    already contain the mapping; generate the table from them).
 

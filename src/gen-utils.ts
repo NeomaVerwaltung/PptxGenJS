@@ -140,6 +140,20 @@ export function getUuid (uuidFormat: string): string {
  * @param {string} xml - XML string to encode
  * @returns {string} escaped XML
  */
+/** deprecation keys already warned about - each fires once per process */
+const _warnedDeprecations = new Set<string>()
+
+/**
+ * Warn about a deprecated option/usage - once per key, so migration guidance appears without flooding the console
+ * @param {string} key - unique key for this deprecation
+ * @param {string} message - migration guidance
+ */
+export function warnDeprecatedOnce (key: string, message: string): void {
+	if (_warnedDeprecations.has(key)) return
+	_warnedDeprecations.add(key)
+	console.warn(`[pptxgenjs] DEPRECATED: ${message}`)
+}
+
 export function encodeXmlEntities (xml: string | undefined): string {
 	// NOTE: Dont use short-circuit eval here as value c/b "0" (zero) etc.!
 	if (typeof xml === 'undefined' || xml == null) return ''

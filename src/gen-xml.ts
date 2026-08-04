@@ -43,6 +43,7 @@ import {
 	getUuid,
 	inch2Emu,
 	valToPts,
+	warnDeprecatedOnce,
 } from './gen-utils'
 
 const ImageSizingXml = {
@@ -1002,6 +1003,7 @@ function genXmlTextRunProperties (opts: ObjectOptions | TextPropsOptions, isDefa
 	runProps += opts?.bold ? ` b="${opts.bold ? '1' : '0'}"` : ''
 	runProps += opts?.italic ? ` i="${opts.italic ? '1' : '0'}"` : ''
 
+	if (opts?.strike === true) warnDeprecatedOnce('strike-boolean', '`strike: true` is deprecated - use `strike: "sngStrike"` (or `"dblStrike"`)')
 	runProps += opts?.strike ? ` strike="${typeof opts.strike === 'string' ? opts.strike : 'sngStrike'}"` : ''
 	if (typeof opts.underline === 'object' && opts.underline?.style) {
 		runProps += ` u="${opts.underline.style}"`

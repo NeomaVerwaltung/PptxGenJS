@@ -22,6 +22,27 @@ test('#20: caller-supplied options objects are not mutated', async () => {
 	assert.equal(shadow.opacity, 0.5)
 })
 
+test('#31 phase 2: presentation-level compression enum is honored', async () => {
+	const build = (): pptxgen => {
+		const pptx = new pptxgen()
+		const slide = pptx.addSlide()
+		for (let i = 0; i < 20; i++) slide.addText('The quick brown fox jumps over the lazy dog. '.repeat(10), { x: 0.1, y: 0.1, w: 9, h: 5 })
+		return pptx
+	}
+	const plain = build()
+	assert.equal(plain.compression, 'none') // default
+	const stored = (await plain.write({ outputType: 'nodebuffer' })) as Buffer
+
+	const compressed = build()
+	compressed.compression = 'best'
+	const deflated = (await compressed.write({ outputType: 'nodebuffer' })) as Buffer
+	assert.ok(deflated.length < stored.length, `expected best (${deflated.length}) < none (${stored.length})`)
+
+	// deprecated per-call boolean still overrides the presentation setting
+	const overridden = (await compressed.write({ outputType: 'nodebuffer', compression: false })) as Buffer
+	assert.equal(overridden.length, stored.length)
+})
+
 test('#31: compression option is honored for explicit outputTypes', async () => {
 	const pptx = new pptxgen()
 	// enough repetitive content that DEFLATE must beat STORE

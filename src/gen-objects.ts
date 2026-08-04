@@ -49,7 +49,7 @@ import {
 	TextPropsOptions,
 } from './core-interfaces'
 import { getSlidesForTableRows } from './gen-tables'
-import { encodeXmlEntities, getNewRelId, getSmartParseNumber, inch2Emu, resolveDataLabelPosition, valToPts, correctShadowOptions } from './gen-utils'
+import { encodeXmlEntities, getNewRelId, getSmartParseNumber, inch2Emu, resolveDataLabelPosition, valToPts, correctShadowOptions, warnDeprecatedOnce } from './gen-utils'
 
 /** Valid OOXML preset-geometry strings (the values of `SHAPE_TYPE`) - anything else corrupts the file. */
 const VALID_SHAPE_PRESETS = new Set<string>(Object.values(SHAPE_TYPE))
@@ -332,9 +332,15 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 		options.plotArea.border.pt = options.plotArea.border.width ?? (!options.plotArea.border.pt || isNaN(options.plotArea.border.pt) ? DEF_CHART_BORDER.pt : options.plotArea.border.pt)
 	}
 	if (options.plotArea.border && (!options.plotArea.border.color || typeof options.plotArea.border.color !== 'string')) { options.plotArea.border.color = DEF_CHART_BORDER.color }
-	if (options.border) options.plotArea.border = options.border // @deprecated [[remove in v4.0]]
+	if (options.border) {
+		warnDeprecatedOnce('chart-border', 'chart `border` is deprecated - use `plotArea.border`')
+		options.plotArea.border = options.border // @deprecated [[remove in v4.0]]
+	}
 	options.plotArea.fill = options.plotArea.fill || { color: undefined, transparency: undefined }
-	if (options.fill && options.plotArea.fill) options.plotArea.fill.color = options.fill // @deprecated [[remove in v4.0]]
+	if (options.fill && options.plotArea.fill) {
+		warnDeprecatedOnce('chart-fill', 'chart `fill` is deprecated - use `plotArea.fill`')
+		options.plotArea.fill.color = options.fill // @deprecated [[remove in v4.0]]
+	}
 	//
 	options.chartArea = options.chartArea || {}
 	options.chartArea.border = options.chartArea.border && typeof options.chartArea.border === 'object' ? options.chartArea.border : undefined
@@ -733,14 +739,15 @@ export function addShapeDefinition(target: PresSlide | SlideLayout, shapeName: S
 
 	// 3: Handle line (lots of deprecated opts)
 	if (typeof options.line === 'string') {
+		warnDeprecatedOnce('line-string', '`line: "<color>"` (string) is deprecated - use `line: { color: "..." }`')
 		const tmpOpts = newLineOpts
 		tmpOpts.color = String(options.line) // @deprecated `options.line` string (was line color)
 		options.line = tmpOpts
 	}
-	if (typeof options.lineSize === 'number') options.line.width = options.lineSize // @deprecated (part of `ShapeLineProps` now)
-	if (typeof options.lineDash === 'string') options.line.dashType = options.lineDash // @deprecated (part of `ShapeLineProps` now)
-	if (typeof options.lineHead === 'string') options.line.beginArrowType = options.lineHead // @deprecated (part of `ShapeLineProps` now)
-	if (typeof options.lineTail === 'string') options.line.endArrowType = options.lineTail // @deprecated (part of `ShapeLineProps` now)
+	if (typeof options.lineSize === 'number') { warnDeprecatedOnce('lineSize', '`lineSize` is deprecated - use `line.width`'); options.line.width = options.lineSize }
+	if (typeof options.lineDash === 'string') { warnDeprecatedOnce('lineDash', '`lineDash` is deprecated - use `line.dashType`'); options.line.dashType = options.lineDash }
+	if (typeof options.lineHead === 'string') { warnDeprecatedOnce('lineHead', '`lineHead` is deprecated - use `line.beginArrowType`'); options.line.beginArrowType = options.lineHead }
+	if (typeof options.lineTail === 'string') { warnDeprecatedOnce('lineTail', '`lineTail` is deprecated - use `line.endArrowType`'); options.line.endArrowType = options.lineTail }
 
 	// 4: Create hyperlink rels
 	createHyperlinkRels(target, newObject)
@@ -1082,15 +1089,15 @@ export function addTextDefinition(target: PresSlide | SlideLayout, text: TextPro
 
 				// 3: Handle line (lots of deprecated opts)
 				if (typeof itemOpts.line === 'string') {
+					warnDeprecatedOnce('line-string', '`line: "<color>"` (string) is deprecated - use `line: { color: "..." }`')
 					const tmpOpts = newLineOpts
-					if (typeof itemOpts.line === 'string') tmpOpts.color = itemOpts.line // @deprecated [remove in v4.0]
-					// tmpOpts.color = itemOpts.line!.toString() // @deprecated `itemOpts.line`:[string] (was line color)
+					tmpOpts.color = itemOpts.line // @deprecated [remove in v4.0]
 					itemOpts.line = tmpOpts
 				}
-				if (typeof itemOpts.lineSize === 'number' && itemOpts.line) itemOpts.line.width = itemOpts.lineSize // @deprecated (part of `ShapeLineProps` now)
-				if (typeof itemOpts.lineDash === 'string' && itemOpts.line) itemOpts.line.dashType = itemOpts.lineDash // @deprecated (part of `ShapeLineProps` now)
-				if (typeof itemOpts.lineHead === 'string' && itemOpts.line) itemOpts.line.beginArrowType = itemOpts.lineHead // @deprecated (part of `ShapeLineProps` now)
-				if (typeof itemOpts.lineTail === 'string' && itemOpts.line) itemOpts.line.endArrowType = itemOpts.lineTail // @deprecated (part of `ShapeLineProps` now)
+				if (typeof itemOpts.lineSize === 'number' && itemOpts.line) { warnDeprecatedOnce('lineSize', '`lineSize` is deprecated - use `line.width`'); itemOpts.line.width = itemOpts.lineSize }
+				if (typeof itemOpts.lineDash === 'string' && itemOpts.line) { warnDeprecatedOnce('lineDash', '`lineDash` is deprecated - use `line.dashType`'); itemOpts.line.dashType = itemOpts.lineDash }
+				if (typeof itemOpts.lineHead === 'string' && itemOpts.line) { warnDeprecatedOnce('lineHead', '`lineHead` is deprecated - use `line.beginArrowType`'); itemOpts.line.beginArrowType = itemOpts.lineHead }
+				if (typeof itemOpts.lineTail === 'string' && itemOpts.line) { warnDeprecatedOnce('lineTail', '`lineTail` is deprecated - use `line.endArrowType`'); itemOpts.line.endArrowType = itemOpts.lineTail }
 			}
 
 			// C: Line opts
@@ -1178,6 +1185,7 @@ export function addPlaceholdersToSlideLayouts(slide: PresSlide): void {
 export function addBackgroundDefinition(props: BackgroundProps, target: SlideLayout): void {
 	// A: @deprecated
 	if (target.bkgd) {
+		warnDeprecatedOnce('bkgd', '`bkgd` is deprecated - use `background`')
 		if (!target.background) target.background = {}
 
 		if (typeof target.bkgd === 'string') target.background.color = target.bkgd
