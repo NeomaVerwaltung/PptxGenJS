@@ -874,9 +874,8 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 				strXml += '  </c:tx>'
 
 				// Fill and Border
-				// TODO: CURRENT: Pull#727
-				// TODO: let seriesColor = obj.color ? obj.color : opts.chartColors ? opts.chartColors[colorIndex % opts.chartColors.length] : null
-				const seriesColor = opts.chartColors ? opts.chartColors[colorIndex % opts.chartColors.length] : undefined
+				// NOTE: a per-series `color` wins over the shared `chartColors` cycle (issue #37)
+				const seriesColor = obj.color ?? (opts.chartColors ? opts.chartColors[colorIndex % opts.chartColors.length] : undefined)
 
 				strXml += '  <c:spPr>'
 				if (seriesColor === 'transparent') {
@@ -930,7 +929,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 					strXml += '  <c:symbol val="' + opts.lineDataSymbol + '"/>'
 					if (opts.lineDataSymbolSize) strXml += `<c:size val="${opts.lineDataSymbolSize}"/>` // Defaults to "auto" otherwise (but this is usually too small, so there is a default)
 					strXml += '  <c:spPr>'
-					strXml += `    <a:solidFill>${createColorElement(chartColors[dataIndex + 1 > chartColors.length ? Math.floor(Math.random() * chartColors.length) : dataIndex])}</a:solidFill>`
+					strXml += `    <a:solidFill>${createColorElement(obj.color ?? chartColors[dataIndex + 1 > chartColors.length ? Math.floor(Math.random() * chartColors.length) : dataIndex])}</a:solidFill>`
 					strXml += `    <a:ln w="${opts.lineDataSymbolLineSize}" cap="flat"><a:solidFill>${createColorElement(opts.lineDataSymbolLineColor || seriesColor)}</a:solidFill><a:prstDash val="solid"/><a:round/></a:ln>`
 					strXml += '    <a:effectLst/>'
 					strXml += '  </c:spPr>'
@@ -1037,7 +1036,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 				strXml += '        </a:defRPr>'
 				strXml += '      </a:pPr></a:p>'
 				strXml += '    </c:txPr>'
-				if (opts.dataLabelPosition) strXml += ' <c:dLblPos val="' + opts.dataLabelPosition + '"/>'
+				if (opts.dataLabelPosition) strXml += `<c:dLblPos val="${opts.dataLabelPosition}"/>`
 				strXml += '    <c:showLegendKey val="0"/>'
 				strXml += '    <c:showVal val="' + (opts.showValue ? '1' : '0') + '"/>'
 				strXml += '    <c:showCatName val="0"/>'
@@ -1102,7 +1101,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 				// 'c:spPr': Fill, Border, Line, LineStyle (dash, etc.), Shadow
 				strXml += '  <c:spPr>'
 				{
-					const tmpSerColor = chartColors[colorIndex % chartColors.length]
+					const tmpSerColor = obj.color ?? chartColors[colorIndex % chartColors.length]
 
 					if (tmpSerColor === 'transparent') {
 						strXml += '<a:noFill/>'
@@ -1133,8 +1132,8 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 						strXml += `<c:size val="${opts.lineDataSymbolSize}"/>`
 					}
 					strXml += '<c:spPr>'
-					strXml += `<a:solidFill>${createColorElement(chartColors[idx + 1 > chartColors.length ? Math.floor(Math.random() * chartColors.length) : idx])}</a:solidFill>`
-					strXml += `<a:ln w="${opts.lineDataSymbolLineSize}" cap="flat"><a:solidFill>${createColorElement(opts.lineDataSymbolLineColor || chartColors[colorIndex % chartColors.length])}</a:solidFill><a:prstDash val="solid"/><a:round/></a:ln>`
+					strXml += `<a:solidFill>${createColorElement(obj.color ?? chartColors[idx + 1 > chartColors.length ? Math.floor(Math.random() * chartColors.length) : idx])}</a:solidFill>`
+					strXml += `<a:ln w="${opts.lineDataSymbolLineSize}" cap="flat"><a:solidFill>${createColorElement(opts.lineDataSymbolLineColor || obj.color || chartColors[colorIndex % chartColors.length])}</a:solidFill><a:prstDash val="solid"/><a:round/></a:ln>`
 					strXml += '<a:effectLst/>'
 					strXml += '</c:spPr>'
 					strXml += '</c:marker>'
@@ -1205,7 +1204,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 								strXml += '        </a:ln>'
 								strXml += '        <a:effectLst/>'
 								strXml += '    </c:spPr>'
-								if (opts.dataLabelPosition) strXml += ' <c:dLblPos val="' + opts.dataLabelPosition + '"/>'
+								if (opts.dataLabelPosition) strXml += `<c:dLblPos val="${opts.dataLabelPosition}"/>`
 								strXml += '    <c:showLegendKey val="0"/>'
 								strXml += '    <c:showVal val="0"/>'
 								strXml += '    <c:showCatName val="0"/>'
@@ -1245,7 +1244,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 						strXml += '            <a:endParaRPr lang="en-US"/>'
 						strXml += '        </a:p>'
 						strXml += '    </c:txPr>'
-						if (opts.dataLabelPosition) strXml += ' <c:dLblPos val="' + opts.dataLabelPosition + '"/>'
+						if (opts.dataLabelPosition) strXml += `<c:dLblPos val="${opts.dataLabelPosition}"/>`
 						strXml += '    <c:showLegendKey val="0"/>'
 						strXml += ` <c:showVal val="${opts.showLabel ? '1' : '0'}"/>`
 						strXml += ` <c:showCatName val="${opts.showLabel ? '1' : '0'}"/>`
@@ -1339,7 +1338,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 				strXml += '        </a:defRPr>'
 				strXml += '      </a:pPr></a:p>'
 				strXml += '    </c:txPr>'
-				if (opts.dataLabelPosition) strXml += ' <c:dLblPos val="' + opts.dataLabelPosition + '"/>'
+				if (opts.dataLabelPosition) strXml += `<c:dLblPos val="${opts.dataLabelPosition}"/>`
 				strXml += '    <c:showLegendKey val="0"/>'
 				strXml += '    <c:showVal val="' + (opts.showValue ? '1' : '0') + '"/>'
 				strXml += '    <c:showCatName val="0"/>'
@@ -1394,7 +1393,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 				{
 					strXml += '<c:spPr>'
 
-					const tmpSerColor = chartColors[colorIndex % chartColors.length]
+					const tmpSerColor = obj.color ?? chartColors[colorIndex % chartColors.length]
 
 					if (tmpSerColor === 'transparent') {
 						strXml += '<a:noFill/>'
@@ -1591,7 +1590,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 				strXml += '   </a:defRPr>'
 				strXml += '      </a:pPr></a:p>'
 				strXml += '    </c:txPr>'
-				if (chartType === CHART_TYPE.PIE && opts.dataLabelPosition) strXml += `<c:dLblPos val="${opts.dataLabelPosition}"/>`
+				if (opts.dataLabelPosition) strXml += `<c:dLblPos val="${opts.dataLabelPosition}"/>`
 				strXml += '    <c:showLegendKey val="0"/>'
 				strXml += '    <c:showVal val="' + (opts.showValue ? '1' : '0') + '"/>'
 				strXml += '    <c:showCatName val="' + (opts.showLabel ? '1' : '0') + '"/>'

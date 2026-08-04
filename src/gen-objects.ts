@@ -49,7 +49,7 @@ import {
 	TextPropsOptions,
 } from './core-interfaces'
 import { getSlidesForTableRows } from './gen-tables'
-import { encodeXmlEntities, getNewRelId, getSmartParseNumber, inch2Emu, valToPts, correctShadowOptions } from './gen-utils'
+import { encodeXmlEntities, getNewRelId, getSmartParseNumber, inch2Emu, resolveDataLabelPosition, valToPts, correctShadowOptions } from './gen-utils'
 
 /** Valid OOXML preset-geometry strings (the values of `SHAPE_TYPE`) - anything else corrupts the file. */
 const VALID_SHAPE_PRESETS = new Set<string>(Object.values(SHAPE_TYPE))
@@ -80,6 +80,16 @@ export function createSlideMaster(props: SlideMasterProps, target: SlideLayout):
 			else if (MASTER_OBJECTS[key] && key === 'image') addImageDefinition(target, object[key])
 			else if (MASTER_OBJECTS[key] && key === 'line') addShapeDefinition(target, SHAPE_TYPE.LINE, object[key])
 			else if (MASTER_OBJECTS[key] && key === 'rect') addShapeDefinition(target, SHAPE_TYPE.RECTANGLE, object[key])
+			else if (MASTER_OBJECTS[key] && key === 'shape') addShapeDefinition(target, object[key].type, object[key].options ?? {})
+			else if (MASTER_OBJECTS[key] && key === 'media') addMediaDefinition(target as unknown as PresSlide, object[key])
+			else if (MASTER_OBJECTS[key] && key === 'table') {
+				// auto-paging makes no sense on a master - a master has no "next slide" to flow onto
+				const tableProps: TableProps = { ...object[key].options, autoPage: false }
+				const noPaging = (): never => {
+					throw new Error('defineSlideMaster: tables on a master cannot auto-page')
+				}
+				addTableDefinition(target as unknown as PresSlide, object[key].rows, tableProps, target, target._presLayout, noPaging, noPaging)
+			}
 			else if (MASTER_OBJECTS[key] && key === 'text') addTextDefinition(target, [{ text: object[key].text }], object[key].options, false)
 			else if (MASTER_OBJECTS[key] && key === 'placeholder') {
 				// TODO: 20180820: Check for existing `name`?
@@ -234,24 +244,13 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 	if (options.barGrouping?.includes('tacked')) {
 		if (!options.barGapWidthPct) options.barGapWidthPct = 50
 	}
-	// Clean up and validate data label positions
-	// REFERENCE: https://docs.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/e2b1697c-7adc-463d-9081-3daef72f656f?redirectedfrom=MSDN
+	// Translate friendly data label positions to OOXML codes and drop values the chart type rejects
+	// NOTE: an unsupported `c:dLblPos` makes PowerPoint declare the file corrupt, so it is dropped with a warning
+	// NOTE: a multi-type chart has no single type to validate against, so only the name translation applies there
 	if (options.dataLabelPosition) {
-		if (options._type === CHART_TYPE.AREA || options._type === CHART_TYPE.BAR3D || options._type === CHART_TYPE.DOUGHNUT || options._type === CHART_TYPE.RADAR) { delete options.dataLabelPosition }
-		if (options._type === CHART_TYPE.PIE) {
-			if (!['bestFit', 'ctr', 'inEnd', 'outEnd'].includes(options.dataLabelPosition ?? '')) delete options.dataLabelPosition
-		}
-		if (options._type === CHART_TYPE.BUBBLE || options._type === CHART_TYPE.BUBBLE3D || options._type === CHART_TYPE.LINE || options._type === CHART_TYPE.SCATTER) {
-			if (!['b', 'ctr', 'l', 'r', 't'].includes(options.dataLabelPosition ?? '')) delete options.dataLabelPosition
-		}
-		if (options._type === CHART_TYPE.BAR) {
-			if (!['stacked', 'percentStacked'].includes(options.barGrouping || '')) {
-				if (!['ctr', 'inBase', 'inEnd'].includes(options.dataLabelPosition ?? '')) delete options.dataLabelPosition
-			}
-			if (!['clustered'].includes(options.barGrouping || '')) {
-				if (!['ctr', 'inBase', 'inEnd', 'outEnd'].includes(options.dataLabelPosition ?? '')) delete options.dataLabelPosition
-			}
-		}
+		const chartType = Array.isArray(options._type) ? undefined : options._type
+		options.dataLabelPosition = resolveDataLabelPosition(options.dataLabelPosition, chartType, options.barGrouping) as typeof options.dataLabelPosition
+		if (!options.dataLabelPosition) delete options.dataLabelPosition
 	}
 	options.dataLabelBkgrdColors = options.dataLabelBkgrdColors || !options.dataLabelBkgrdColors ? options.dataLabelBkgrdColors : false
 	if (!['b', 'l', 'r', 't', 'tr'].includes(options.legendPos || '')) options.legendPos = 'r'
@@ -324,12 +323,14 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 	options.chartColorsOpacity = options.chartColorsOpacity && !isNaN(options.chartColorsOpacity) ? options.chartColorsOpacity : undefined
 	// DEPRECATED: v3.11.0 - use `plotArea.border` vvv
 	options.border = options.border && typeof options.border === 'object' ? options.border : undefined
-	if (options.border && (!options.border.pt || isNaN(options.border.pt))) options.border.pt = DEF_CHART_BORDER.pt
+	if (options.border) options.border.pt = options.border.width ?? (!options.border.pt || isNaN(options.border.pt) ? DEF_CHART_BORDER.pt : options.border.pt)
 	if (options.border && (!options.border.color || typeof options.border.color !== 'string')) options.border.color = DEF_CHART_BORDER.color
 	// DEPRECATED: (remove above in v4.0) ^^^
 	options.plotArea = options.plotArea || {}
 	options.plotArea.border = options.plotArea.border && typeof options.plotArea.border === 'object' ? options.plotArea.border : undefined
-	if (options.plotArea.border && (!options.plotArea.border.pt || isNaN(options.plotArea.border.pt))) options.plotArea.border.pt = DEF_CHART_BORDER.pt
+	if (options.plotArea.border) {
+		options.plotArea.border.pt = options.plotArea.border.width ?? (!options.plotArea.border.pt || isNaN(options.plotArea.border.pt) ? DEF_CHART_BORDER.pt : options.plotArea.border.pt)
+	}
 	if (options.plotArea.border && (!options.plotArea.border.color || typeof options.plotArea.border.color !== 'string')) { options.plotArea.border.color = DEF_CHART_BORDER.color }
 	if (options.border) options.plotArea.border = options.border // @deprecated [[remove in v4.0]]
 	options.plotArea.fill = options.plotArea.fill || { color: undefined, transparency: undefined }
@@ -340,13 +341,13 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 	if (options.chartArea.border) {
 		options.chartArea.border = {
 			color: options.chartArea.border.color || DEF_CHART_BORDER.color,
-			pt: options.chartArea.border.pt || DEF_CHART_BORDER.pt,
+			pt: options.chartArea.border.width ?? options.chartArea.border.pt ?? DEF_CHART_BORDER.pt,
 		}
 	}
 	options.chartArea.roundedCorners = typeof options.chartArea.roundedCorners === 'boolean' ? options.chartArea.roundedCorners : true
 	//
 	options.dataBorder = options.dataBorder && typeof options.dataBorder === 'object' ? options.dataBorder : undefined
-	if (options.dataBorder && (!options.dataBorder.pt || isNaN(options.dataBorder.pt))) options.dataBorder.pt = 0.75
+	if (options.dataBorder) options.dataBorder.pt = options.dataBorder.width ?? (!options.dataBorder.pt || isNaN(options.dataBorder.pt) ? 0.75 : options.dataBorder.pt)
 	if (options.dataBorder && options.dataBorder.color) {
 		const borderColor = options.dataBorder.color
 		const isHexColor = typeof borderColor === 'string' && borderColor.length === 6 && /^[0-9A-Fa-f]{6}$/.test(borderColor)
@@ -479,6 +480,7 @@ export function addImageDefinition(target: PresSlide | SlideLayout, opt: ImagePr
 		transparency: opt.transparency || 0,
 		objectName,
 		shadow: opt.shadow ? correctShadowOptions(opt.shadow) : undefined,
+		line: opt.line,
 		_sizeFromImage: !intWidth && !intHeight,
 	}
 
@@ -839,7 +841,7 @@ export function addTableDefinition(
 					cellBorder[idx] = {
 						type: cellBorder[idx].type || DEF_CELL_BORDER.type,
 						color: cellBorder[idx].color || DEF_CELL_BORDER.color,
-						pt: typeof cellBorder[idx].pt === 'number' ? cellBorder[idx].pt : DEF_CELL_BORDER.pt,
+						pt: cellBorder[idx].width ?? (typeof cellBorder[idx].pt === 'number' ? cellBorder[idx].pt : DEF_CELL_BORDER.pt),
 					}
 				})
 
@@ -872,7 +874,7 @@ export function addTableDefinition(
 		const optBorder = opt.border
 		;[0, 1, 2, 3].forEach(idx => {
 			optBorder[idx] = optBorder[idx]
-				? { type: optBorder[idx].type || DEF_CELL_BORDER.type, color: optBorder[idx].color || DEF_CELL_BORDER.color, pt: optBorder[idx].pt || DEF_CELL_BORDER.pt }
+				? { type: optBorder[idx].type || DEF_CELL_BORDER.type, color: optBorder[idx].color || DEF_CELL_BORDER.color, pt: optBorder[idx].width ?? optBorder[idx].pt ?? DEF_CELL_BORDER.pt }
 				: { type: 'none' }
 		})
 	}
