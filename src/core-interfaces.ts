@@ -1957,6 +1957,12 @@ export interface AddSlideProps {
 export interface PresentationProps {
 	author: string
 	company: string
+	/**
+	 * Zip compression for exported files
+	 * @default 'none'
+	 * @since v4.1.0
+	 */
+	compression: CompressionLevel
 	layout: string
 	masterSlide: PresSlide
 	/**

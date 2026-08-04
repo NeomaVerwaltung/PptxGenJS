@@ -696,6 +696,28 @@ export function addNotesDefinition(target: PresSlide, notes: string): void {
  * @param {SHAPE_NAME} shapeName shape name
  * @param {ShapeProps} opts shape options
  */
+/**
+ * Map the deprecated v3.x line props (`line` as color string, `lineSize`/`lineDash`/`lineHead`/`lineTail`)
+ * onto `line: ShapeLineProps`, warning once per prop. Shared by the shape and text paths; delete in the next major.
+ * @param {object} opts - options object carrying the deprecated props
+ * @param {ShapeLineProps} newLineOpts - the normalized line object to fill when `line` was a color string
+ */
+function normalizeDeprecatedLineProps(
+	opts: { line?: ShapeLineProps | string, lineSize?: number, lineDash?: ShapeLineProps['dashType'], lineHead?: ShapeLineProps['beginArrowType'], lineTail?: ShapeLineProps['endArrowType'] },
+	newLineOpts: ShapeLineProps
+): void {
+	if (typeof opts.line === 'string') {
+		warnDeprecatedOnce('line-string', '`line: "<color>"` (string) is deprecated - use `line: { color: "..." }`')
+		newLineOpts.color = opts.line // @deprecated [remove in next major]
+		opts.line = newLineOpts
+	}
+	if (typeof opts.line !== 'object') return
+	if (typeof opts.lineSize === 'number') { warnDeprecatedOnce('lineSize', '`lineSize` is deprecated - use `line.width`'); opts.line.width = opts.lineSize }
+	if (typeof opts.lineDash === 'string') { warnDeprecatedOnce('lineDash', '`lineDash` is deprecated - use `line.dashType`'); opts.line.dashType = opts.lineDash }
+	if (typeof opts.lineHead === 'string') { warnDeprecatedOnce('lineHead', '`lineHead` is deprecated - use `line.beginArrowType`'); opts.line.beginArrowType = opts.lineHead }
+	if (typeof opts.lineTail === 'string') { warnDeprecatedOnce('lineTail', '`lineTail` is deprecated - use `line.endArrowType`'); opts.line.endArrowType = opts.lineTail }
+}
+
 export function addShapeDefinition(target: PresSlide | SlideLayout, shapeName: SHAPE_NAME, opts: ShapeProps): void {
 	const options = typeof opts === 'object' ? opts : {}
 	options.line = options.line || { type: 'none' }
@@ -738,16 +760,7 @@ export function addShapeDefinition(target: PresSlide | SlideLayout, shapeName: S
 		: `Shape ${target._slideObjects.filter(obj => obj._type === SLIDE_OBJECT_TYPES.text).length}`
 
 	// 3: Handle line (lots of deprecated opts)
-	if (typeof options.line === 'string') {
-		warnDeprecatedOnce('line-string', '`line: "<color>"` (string) is deprecated - use `line: { color: "..." }`')
-		const tmpOpts = newLineOpts
-		tmpOpts.color = String(options.line) // @deprecated `options.line` string (was line color)
-		options.line = tmpOpts
-	}
-	if (typeof options.lineSize === 'number') { warnDeprecatedOnce('lineSize', '`lineSize` is deprecated - use `line.width`'); options.line.width = options.lineSize }
-	if (typeof options.lineDash === 'string') { warnDeprecatedOnce('lineDash', '`lineDash` is deprecated - use `line.dashType`'); options.line.dashType = options.lineDash }
-	if (typeof options.lineHead === 'string') { warnDeprecatedOnce('lineHead', '`lineHead` is deprecated - use `line.beginArrowType`'); options.line.beginArrowType = options.lineHead }
-	if (typeof options.lineTail === 'string') { warnDeprecatedOnce('lineTail', '`lineTail` is deprecated - use `line.endArrowType`'); options.line.endArrowType = options.lineTail }
+	normalizeDeprecatedLineProps(options, newLineOpts)
 
 	// 4: Create hyperlink rels
 	createHyperlinkRels(target, newObject)
@@ -1088,16 +1101,7 @@ export function addTextDefinition(target: PresSlide | SlideLayout, text: TextPro
 				if (typeof itemOpts.line === 'object') itemOpts.line = newLineOpts
 
 				// 3: Handle line (lots of deprecated opts)
-				if (typeof itemOpts.line === 'string') {
-					warnDeprecatedOnce('line-string', '`line: "<color>"` (string) is deprecated - use `line: { color: "..." }`')
-					const tmpOpts = newLineOpts
-					tmpOpts.color = itemOpts.line // @deprecated [remove in v4.0]
-					itemOpts.line = tmpOpts
-				}
-				if (typeof itemOpts.lineSize === 'number' && itemOpts.line) { warnDeprecatedOnce('lineSize', '`lineSize` is deprecated - use `line.width`'); itemOpts.line.width = itemOpts.lineSize }
-				if (typeof itemOpts.lineDash === 'string' && itemOpts.line) { warnDeprecatedOnce('lineDash', '`lineDash` is deprecated - use `line.dashType`'); itemOpts.line.dashType = itemOpts.lineDash }
-				if (typeof itemOpts.lineHead === 'string' && itemOpts.line) { warnDeprecatedOnce('lineHead', '`lineHead` is deprecated - use `line.beginArrowType`'); itemOpts.line.beginArrowType = itemOpts.lineHead }
-				if (typeof itemOpts.lineTail === 'string' && itemOpts.line) { warnDeprecatedOnce('lineTail', '`lineTail` is deprecated - use `line.endArrowType`'); itemOpts.line.endArrowType = itemOpts.lineTail }
+				normalizeDeprecatedLineProps(itemOpts, newLineOpts)
 			}
 
 			// C: Line opts

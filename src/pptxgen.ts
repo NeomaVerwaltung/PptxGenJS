@@ -236,6 +236,11 @@ export default class PptxGenJS implements IPresentationProps {
 	 */
 	private _compression: CompressionLevel
 	public set compression(value: CompressionLevel) {
+		// Guard plain-JS callers: anything but a valid level would otherwise silently select DEFLATE
+		if (value !== 'none' && value !== 'fast' && value !== 'best') {
+			console.warn(`[pptxgenjs] invalid compression "${String(value)}" - valid values are 'none' | 'fast' | 'best'; using 'none'`)
+			value = 'none'
+		}
 		this._compression = value
 	}
 
@@ -581,14 +586,15 @@ export default class PptxGenJS implements IPresentationProps {
 
 			// E: Wait for Promises (if any) then generate the PPTX file
 			return await Promise.all(arrChartPromises).then(async () => {
-				// Effective level: deprecated per-call boolean (when given) overrides the presentation-level setting
-				let level = this._compression
+				// Effective level: deprecated per-call boolean (when given) overrides the presentation-level setting.
+				// `legacy` = boolean `true`, kept on JSZip's default DEFLATE level so existing callers see no perf change.
+				let level: CompressionLevel | 'legacy' = this._compression
 				if (typeof props.compression === 'boolean') {
-					warnDeprecatedOnce('write-compression', '`compression` on write()/writeFile()/stream() is deprecated - set it once on the presentation instead: `pptx.compression = "none" | "fast" | "best"`')
-					level = props.compression ? 'best' : 'none'
+					if (props.compression) warnDeprecatedOnce('write-compression', '`compression: true` on write()/writeFile()/stream() is deprecated - set it once on the presentation instead: `pptx.compression = "fast" | "best"`')
+					level = props.compression ? 'legacy' : 'none'
 				}
 				const compression = level === 'none' ? 'STORE' : 'DEFLATE'
-				const compressionOptions = { level: level === 'fast' ? 1 : 9 } // ignored by JSZip when STORE
+				const compressionOptions = level === 'fast' ? { level: 1 } : level === 'best' ? { level: 9 } : undefined
 
 				if (props.outputType === 'STREAM') {
 					// A: stream file
@@ -625,6 +631,7 @@ export default class PptxGenJS implements IPresentationProps {
 	 */
 	async write(props?: WriteProps | WRITE_OUTPUT_TYPE): Promise<string | ArrayBuffer | Blob | Buffer | Uint8Array> {
 		// DEPRECATED: @deprecated v3.5.0 - outputType - [[remove in v4.0.0]]
+		if (typeof props === 'string') warnDeprecatedOnce('write-string', 'write(outputType) as a string is deprecated - pass { outputType } instead')
 		const propsOutpType: WRITE_OUTPUT_TYPE | undefined = typeof props === 'object' ? props?.outputType : props
 		// Leave undefined when not passed so the presentation-level `compression` setting applies
 		const propsCompress = typeof props === 'object' ? props?.compression : undefined
@@ -648,7 +655,7 @@ export default class PptxGenJS implements IPresentationProps {
 		// STEP 2: Normalise the user arguments
 		if (typeof props === 'string') {
 			// DEPRECATED: @deprecated v3.5.0 - fileName - [[remove in v4.0.0]]
-			console.warn('[WARNING] writeFile(string) is deprecated - pass { fileName } instead.')
+			warnDeprecatedOnce('writeFile-string', 'writeFile(string) is deprecated - pass { fileName } instead')
 		}
 		const writeProps: WriteFileProps = typeof props === 'string' ? { fileName: props } : (props ?? {})
 		const { fileName: rawName = 'Presentation.pptx', compression } = writeProps

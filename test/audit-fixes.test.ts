@@ -41,6 +41,12 @@ test('#31 phase 2: presentation-level compression enum is honored', async () => 
 	// deprecated per-call boolean still overrides the presentation setting
 	const overridden = (await compressed.write({ outputType: 'nodebuffer', compression: false })) as Buffer
 	assert.equal(overridden.length, stored.length)
+
+	// invalid values are rejected by the setter, not silently mapped to DEFLATE
+	const guarded = build()
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	;(guarded as any).compression = false
+	assert.equal(guarded.compression, 'none')
 })
 
 test('#31: compression option is honored for explicit outputTypes', async () => {
