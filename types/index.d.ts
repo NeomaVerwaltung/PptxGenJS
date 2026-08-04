@@ -51,6 +51,14 @@ declare class PptxGenJS {
 	 */
 	rtlMode: boolean
 
+	/**
+	 * Zip compression for exported files - applied by every export method
+	 * - 'none': store uncompressed (fastest), 'fast': DEFLATE level 1, 'best': DEFLATE level 9
+	 * @default 'none'
+	 * @since v4.1.0
+	 */
+	compression: PptxGenJS.CompressionLevel
+
 	// Presentation Metadata
 	/**
 	 * Author name
@@ -2505,11 +2513,21 @@ declare namespace PptxGenJS {
 
 	// Core
 	// ====
+	/**
+	 * Zip compression applied to the exported file
+	 * - 'none': store uncompressed (fastest)
+	 * - 'fast': DEFLATE level 1 (quick, decent savings)
+	 * - 'best': DEFLATE level 9 (smallest file, slowest)
+	 * @since v4.1.0
+	 */
+	export type CompressionLevel = 'none' | 'fast' | 'best'
+
 	export interface WriteBaseProps {
 		/**
 		 * Whether to compress export (can save substantial space, but takes a bit longer to export)
 		 * @default false
 		 * @since v3.5.0
+		 * @deprecated v4.1.0 - set `compression` on the presentation instead (`pptx.compression = 'best'`)
 		 */
 		compression?: boolean
 	}

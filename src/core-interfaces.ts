@@ -1127,6 +1127,10 @@ export interface TextPropsOptions extends PositionProps, DataOrPathProps, TextBa
 	rtlMode?: boolean
 	shadow?: ShadowProps
 	shape?: SHAPE_NAME
+	/**
+	 * Strikethrough style
+	 * - `boolean` form is deprecated (v4.1.0): `true` maps to `'sngStrike'` - pass the string value instead
+	 */
 	strike?: boolean | 'dblStrike' | 'sngStrike'
 	subscript?: boolean
 	superscript?: boolean
@@ -1753,11 +1757,21 @@ export interface ISlideObject {
 }
 // PRIVATE ^^^
 
+/**
+ * Zip compression applied to the exported file
+ * - 'none': store uncompressed (fastest)
+ * - 'fast': DEFLATE level 1 (quick, decent savings)
+ * - 'best': DEFLATE level 9 (smallest file, slowest)
+ */
+export type CompressionLevel = 'none' | 'fast' | 'best'
+
 export interface WriteBaseProps {
 	/**
 	 * Whether to compress export (can save substantial space, but takes a bit longer to export)
 	 * @default false
 	 * @since v3.5.0
+	 * @deprecated v4.1.0 - set `compression` on the presentation instead (`pptx.compression = 'best'`) - a
+	 * boolean per-write flag cannot express a level and compression is document config, not a per-call concern
 	 */
 	compression?: boolean
 }
@@ -1943,6 +1957,12 @@ export interface AddSlideProps {
 export interface PresentationProps {
 	author: string
 	company: string
+	/**
+	 * Zip compression for exported files
+	 * @default 'none'
+	 * @since v4.1.0
+	 */
+	compression: CompressionLevel
 	layout: string
 	masterSlide: PresSlide
 	/**

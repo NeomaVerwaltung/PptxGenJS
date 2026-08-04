@@ -135,6 +135,20 @@ export function getUuid (uuidFormat: string): string {
 	})
 }
 
+/** deprecation keys already warned about - each fires once per process */
+const _warnedDeprecations = new Set<string>()
+
+/**
+ * Warn about a deprecated option/usage - once per key, so migration guidance appears without flooding the console
+ * @param {string} key - unique key for this deprecation
+ * @param {string} message - migration guidance
+ */
+export function warnDeprecatedOnce (key: string, message: string): void {
+	if (_warnedDeprecations.has(key)) return
+	_warnedDeprecations.add(key)
+	console.warn(`[pptxgenjs] DEPRECATED: ${message}`)
+}
+
 /**
  * Replace special XML characters with HTML-encoded strings
  * @param {string} xml - XML string to encode
@@ -325,9 +339,12 @@ export function getNewRelId (target: PresSlide | SlideLayout): number {
  */
 export function correctShadowOptions (ShadowProps: ShadowProps): ShadowProps | undefined {
 	if (!ShadowProps || typeof ShadowProps !== 'object') {
-		// console.warn("`shadow` options must be an object. Ex: `{shadow: {type:'none'}}`")
+		if (ShadowProps) console.warn('[pptxgenjs] `shadow` must be an object (ex: `{shadow: {type:\'outer\'}}`) - value ignored')
 		return
 	}
+
+	// Work on a copy - never mutate the caller's options object
+	ShadowProps = { ...ShadowProps }
 
 	// OPT: `type`
 	if (ShadowProps.type !== 'outer' && ShadowProps.type !== 'inner' && ShadowProps.type !== 'none') {

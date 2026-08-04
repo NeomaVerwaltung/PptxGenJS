@@ -157,6 +157,15 @@ export function encodeSlideMediaRels(layout: PresSlide | SlideLayout): Array<Pro
 						// A: build request
 						const xhr = new XMLHttpRequest()
 						xhr.onload = () => {
+							// status 0 = non-HTTP schemes (file://); anything outside 2xx is an error page, not image bytes
+							if (xhr.status !== 0 && (xhr.status < 200 || xhr.status > 299)) {
+								rel.data = IMG_BROKEN
+								candidateRels
+									.filter(dupe => dupe.isDuplicate && dupe.path === rel.path)
+									.forEach(dupe => (dupe.data = rel.data))
+								reject(new Error(`ERROR! HTTP status ${xhr.status} loading image: ${rel.path}`))
+								return
+							}
 							const reader = new FileReader()
 							reader.onloadend = () => {
 								if (typeof reader.result === 'string') rel.data = reader.result

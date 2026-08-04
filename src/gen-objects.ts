@@ -49,7 +49,7 @@ import {
 	TextPropsOptions,
 } from './core-interfaces'
 import { getSlidesForTableRows } from './gen-tables'
-import { encodeXmlEntities, getNewRelId, getSmartParseNumber, inch2Emu, resolveDataLabelPosition, valToPts, correctShadowOptions } from './gen-utils'
+import { encodeXmlEntities, getNewRelId, getSmartParseNumber, inch2Emu, resolveDataLabelPosition, valToPts, correctShadowOptions, warnDeprecatedOnce } from './gen-utils'
 
 /** Valid OOXML preset-geometry strings (the values of `SHAPE_TYPE`) - anything else corrupts the file. */
 const VALID_SHAPE_PRESETS = new Set<string>(Object.values(SHAPE_TYPE))
@@ -283,7 +283,7 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 	correctGridLineOptions(options.catGridLine)
 	correctGridLineOptions(options.valGridLine)
 	correctGridLineOptions(options.serGridLine)
-	if (options.shadow) correctShadowOptions(options.shadow)
+	if (options.shadow) options.shadow = correctShadowOptions(options.shadow)
 
 	// C: Options: plotArea
 	options.showDataTable = options.showDataTable || !options.showDataTable ? options.showDataTable : false
@@ -332,9 +332,15 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 		options.plotArea.border.pt = options.plotArea.border.width ?? (!options.plotArea.border.pt || isNaN(options.plotArea.border.pt) ? DEF_CHART_BORDER.pt : options.plotArea.border.pt)
 	}
 	if (options.plotArea.border && (!options.plotArea.border.color || typeof options.plotArea.border.color !== 'string')) { options.plotArea.border.color = DEF_CHART_BORDER.color }
-	if (options.border) options.plotArea.border = options.border // @deprecated [[remove in v4.0]]
+	if (options.border) {
+		warnDeprecatedOnce('chart-border', 'chart `border` is deprecated - use `plotArea.border`')
+		options.plotArea.border = options.border // @deprecated [[remove in v4.0]]
+	}
 	options.plotArea.fill = options.plotArea.fill || { color: undefined, transparency: undefined }
-	if (options.fill && options.plotArea.fill) options.plotArea.fill.color = options.fill // @deprecated [[remove in v4.0]]
+	if (options.fill && options.plotArea.fill) {
+		warnDeprecatedOnce('chart-fill', 'chart `fill` is deprecated - use `plotArea.fill`')
+		options.plotArea.fill.color = options.fill // @deprecated [[remove in v4.0]]
+	}
 	//
 	options.chartArea = options.chartArea || {}
 	options.chartArea.border = options.chartArea.border && typeof options.chartArea.border === 'object' ? options.chartArea.border : undefined
@@ -690,6 +696,28 @@ export function addNotesDefinition(target: PresSlide, notes: string): void {
  * @param {SHAPE_NAME} shapeName shape name
  * @param {ShapeProps} opts shape options
  */
+/**
+ * Map the deprecated v3.x line props (`line` as color string, `lineSize`/`lineDash`/`lineHead`/`lineTail`)
+ * onto `line: ShapeLineProps`, warning once per prop. Shared by the shape and text paths; delete in the next major.
+ * @param {object} opts - options object carrying the deprecated props
+ * @param {ShapeLineProps} newLineOpts - the normalized line object to fill when `line` was a color string
+ */
+function normalizeDeprecatedLineProps(
+	opts: { line?: ShapeLineProps | string, lineSize?: number, lineDash?: ShapeLineProps['dashType'], lineHead?: ShapeLineProps['beginArrowType'], lineTail?: ShapeLineProps['endArrowType'] },
+	newLineOpts: ShapeLineProps
+): void {
+	if (typeof opts.line === 'string') {
+		warnDeprecatedOnce('line-string', '`line: "<color>"` (string) is deprecated - use `line: { color: "..." }`')
+		newLineOpts.color = opts.line // @deprecated [remove in next major]
+		opts.line = newLineOpts
+	}
+	if (typeof opts.line !== 'object') return
+	if (typeof opts.lineSize === 'number') { warnDeprecatedOnce('lineSize', '`lineSize` is deprecated - use `line.width`'); opts.line.width = opts.lineSize }
+	if (typeof opts.lineDash === 'string') { warnDeprecatedOnce('lineDash', '`lineDash` is deprecated - use `line.dashType`'); opts.line.dashType = opts.lineDash }
+	if (typeof opts.lineHead === 'string') { warnDeprecatedOnce('lineHead', '`lineHead` is deprecated - use `line.beginArrowType`'); opts.line.beginArrowType = opts.lineHead }
+	if (typeof opts.lineTail === 'string') { warnDeprecatedOnce('lineTail', '`lineTail` is deprecated - use `line.endArrowType`'); opts.line.endArrowType = opts.lineTail }
+}
+
 export function addShapeDefinition(target: PresSlide | SlideLayout, shapeName: SHAPE_NAME, opts: ShapeProps): void {
 	const options = typeof opts === 'object' ? opts : {}
 	options.line = options.line || { type: 'none' }
@@ -732,15 +760,7 @@ export function addShapeDefinition(target: PresSlide | SlideLayout, shapeName: S
 		: `Shape ${target._slideObjects.filter(obj => obj._type === SLIDE_OBJECT_TYPES.text).length}`
 
 	// 3: Handle line (lots of deprecated opts)
-	if (typeof options.line === 'string') {
-		const tmpOpts = newLineOpts
-		tmpOpts.color = String(options.line) // @deprecated `options.line` string (was line color)
-		options.line = tmpOpts
-	}
-	if (typeof options.lineSize === 'number') options.line.width = options.lineSize // @deprecated (part of `ShapeLineProps` now)
-	if (typeof options.lineDash === 'string') options.line.dashType = options.lineDash // @deprecated (part of `ShapeLineProps` now)
-	if (typeof options.lineHead === 'string') options.line.beginArrowType = options.lineHead // @deprecated (part of `ShapeLineProps` now)
-	if (typeof options.lineTail === 'string') options.line.endArrowType = options.lineTail // @deprecated (part of `ShapeLineProps` now)
+	normalizeDeprecatedLineProps(options, newLineOpts)
 
 	// 4: Create hyperlink rels
 	createHyperlinkRels(target, newObject)
@@ -1081,16 +1101,7 @@ export function addTextDefinition(target: PresSlide | SlideLayout, text: TextPro
 				if (typeof itemOpts.line === 'object') itemOpts.line = newLineOpts
 
 				// 3: Handle line (lots of deprecated opts)
-				if (typeof itemOpts.line === 'string') {
-					const tmpOpts = newLineOpts
-					if (typeof itemOpts.line === 'string') tmpOpts.color = itemOpts.line // @deprecated [remove in v4.0]
-					// tmpOpts.color = itemOpts.line!.toString() // @deprecated `itemOpts.line`:[string] (was line color)
-					itemOpts.line = tmpOpts
-				}
-				if (typeof itemOpts.lineSize === 'number' && itemOpts.line) itemOpts.line.width = itemOpts.lineSize // @deprecated (part of `ShapeLineProps` now)
-				if (typeof itemOpts.lineDash === 'string' && itemOpts.line) itemOpts.line.dashType = itemOpts.lineDash // @deprecated (part of `ShapeLineProps` now)
-				if (typeof itemOpts.lineHead === 'string' && itemOpts.line) itemOpts.line.beginArrowType = itemOpts.lineHead // @deprecated (part of `ShapeLineProps` now)
-				if (typeof itemOpts.lineTail === 'string' && itemOpts.line) itemOpts.line.endArrowType = itemOpts.lineTail // @deprecated (part of `ShapeLineProps` now)
+				normalizeDeprecatedLineProps(itemOpts, newLineOpts)
 			}
 
 			// C: Line opts
@@ -1131,7 +1142,7 @@ export function addTextDefinition(target: PresSlide | SlideLayout, text: TextPro
 		}
 
 		// STEP 3: ROBUST: Set rational values for some shadow props if needed
-		if (itemOpts.shadow) correctShadowOptions(itemOpts.shadow)
+		if (itemOpts.shadow) itemOpts.shadow = correctShadowOptions(itemOpts.shadow)
 
 		return itemOpts
 	}
@@ -1178,6 +1189,7 @@ export function addPlaceholdersToSlideLayouts(slide: PresSlide): void {
 export function addBackgroundDefinition(props: BackgroundProps, target: SlideLayout): void {
 	// A: @deprecated
 	if (target.bkgd) {
+		warnDeprecatedOnce('bkgd', '`bkgd` is deprecated - use `background`')
 		if (!target.background) target.background = {}
 
 		if (typeof target.bkgd === 'string') target.background.color = target.bkgd
