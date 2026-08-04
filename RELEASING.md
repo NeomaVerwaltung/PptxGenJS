@@ -20,7 +20,6 @@ This document describes the release process for the NEOMA distribution of PptxGe
 
 > `dist/` is not committed. The release workflow rebuilds it (`npm ci` runs `prepare`) and attaches
 > `pptxgen.bundle.js`, `pptxgen.min.js`, `pptxgen.cjs.js` and `pptxgen.es.js` to the GitHub Release.
-7. Update the version in `demos/node/package.json` (its `@neo-ma/pptxgenjs` dependency is `file:../..`; no dependency bump is required).
 
 ## Pre-release testing
 
@@ -31,7 +30,7 @@ Run the standard test suite as documented in [TESTING.md](./TESTING.md), then re
 | pptxgen.es.js  | Webpack 4 | SPFx (v1.16.1) project |        |
 | pptxgen.es.js  | Webpack 5 | SPFx (v1.19.1) project |        |
 | pptxgen.es.js  | Rollup 4  | Vite (v6) scaffold     |        |
-| pptxgen.cjs.js | Node/CJS  | Node demo              |        |
+| pptxgen.cjs.js | Node/CJS  | Node scaffold          |        |
 
 ## Pre-release verification
 
