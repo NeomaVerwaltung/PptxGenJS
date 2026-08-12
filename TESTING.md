@@ -2,7 +2,7 @@
 
 This document describes how to manually verify PptxGenJS across supported platforms and environments prior to a release.
 
-The automated suite (`npm run check`) covers linting, type checks, and unit/e2e/snapshot tests. The manual steps below validate real runtimes and bundlers.
+The automated suite (`npm run check`) covers linting, type checks, and unit/e2e/package-contract tests. The manual steps below validate real runtimes and bundlers.
 
 > **Note:** the checked-in `demos/` workspace was removed (issue #8). The manual tests below scaffold a throwaway
 > project per platform instead, so nothing has to be kept current in this repository. Demos may return later in a

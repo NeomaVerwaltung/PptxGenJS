@@ -10,8 +10,8 @@
 import { test, before } from 'node:test'
 import assert from 'node:assert/strict'
 import JSZip from 'jszip'
-import { XMLValidator } from 'fast-xml-parser'
 import pptxgen from '../src/pptxgen'
+import { assertPptxPackageContracts, readPart } from './pptx-contracts'
 
 const MARKER = 'ENTERPRISE_SMOKE_TEST'
 
@@ -46,17 +46,11 @@ test('e2e: contains required OOXML parts', () => {
 	}
 })
 
-test('e2e: every XML part is well-formed', async () => {
-	const xmlParts = Object.keys(zip.files).filter(name => name.endsWith('.xml') || name.endsWith('.rels'))
-	assert.ok(xmlParts.length > 0, 'no XML parts found in package')
-	for (const name of xmlParts) {
-		const content = await zip.file(name)!.async('string')
-		const result = XMLValidator.validate(content)
-		assert.equal(result, true, `malformed XML in ${name}: ${JSON.stringify(result)}`)
-	}
+test('e2e: package contracts hold', async () => {
+	await assertPptxPackageContracts(zip)
 })
 
 test('e2e: slide contains the supplied text', async () => {
-	const slideXml = await zip.file('ppt/slides/slide1.xml')!.async('string')
+	const slideXml = await readPart(zip, 'ppt/slides/slide1.xml')
 	assert.ok(slideXml.includes(MARKER), 'supplied text not found in slide XML')
 })

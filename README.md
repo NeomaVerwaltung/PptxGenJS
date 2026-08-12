@@ -10,7 +10,7 @@ PptxGenJS is a JavaScript library for generating PowerPoint presentations progra
 This repository is a fork of [gitbrent/PptxGenJS](https://github.com/gitbrent/PptxGenJS), maintained by [NEOMA GmbH](https://neo-ma.de) and published as `@neo-ma/pptxgenjs`. It exists to provide a production-hardened distribution:
 
 - **Strict null-safety** — the entire source compiles under TypeScript `strictNullChecks` with zero non-null assertions (`!`) and zero unchecked `as` casts; null-safety is enforced through explicit types, guard clauses, and validated defaults
-- **Continuous integration** — unit, end-to-end, and golden-file OOXML snapshot tests run on Node.js 20 and 22
+- **Continuous integration** — unit, end-to-end, and OOXML package-contract tests run on Node.js 20 and 22
 - **Security** — no known vulnerabilities in the published package, [CodeQL](https://github.com/NeomaVerwaltung/PptxGenJS/security/code-scanning) scanning, and a published [security policy](SECURITY.md)
 
 The public API remains compatible with upstream PptxGenJS; existing code and documentation continue to apply.

@@ -18,9 +18,6 @@ import {
 import {
 	IPresentationProps,
 	ISlideObject,
-	ISlideRel,
-	ISlideRelChart,
-	ISlideRelMedia,
 	ObjectOptions,
 	PresSlide,
 	ShadowProps,
@@ -139,6 +136,56 @@ function genXmlShadow (shadow: ShadowProps): string {
 	return `<a:effectLst><a:${type}Shdw ${attrs} blurRad="${blur}" dist="${offset}" dir="${angle}"><a:srgbClr val="${color}"><a:alpha val="${opacity}"/></a:srgbClr></a:${type}Shdw></a:effectLst>`
 }
 
+interface SlideObjectContext {
+	cx: number
+	cy: number
+	imgHeight: number
+	imgWidth: number
+	locationAttr: string
+	placeholderObj: ISlideObject | undefined
+	rounding: ObjectOptions['rounding']
+	sizing: ObjectOptions['sizing']
+	x: number
+	y: number
+}
+
+/**
+ * Resolve an object's exported geometry once, before its type-specific XML is rendered.
+ * Placeholder geometry deliberately overrides object geometry; image dimensions are captured first
+ * because image sizing is based on the source image dimensions, not its placeholder frame.
+ */
+function resolveSlideObjectContext (slide: PresSlide | SlideLayout, slideItemObj: ISlideObject & { options: ObjectOptions }): SlideObjectContext {
+	const options = slideItemObj.options
+
+	const placeholderObj =
+		'_slideLayout' in slide && slide._slideLayout?._slideObjects !== undefined && options.placeholder
+			? slide._slideLayout._slideObjects.find(object => object.options?.placeholder === options.placeholder)
+			: undefined
+
+	let x = typeof options.x !== 'undefined' ? getSmartParseNumber(options.x, 'X', slide._presLayout) : 0
+	let y = typeof options.y !== 'undefined' ? getSmartParseNumber(options.y, 'Y', slide._presLayout) : 0
+	let cx = typeof options.w !== 'undefined' ? getSmartParseNumber(options.w, 'X', slide._presLayout) : getSmartParseNumber('75%', 'X', slide._presLayout)
+	let cy = typeof options.h !== 'undefined' ? getSmartParseNumber(options.h, 'Y', slide._presLayout) : 0
+
+	// Image sizing needs the object's own dimensions even when the image is positioned through a placeholder.
+	const imgWidth = cx
+	const imgHeight = cy
+
+	if (placeholderObj) {
+		if (placeholderObj.options?.x === 0 || placeholderObj.options?.x) x = getSmartParseNumber(placeholderObj.options.x, 'X', slide._presLayout)
+		if (placeholderObj.options?.y === 0 || placeholderObj.options?.y) y = getSmartParseNumber(placeholderObj.options.y, 'Y', slide._presLayout)
+		if (placeholderObj.options?.w === 0 || placeholderObj.options?.w) cx = getSmartParseNumber(placeholderObj.options.w, 'X', slide._presLayout)
+		if (placeholderObj.options?.h === 0 || placeholderObj.options?.h) cy = getSmartParseNumber(placeholderObj.options.h, 'Y', slide._presLayout)
+	}
+
+	let locationAttr = ''
+	if (options.flipH) locationAttr += ' flipH="1"'
+	if (options.flipV) locationAttr += ' flipV="1"'
+	if (options.rotate) locationAttr += ` rot="${convertRotationDegrees(options.rotate)}"`
+
+	return { cx, cy, imgHeight, imgWidth, locationAttr, placeholderObj, rounding: options.rounding, sizing: options.sizing, x, y }
+}
+
 /**
  * Transforms a slide or slideLayout to resulting XML string - Creates `ppt/slide*.xml`
  * @param {PresSlide|SlideLayout} slideObject - slide object created within createSlideObject
@@ -166,56 +213,20 @@ function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 	strSlideXml += '<a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>'
 
 	// STEP 3: Loop over all Slide.data objects and add them to this slide
-	slide._slideObjects.forEach((slideItemObj: ISlideObject, idx: number) => {
-		let x = 0
-		let y = 0
-		let cx = getSmartParseNumber('75%', 'X', slide._presLayout)
-		let cy = 0
-		let placeholderObj: ISlideObject | undefined
-		let locationAttr = ''
+	slide._slideObjects.forEach((slideObject: ISlideObject, idx: number) => {
+		const slideItemObj = { ...slideObject, options: slideObject.options ?? {} }
+		// XML generation has historically filled in this internal object; retain that contract for downstream renderers.
+		slideObject.options = slideItemObj.options
 		let arrTabRows: TableCell[][] = []
 		let objTabOpts: ObjectOptions = {}
 		let intColCnt = 0
 		let intColW = 0
 		let cellOpts: TableCellProps | undefined
 		let strXml = ''
-		const sizing: ObjectOptions['sizing'] = slideItemObj.options?.sizing
-		const rounding = slideItemObj.options?.rounding
-
-		if (
-			'_slideLayout' in slide &&
-			slide._slideLayout?._slideObjects !== undefined &&
-			slideItemObj.options &&
-			slideItemObj.options.placeholder
-		) {
-			placeholderObj = slide._slideLayout._slideObjects.filter(
-				(object: ISlideObject) => object.options?.placeholder === slideItemObj.options?.placeholder
-			)[0]
-		}
-
-		// A: Set option vars
-		slideItemObj.options = slideItemObj.options || {}
-
-		if (typeof slideItemObj.options.x !== 'undefined') x = getSmartParseNumber(slideItemObj.options.x, 'X', slide._presLayout)
-		if (typeof slideItemObj.options.y !== 'undefined') y = getSmartParseNumber(slideItemObj.options.y, 'Y', slide._presLayout)
-		if (typeof slideItemObj.options.w !== 'undefined') cx = getSmartParseNumber(slideItemObj.options.w, 'X', slide._presLayout)
-		if (typeof slideItemObj.options.h !== 'undefined') cy = getSmartParseNumber(slideItemObj.options.h, 'Y', slide._presLayout)
-
-		// Set w/h now that smart parse is done
-		let imgWidth = cx
-		let imgHeight = cy
-
-		// If using a placeholder then inherit it's position
-		if (placeholderObj) {
-			if (placeholderObj.options?.x || placeholderObj.options?.x === 0) x = getSmartParseNumber(placeholderObj.options?.x, 'X', slide._presLayout)
-			if (placeholderObj.options?.y || placeholderObj.options?.y === 0) y = getSmartParseNumber(placeholderObj.options?.y, 'Y', slide._presLayout)
-			if (placeholderObj.options?.w || placeholderObj.options?.w === 0) cx = getSmartParseNumber(placeholderObj.options?.w, 'X', slide._presLayout)
-			if (placeholderObj.options?.h || placeholderObj.options?.h === 0) cy = getSmartParseNumber(placeholderObj.options?.h, 'Y', slide._presLayout)
-		}
-		//
-		if (slideItemObj.options.flipH) locationAttr += ' flipH="1"'
-		if (slideItemObj.options.flipV) locationAttr += ' flipV="1"'
-		if (slideItemObj.options.rotate) locationAttr += ` rot="${convertRotationDegrees(slideItemObj.options.rotate)}"`
+		const context = resolveSlideObjectContext(slide, slideItemObj)
+		const { cx, x, y } = context
+		let { cy, imgHeight, imgWidth } = context
+		const { locationAttr, placeholderObj, rounding, sizing } = context
 
 		// B: Add OBJECT to the current Slide
 		switch (slideItemObj._type) {
@@ -791,73 +802,6 @@ function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 
 	// LAST: Return
 	return strSlideXml
-}
-
-/**
- * Transforms slide relations to XML string.
- * Extra relations that are not dynamic can be passed using the 2nd arg (e.g. theme relation in master file).
- * These relations use rId series that starts with 1-increased maximum of rIds used for dynamic relations.
- * @param {PresSlide | SlideLayout} slide - slide object whose relations are being transformed
- * @param {{ target: string; type: string }[]} defaultRels - array of default relations
- * @return {string} XML
- */
-function slideObjectRelationsToXml (slide: PresSlide | SlideLayout, defaultRels: Array<{ target: string, type: string }>): string {
-	let lastRid = 0 // stores maximum rId used for dynamic relations
-	let strXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + CRLF + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-
-	// STEP 1: Add all rels for this Slide
-	slide._rels.forEach((rel: ISlideRel) => {
-		lastRid = Math.max(lastRid, rel.rId)
-		if (rel.type.toLowerCase().includes('hyperlink')) {
-			if (rel.data === 'slide') {
-				strXml += `<Relationship Id="rId${rel.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slide${rel.Target}.xml"/>`
-			} else {
-				strXml += `<Relationship Id="rId${rel.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="${rel.Target}" TargetMode="External"/>`
-			}
-		} else if (rel.type.toLowerCase().includes('notesSlide')) {
-			strXml += `<Relationship Id="rId${rel.rId}" Target="${rel.Target}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide"/>`
-		}
-	})
-	; (slide._relsChart || []).forEach((rel: ISlideRelChart) => {
-		lastRid = Math.max(lastRid, rel.rId)
-		strXml += `<Relationship Id="rId${rel.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="${rel.Target}"/>`
-	})
-	; (slide._relsMedia || []).forEach((rel: ISlideRelMedia) => {
-		const relRid = rel.rId.toString()
-		lastRid = Math.max(lastRid, rel.rId)
-		if (rel.type.toLowerCase().includes('image')) {
-			strXml += '<Relationship Id="rId' + relRid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="' + rel.Target + '"/>'
-		} else if (rel.type.toLowerCase().includes('audio')) {
-			// As media has *TWO* rel entries per item, check for first one, if found add second rel with alt style
-			if (strXml.includes(' Target="' + rel.Target + '"')) {
-				strXml += '<Relationship Id="rId' + relRid + '" Type="http://schemas.microsoft.com/office/2007/relationships/media" Target="' + rel.Target + '"/>'
-			} else {
-				strXml += '<Relationship Id="rId' + relRid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/audio" Target="' + rel.Target + '"/>'
-			}
-		} else if (rel.type.toLowerCase().includes('video')) {
-			// As media has *TWO* rel entries per item, check for first one, if found add second rel with alt style
-			if (strXml.includes(' Target="' + rel.Target + '"')) {
-				strXml += '<Relationship Id="rId' + relRid + '" Type="http://schemas.microsoft.com/office/2007/relationships/media" Target="' + rel.Target + '"/>'
-			} else {
-				strXml += '<Relationship Id="rId' + relRid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/video" Target="' + rel.Target + '"/>'
-			}
-		} else if (rel.type.toLowerCase().includes('online')) {
-			// As media has *TWO* rel entries per item, check for first one, if found add second rel with alt style
-			if (strXml.includes(' Target="' + rel.Target + '"')) {
-				strXml += '<Relationship Id="rId' + relRid + '" Type="http://schemas.microsoft.com/office/2007/relationships/image" Target="' + rel.Target + '"/>'
-			} else {
-				strXml += '<Relationship Id="rId' + relRid + '" Target="' + rel.Target + '" TargetMode="External" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/video"/>'
-			}
-		}
-	})
-
-	// STEP 2: Add default rels
-	defaultRels.forEach((rel, idx) => {
-		strXml += `<Relationship Id="rId${lastRid + idx + 1}" Type="${rel.type}" Target="${rel.target}"/>`
-	})
-
-	strXml += '</Relationships>'
-	return strXml
 }
 
 /**
@@ -1713,99 +1657,6 @@ export function makeXmlMaster (slide: PresSlide, layouts: SlideLayout[]): string
 	return strXml
 }
 
-/**
- * Generates XML string for a slide layout relation file
- * @param {number} layoutNumber - 1-indexed number of a layout that relations are generated for
- * @param {SlideLayout[]} slideLayouts - Slide Layouts
- * @return {string} XML
- */
-export function makeXmlSlideLayoutRel (layoutNumber: number, slideLayouts: SlideLayout[]): string {
-	return slideObjectRelationsToXml(slideLayouts[layoutNumber - 1], [
-		{
-			target: '../slideMasters/slideMaster1.xml',
-			type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster',
-		},
-	])
-}
-
-/**
- * Creates `ppt/_rels/slide*.xml.rels`
- * @param {PresSlide[]} slides
- * @param {SlideLayout[]} slideLayouts - Slide Layout(s)
- * @param {number} `slideNumber` 1-indexed number of a layout that relations are generated for
- * @return {string} XML
- */
-export function makeXmlSlideRel (slides: PresSlide[], slideLayouts: SlideLayout[], slideNumber: number): string {
-	return slideObjectRelationsToXml(slides[slideNumber - 1], [
-		{
-			target: `../slideLayouts/slideLayout${getLayoutIdxForSlide(slides, slideLayouts, slideNumber)}.xml`,
-			type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout',
-		},
-		{
-			target: `../notesSlides/notesSlide${slideNumber}.xml`,
-			type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide',
-		},
-	])
-}
-
-/**
- * Generates XML string for a slide relation file.
- * @param {number} slideNumber - 1-indexed number of a layout that relations are generated for
- * @return {string} XML
- */
-export function makeXmlNotesSlideRel (slideNumber: number): string {
-	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-		<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-			<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesMaster" Target="../notesMasters/notesMaster1.xml"/>
-			<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="../slides/slide${slideNumber}.xml"/>
-		</Relationships>`
-}
-
-/**
- * Creates `ppt/slideMasters/_rels/slideMaster1.xml.rels`
- * @param {PresSlide} masterSlide - Slide object
- * @param {SlideLayout[]} slideLayouts - Slide Layouts
- * @return {string} XML
- */
-export function makeXmlMasterRel (masterSlide: PresSlide, slideLayouts: SlideLayout[]): string {
-	const defaultRels = slideLayouts.map((_layoutDef, idx) => ({
-		target: `../slideLayouts/slideLayout${idx + 1}.xml`,
-		type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout',
-	}))
-	defaultRels.push({ target: '../theme/theme1.xml', type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme' })
-
-	return slideObjectRelationsToXml(masterSlide, defaultRels)
-}
-
-/**
- * Creates `ppt/notesMasters/_rels/notesMaster1.xml.rels`
- * @return {string} XML
- */
-export function makeXmlNotesMasterRel (): string {
-	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${CRLF}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-		<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme1.xml"/>
-		</Relationships>`
-}
-
-/**
- * For the passed slide number, resolves name of a layout that is used for.
- * @param {PresSlide[]} slides - srray of slides
- * @param {SlideLayout[]} slideLayouts - array of slideLayouts
- * @param {number} slideNumber
- * @return {number} slide number
- */
-function getLayoutIdxForSlide (slides: PresSlide[], slideLayouts: SlideLayout[], slideNumber: number): number {
-	for (let i = 0; i < slideLayouts.length; i++) {
-		if (slideLayouts[i]._name === slides[slideNumber - 1]._slideLayout._name) {
-			return i + 1
-		}
-	}
-
-	// IMPORTANT: Return 1 (for `slideLayout1.xml`) when no def is found
-	// So all objects are in Layout1 and every slide that references it uses this layout.
-	return 1
-}
-
 // XML-GEN: Last 5 functions create root /ppt files
 
 /**
@@ -1903,4 +1754,3 @@ export function makeXmlTableStyles (): string {
 export function makeXmlViewProps (): string {
 	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${CRLF}<p:viewPr xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:normalViewPr horzBarState="maximized"><p:restoredLeft sz="15611"/><p:restoredTop sz="94610"/></p:normalViewPr><p:slideViewPr><p:cSldViewPr snapToGrid="0" snapToObjects="1"><p:cViewPr varScale="1"><p:scale><a:sx n="136" d="100"/><a:sy n="136" d="100"/></p:scale><p:origin x="216" y="312"/></p:cViewPr><p:guideLst/></p:cSldViewPr></p:slideViewPr><p:notesTextViewPr><p:cViewPr><p:scale><a:sx n="1" d="1"/><a:sy n="1" d="1"/></p:scale><p:origin x="0" y="0"/></p:cViewPr></p:notesTextViewPr><p:gridSpacing cx="76200" cy="76200"/></p:viewPr>`
 }
-
