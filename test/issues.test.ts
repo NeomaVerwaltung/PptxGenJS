@@ -165,6 +165,23 @@ test('#39: auto-paged tables account for cell margins', async () => {
 	assert.ok(pageCount(0.5) > pageCount(0), 'large cell margins did not increase the page count')
 })
 
+test('#1472: auto-paging one table does not move a sibling table', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	const options = { x: 0.5, y: 3.5, w: 4, autoPage: true }
+
+	slide.addTable(Array.from({ length: 20 }, (_, idx) => [`Long table row ${idx}`]), options)
+	options.x = 5
+	slide.addTable([['Short table row 1'], ['Short table row 2']], options)
+
+	assert.equal(pptx.slides.length, 2, 'the long table did not create a second slide')
+	assert.equal(options.y, 3.5, 'auto-paging mutated the shared table position')
+
+	const xml = await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')
+	const secondTable = /<p:graphicFrame>[\s\S]*?<p:cNvPr[^>]*name="Table 1"[\s\S]*?<\/p:graphicFrame>/.exec(xml)?.[0] ?? ''
+	assert.ok(secondTable.includes(`<a:off x="${5 * 914400}" y="${3.5 * 914400}"/>`), 'the second table was not kept at its requested position')
+})
+
 test('#29: BorderProps accepts `width` (points) alongside the deprecated `pt`', async () => {
 	const cellXml = async (border: Record<string, unknown>): Promise<string> => {
 		const pptx = new pptxgen()
