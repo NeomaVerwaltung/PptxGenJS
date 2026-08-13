@@ -58,6 +58,20 @@ test('#20: shadow options are not mutated, so a second export matches the first'
 	assert.ok(first.includes('dir="2700000"'), 'shadow angle not converted for XML')
 })
 
+test('#1083: rich text writes one paragraph-properties element per paragraph', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addText([
+		{ text: 'Normal ' },
+		{ text: 'bold', options: { bold: true } },
+		{ text: ' normal' },
+	], { x: 1, y: 1, w: 4, h: 1, bullet: { type: 'bullet' } })
+
+	const xml = await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')
+	const paragraph = xml.match(/<a:p>[\s\S]*?<\/a:p>/)?.[0] ?? ''
+	assert.equal((paragraph.match(/<a:pPr/g) ?? []).length, 1, 'rich text emitted multiple paragraph-properties elements')
+	assert.ok(paragraph.includes('<a:t>bold</a:t>'), 'rich-text runs were not preserved')
+})
+
 test('#18: slide master name is XML-escaped', async () => {
 	const pptx = new pptxgen()
 	pptx.defineSlideMaster({ title: 'R&D "Q3" Master', objects: [] })
