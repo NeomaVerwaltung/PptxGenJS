@@ -214,6 +214,18 @@ test('#34: image without w/h is sized from the image itself', async () => {
 	assert.equal(Number(ext[2]), Math.round((2 / 96) * 914400))
 })
 
+test('#1286: contain sizing preserves the ratio of mixed pixel dimensions', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addImage({
+		data: PNG_4x2,
+		x: '19%', y: '54%', w: 2899, h: 97,
+		sizing: { type: 'contain', w: '36%', h: '3%' },
+	})
+
+	const xml = await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')
+	assert.ok(xml.includes('<a:srcRect l="0" r="0" t="-20047" b="-20047"/>'), 'contain sizing mixed image units and produced invalid crop XML')
+})
+
 test('#39: auto-paged tables account for cell margins', async () => {
 	const rows = Array.from({ length: 30 }, (_, idx) => [`Row ${idx} cell A`, `Row ${idx} cell B`])
 	const pageCount = (margin: number): number => {
