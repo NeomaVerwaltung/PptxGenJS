@@ -13,8 +13,8 @@ PPTXGENJS_OFFICE_BIN="$(command -v libreoffice || command -v soffice)" npm run t
 ```
 
 It opens a generated presentation and converts it to PDF, failing if the OOXML
-cannot be consumed. This is intentionally separate from `npm run check` so
-normal contributors do not need an office suite installed.
+cannot be consumed. CI runs this on every pull request; it stays separate from
+`npm run check` so normal contributors do not need an office suite installed.
 
 > **Note:** the checked-in `demos/` workspace was removed (issue #8). The manual tests below scaffold a throwaway
 > project per platform instead, so nothing has to be kept current in this repository. Demos may return later in a

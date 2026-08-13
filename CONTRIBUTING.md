@@ -24,6 +24,7 @@ the full minified/bundled `dist/` artifacts).
 
 For a release candidate, also run `npm run test:office` on a machine with
 LibreOffice installed and `PPTXGENJS_OFFICE_BIN` set to its executable.
+The CI workflow performs this check on every pull request.
 
 ## Tests
 
