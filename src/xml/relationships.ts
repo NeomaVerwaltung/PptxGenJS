@@ -1,7 +1,7 @@
 /** OOXML relationship-part generation. */
 
-import { CRLF } from './core-enums'
-import { ISlideRel, ISlideRelChart, ISlideRelMedia, PresSlide, SlideLayout } from './core-interfaces'
+import { CRLF } from '../core-enums'
+import { ISlideRel, ISlideRelChart, ISlideRelMedia, PresSlide, SlideLayout } from '../core-interfaces'
 
 type DefaultRelationship = { target: string, type: string }
 
