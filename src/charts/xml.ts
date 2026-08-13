@@ -50,6 +50,7 @@ function makeChartSpaceStart (rel: ISlideRelChart): string {
 				fontSize: rel.opts.titleFontSize || DEF_FONT_TITLE_SIZE,
 				titleAlign: rel.opts.titleAlign,
 				titleBold: rel.opts.titleBold,
+				titleItalic: rel.opts.titleItalic,
 				titlePos: rel.opts.titlePos,
 				titleRotate: rel.opts.titleRotate,
 			},
@@ -1150,4 +1151,3 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
  * @param {string} valAxisId - value
  * @return {string} XML
  */
-
