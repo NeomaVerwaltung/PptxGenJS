@@ -7,6 +7,18 @@ import JSZip from 'jszip'
 import { makeXmlCharts } from './xml'
 import { getExcelColName } from './utils'
 
+function getDataTableFormats (chartObject: ISlideRelChart): (string | undefined)[] {
+	return Array.isArray(chartObject.opts._type)
+		? chartObject.opts._type.flatMap(type => Array(type.data.length).fill(type.options?.dataTableFormatCode ?? chartObject.opts.dataTableFormatCode))
+		: chartObject.data.map(() => chartObject.opts.dataTableFormatCode)
+}
+
+function makeNumberStyles (formats: string[]): string {
+	const numFmts = formats.map((format, idx) => `<numFmt numFmtId="${164 + idx}" formatCode="${encodeXmlEntities(format)}"/>`).join('')
+	const cellXfs = formats.map((_format, idx) => `<xf numFmtId="${164 + idx}" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>`).join('')
+	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="${formats.length}">${numFmts}</numFmts><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${formats.length + 1}"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>${cellXfs}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`
+}
+
 /**
  * Based on passed data, creates Excel Worksheet that is used as a data source for a chart.
  * @param {ISlideRelChart} chartObject - chart object
@@ -16,7 +28,7 @@ import { getExcelColName } from './utils'
 export async function createExcelWorksheet (chartObject: ISlideRelChart, zip: JSZip): Promise<string> {
 	const zipExcel = new JSZip()
 	addWorkbookFolders(zipExcel)
-	addCoreWorkbookFiles(zipExcel)
+	addCoreWorkbookFiles(zipExcel, [...new Set(getDataTableFormats(chartObject).filter((format): format is string => !!format))])
 	addSharedStringsFile(chartObject, zipExcel)
 	addTableFile(chartObject, zipExcel)
 	addWorksheetFile(chartObject, zipExcel)
@@ -38,7 +50,7 @@ function addWorkbookFolders (zipExcel: JSZip): void {
  * Write the fixed XLSX package parts: content types, root/workbook relationships, metadata, styles, theme, and workbook.
  * These parts are independent of chart data and must exist before the data-specific files are added.
  */
-function addCoreWorkbookFiles (zipExcel: JSZip): void {
+function addCoreWorkbookFiles (zipExcel: JSZip, customFormats: string[]): void {
 	// B: Add core contents
 	{
 		zipExcel.file(
@@ -100,7 +112,7 @@ function addCoreWorkbookFiles (zipExcel: JSZip): void {
 		)
 		zipExcel.file(
 			'xl/styles.xml',
-			'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="0" formatCode="General"/></numFmts><fonts count="4"><font><sz val="9"/><color indexed="8"/><name val="Geneva"/></font><font><sz val="9"/><color indexed="8"/><name val="Geneva"/></font><font><sz val="10"/><color indexed="8"/><name val="Geneva"/></font><font><sz val="18"/><color indexed="8"/>' +
+			customFormats.length > 0 ? makeNumberStyles(customFormats) : '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="0" formatCode="General"/></numFmts><fonts count="4"><font><sz val="9"/><color indexed="8"/><name val="Geneva"/></font><font><sz val="9"/><color indexed="8"/><name val="Geneva"/></font><font><sz val="10"/><color indexed="8"/><name val="Geneva"/></font><font><sz val="18"/><color indexed="8"/>' +
 			'<name val="Arial"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><dxfs count="0"/><tableStyles count="0"/><colors><indexedColors><rgbColor rgb="ff000000"/><rgbColor rgb="ffffffff"/><rgbColor rgb="ffff0000"/><rgbColor rgb="ff00ff00"/><rgbColor rgb="ff0000ff"/>' +
 			'<rgbColor rgb="ffffff00"/><rgbColor rgb="ffff00ff"/><rgbColor rgb="ff00ffff"/><rgbColor rgb="ff000000"/><rgbColor rgb="ffffffff"/><rgbColor rgb="ff878787"/><rgbColor rgb="fff9f9f9"/></indexedColors></colors></styleSheet>\n'
 		)
@@ -251,6 +263,9 @@ function addTableFile (chartObject: ISlideRelChart, zipExcel: JSZip): void {
  */
 function addWorksheetFile (chartObject: ISlideRelChart, zipExcel: JSZip): void {
 	const data = chartObject.data
+	const dataTableFormats = getDataTableFormats(chartObject)
+	const customFormats = [...new Set(dataTableFormats.filter((format): format is string => !!format))]
+	const dataStyleIds = dataTableFormats.map(format => format ? customFormats.indexOf(format) + 1 : 0)
 	const intBubbleCols = (data.length - 1) * 2 + 1
 	const IS_MULTI_CAT_AXES = (data[0]?.labels?.length ?? 0) > 1
 	const firstDataLabels = data[0]?.labels ?? []
@@ -406,7 +421,8 @@ function addWorksheetFile (chartObject: ISlideRelChart, zipExcel: JSZip): void {
 					for (let idy = 0; idy < data.length; idy++) {
 						// Preserve 0 (a valid value); `|| ''` would blank it out in the embedded worksheet (issue #1430)
 						const cellVal = (data[idy].values ?? [])[idx]
-						strSheetXml += `<c r="${getExcelColName(firstDataLabels.length + idy + 1)}${idx + 2}"><v>${cellVal || cellVal === 0 ? cellVal : ''}</v></c>`
+						const style = dataStyleIds[idy] ? ` s="${dataStyleIds[idy]}"` : ''
+						strSheetXml += `<c r="${getExcelColName(firstDataLabels.length + idy + 1)}${idx + 2}"${style}><v>${cellVal || cellVal === 0 ? cellVal : ''}</v></c>`
 					}
 					strSheetXml += '</row>'
 				})
@@ -532,7 +548,8 @@ function addWorksheetFile (chartObject: ISlideRelChart, zipExcel: JSZip): void {
 					for (let idy = 0; idy < TOT_SER; idy++) {
 						// NOTE: Preserve 0 (a valid value); `|| ''` would blank it out in the embedded worksheet (issue #1430)
 						const cellVal = (data[idy].values ?? [])[idx]
-						strSheetXml += `<c r="${getExcelColName(TOT_LVL + idy + 1)}${idx + 2}"><v>${typeof cellVal === 'number' ? cellVal : ''}</v></c>`
+						const style = dataStyleIds[idy] ? ` s="${dataStyleIds[idy]}"` : ''
+						strSheetXml += `<c r="${getExcelColName(TOT_LVL + idy + 1)}${idx + 2}"${style}><v>${typeof cellVal === 'number' ? cellVal : ''}</v></c>`
 					}
 
 					strSheetXml += '</row>'
