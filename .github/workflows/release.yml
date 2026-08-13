@@ -1,19 +1,21 @@
 name: Release
 
 on:
-  push:
-    tags: ['v*']
+  release:
+    types: [published]
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    # Gate: the "release" environment has required reviewers (admins) — job waits for approval
+    # Gate: the "release" environment has required reviewers (admins) — job waits for approval.
     environment: release
     permissions:
       contents: write
       id-token: write # npm trusted publishing (OIDC), no NPM_TOKEN needed
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22.x
@@ -25,12 +27,17 @@ jobs:
       - name: Verify built dist files exist
         run: ls -l dist/pptxgen.bundle.js dist/pptxgen.min.js dist/pptxgen.cjs.js dist/pptxgen.es.js
       - name: Verify tag matches package.json version
-        run: test "v$(node -p "require('./package.json').version")" = "${GITHUB_REF_NAME}"
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: test "v$(node -p "require('./package.json').version")" = "$RELEASE_TAG"
       - run: npm install -g npm@latest # trusted publishing needs npm >= 11.5
-      - run: npm publish --provenance --access public
-      - name: Create release with the built bundles attached
+      - run: npm publish --provenance --access public --tag "$NPM_TAG"
+        env:
+          NPM_TAG: ${{ github.event.release.prerelease && 'beta' || 'latest' }}
+      - name: Upload built bundles to the release
         run: >
-          gh release create "$GITHUB_REF_NAME" --generate-notes
+          gh release upload "$RELEASE_TAG"
           dist/pptxgen.bundle.js dist/pptxgen.min.js dist/pptxgen.cjs.js dist/pptxgen.es.js
         env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
           GITHUB_TOKEN: ${{ github.token }}
