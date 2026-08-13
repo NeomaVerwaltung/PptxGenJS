@@ -11,7 +11,7 @@ import { test, before } from 'node:test'
 import assert from 'node:assert/strict'
 import JSZip from 'jszip'
 import pptxgen from '../src/pptxgen'
-import { assertPptxPackageContracts, readPart } from './pptx-contracts'
+import { assertEmbeddedXlsxContracts, assertPptxPackageContracts, readPart } from './pptx-contracts'
 
 const MARKER = 'ENTERPRISE_SMOKE_TEST'
 
@@ -48,6 +48,7 @@ test('e2e: contains required OOXML parts', () => {
 
 test('e2e: package contracts hold', async () => {
 	await assertPptxPackageContracts(zip)
+	await assertEmbeddedXlsxContracts(zip)
 })
 
 test('e2e: slide contains the supplied text', async () => {

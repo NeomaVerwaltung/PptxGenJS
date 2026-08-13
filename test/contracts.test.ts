@@ -8,7 +8,7 @@ import { test, before } from 'node:test'
 import assert from 'node:assert/strict'
 import JSZip from 'jszip'
 import pptxgen from '../src/pptxgen'
-import { assertPptxPackageContracts, readPart } from './pptx-contracts'
+import { assertEmbeddedXlsxContracts, assertPptxPackageContracts, readPart } from './pptx-contracts'
 
 let zip: JSZip
 
@@ -24,6 +24,22 @@ before(async () => {
 
 test('contract: package parts and relationships are coherent', async () => {
 	await assertPptxPackageContracts(zip)
+	await assertEmbeddedXlsxContracts(zip)
+})
+
+test('contract: rejects a part without a declared content type', async () => {
+	const invalidZip = await JSZip.loadAsync(await zip.generateAsync({ type: 'nodebuffer' }))
+	invalidZip.file('ppt/undeclared.bin', 'invalid')
+	await assert.rejects(assertPptxPackageContracts(invalidZip), /package part has no content type/)
+})
+
+test('contract: validates relationship references with any legal ID', async () => {
+	const invalidZip = await JSZip.loadAsync(await zip.generateAsync({ type: 'nodebuffer' }))
+	const slideXml = await readPart(invalidZip, 'ppt/slides/slide1.xml')
+	const referencePattern = /r:(id|embed|link)="rId\d+"/
+	assert.match(slideXml, referencePattern, 'test presentation has no relationship reference')
+	invalidZip.file('ppt/slides/slide1.xml', slideXml.replace(referencePattern, (_match, attribute) => `r:${attribute}="custom-id"`))
+	await assert.rejects(assertPptxPackageContracts(invalidZip), /missing custom-id relationship/)
 })
 
 test('contract: slide keeps text, shape, and table semantics', async () => {

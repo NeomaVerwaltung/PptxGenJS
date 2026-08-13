@@ -9,7 +9,7 @@ import { test, before } from 'node:test'
 import assert from 'node:assert/strict'
 import JSZip from 'jszip'
 import pptxgen from '../src/pptxgen'
-import { assertPptxPackageContracts, readPart } from './pptx-contracts'
+import { assertEmbeddedXlsxContracts, assertPptxPackageContracts, readPart } from './pptx-contracts'
 
 // 1x1 transparent PNG (deterministic image payload)
 const PNG_1x1 =
@@ -89,4 +89,5 @@ test('coverage: line chart xml', async () => {
 
 test('coverage: package contracts hold', async () => {
 	await assertPptxPackageContracts(zip)
+	await assertEmbeddedXlsxContracts(zip)
 })

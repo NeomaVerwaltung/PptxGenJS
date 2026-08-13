@@ -22,6 +22,9 @@ npm run check # lint + typecheck + strict typecheck + tests — run before every
 Build the distributables locally with `npm run build` (or `npm run dist` for
 the full minified/bundled `dist/` artifacts).
 
+For a release candidate, also run `npm run test:office` on a machine with
+LibreOffice installed and `PPTXGENJS_OFFICE_BIN` set to its executable.
+
 ## Tests
 
 Tests live in `test/`. When you change XML generation, add or update the
