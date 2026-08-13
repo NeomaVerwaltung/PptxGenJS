@@ -34,12 +34,14 @@ export function genXmlTitle (opts: IChartPropsTitle, chartX?: number, chartY?: n
             <a:defRPr ${sizeAttr} b="${titleBold}" i="0" u="none" strike="noStrike">
               <a:solidFill>${createColorElement(opts.color || DEF_FONT_COLOR)}</a:solidFill>
               <a:latin typeface="${opts.fontFace || 'Arial'}"/>
+			  <a:ea typeface="${opts.fontFace || 'Arial'}"/>
             </a:defRPr>
           </a:pPr>
           <a:r>
             <a:rPr ${sizeAttr} b="${titleBold}" i="0" u="none" strike="noStrike">
               <a:solidFill>${createColorElement(opts.color || DEF_FONT_COLOR)}</a:solidFill>
               <a:latin typeface="${opts.fontFace || 'Arial'}"/>
+			  <a:ea typeface="${opts.fontFace || 'Arial'}"/>
             </a:rPr>
             <a:t>${encodeXmlEntities(opts.title) || ''}</a:t>
           </a:r>
@@ -58,4 +60,3 @@ export function genXmlTitle (opts: IChartPropsTitle, chartX?: number, chartY?: n
  * @example 1 returns 'A'
  * @example 27 returns 'AA'
  */
-
