@@ -176,15 +176,8 @@ function resolveSlideObjectContext (slide: PresSlide | SlideLayout, slideItemObj
 	return { cx, cy, imgHeight, imgWidth, locationAttr, placeholderObj, rounding: options.rounding, sizing: options.sizing, x, y }
 }
 
-/**
- * Transforms a slide or slideLayout to resulting XML string - Creates `ppt/slide*.xml`
- * @param {PresSlide|SlideLayout} slideObject - slide object created within createSlideObject
- * @return {string} XML string with <p:cSld> as the root
- */
-export function slideObjectToXml (slide: PresSlide | SlideLayout): string {
-	let strSlideXml: string = slide._name ? `<p:cSld name="${encodeXmlEntities(slide._name)}">` : '<p:cSld>'
-	let intTableNum = 1
-
+function genXmlSlideBackground (slide: PresSlide | SlideLayout): string {
+	let strSlideXml = ''
 	// STEP 1: Add background color/image (ensure only a single `<p:bg>` tag is created, ex: when master-baskground has both `color` and `path`)
 	if (slide._bkgdImgRid) {
 		strSlideXml += `<p:bg><p:bgPr><a:blipFill dpi="0" rotWithShape="1"><a:blip r:embed="rId${slide._bkgdImgRid}"><a:lum/></a:blip><a:srcRect/><a:stretch><a:fillRect/></a:stretch></a:blipFill><a:effectLst/></p:bgPr></p:bg>`
@@ -196,12 +189,23 @@ export function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 		strSlideXml += '<p:bg><p:bgRef idx="1001"><a:schemeClr val="bg1"/></p:bgRef></p:bg>'
 	}
 
+	return strSlideXml
+}
+
+function genXmlSlideTreeStart (): string {
+	let strSlideXml = ''
 	// STEP 2: Continue slide by starting spTree node
 	strSlideXml += '<p:spTree>'
 	strSlideXml += '<p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>'
 	strSlideXml += '<p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/>'
 	strSlideXml += '<a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>'
 
+	return strSlideXml
+}
+
+function genXmlSlideObjects (slide: PresSlide | SlideLayout): string {
+	let strSlideXml = ''
+	let intTableNum = 1
 	// STEP 3: Loop over all Slide.data objects and add them to this slide
 	slide._slideObjects.forEach((slideObject: ISlideObject, idx: number) => {
 		const slideItemObj = { ...slideObject, options: slideObject.options ?? {} }
@@ -733,6 +737,11 @@ export function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 		}
 	})
 
+	return strSlideXml
+}
+
+function genXmlSlideNumber (slide: PresSlide | SlideLayout): string {
+	let strSlideXml = ''
 	// STEP 4: Add slide numbers (if any) last
 	if (slide._slideNumberProps) {
 		// Set some defaults (done here b/c SlideNumber canbe added to masters or slides and has numerous entry points)
@@ -786,11 +795,30 @@ export function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 		strSlideXml += '</p:txBody></p:sp>'
 	}
 
+	return strSlideXml
+}
+
+function genXmlSlideEnd (): string {
+	let strSlideXml = ''
 	// STEP 5: Close spTree and finalize slide XML
 	strSlideXml += '</p:spTree>'
 	strSlideXml += '</p:cSld>'
 
-	// LAST: Return
+	return strSlideXml
+}
+
+/**
+ * Transforms a slide or slideLayout to resulting XML string - Creates `ppt/slide*.xml`
+ * @param {PresSlide|SlideLayout} slideObject - slide object created within createSlideObject
+ * @return {string} XML string with <p:cSld> as the root
+ */
+export function slideObjectToXml (slide: PresSlide | SlideLayout): string {
+	let strSlideXml = slide._name ? `<p:cSld name="${encodeXmlEntities(slide._name)}">` : '<p:cSld>'
+	strSlideXml += genXmlSlideBackground(slide)
+	strSlideXml += genXmlSlideTreeStart()
+	strSlideXml += genXmlSlideObjects(slide)
+	strSlideXml += genXmlSlideNumber(slide)
+	strSlideXml += genXmlSlideEnd()
 	return strSlideXml
 }
 

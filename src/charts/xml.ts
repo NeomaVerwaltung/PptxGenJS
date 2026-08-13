@@ -21,65 +21,75 @@ import { createLineCap, createShadowElement, getExcelColName, resolveShadowOptio
 
 export function makeXmlCharts (rel: ISlideRelChart): string {
 	let strXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-	let usesSecondaryValAxis = false
+	strXml += makeChartSpaceStart(rel)
+	const chartTypes = makeChartTypes(rel)
+	strXml += chartTypes.xml
+	strXml += makeChartAxes(rel, chartTypes.usesSecondaryValAxis)
+	strXml += makePlotAreaAndLegend(rel)
+	strXml += makeChartSpaceEnd(rel)
+	return strXml
+}
 
-	// STEP 1: Create chart
-	{
-		// CHARTSPACE: BEGIN vvv
-		strXml +=
-			'<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-		strXml += '<c:date1904 val="0"/>' // ppt defaults to 1904 dates, excel to 1900
-		strXml += `<c:roundedCorners val="${rel.opts.chartArea?.roundedCorners ? '1' : '0'}"/>`
-		strXml += '<c:chart>'
+function makeChartSpaceStart (rel: ISlideRelChart): string {
+	let strXml =
+		'<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+	strXml += '<c:date1904 val="0"/>' // ppt defaults to 1904 dates, excel to 1900
+	strXml += `<c:roundedCorners val="${rel.opts.chartArea?.roundedCorners ? '1' : '0'}"/>`
+	strXml += '<c:chart>'
 
-		// OPTION: Title
-		if (rel.opts.showTitle) {
-			strXml += genXmlTitle(
-				{
-					title: rel.opts.title || 'Chart Title',
-					color: rel.opts.titleColor,
-					fontFace: rel.opts.titleFontFace,
-					fontSize: rel.opts.titleFontSize || DEF_FONT_TITLE_SIZE,
-					titleAlign: rel.opts.titleAlign,
-					titleBold: rel.opts.titleBold,
-					titlePos: rel.opts.titlePos,
-					titleRotate: rel.opts.titleRotate,
-				},
-				typeof rel.opts.x === 'number' ? rel.opts.x : undefined,
-				typeof rel.opts.y === 'number' ? rel.opts.y : undefined
-			)
-			strXml += '<c:autoTitleDeleted val="0"/>'
-		} else {
-			// NOTE: Add autoTitleDeleted tag in else to prevent default creation of chart title even when showTitle is set to false
-			strXml += '<c:autoTitleDeleted val="1"/>'
-		}
-		/** Add 3D view tag
-         * @see: https://c-rex.net/projects/samples/ooxml/e1/Part4/OOXML_P4_DOCX_perspective_topic_ID0E6BUQB.html
-         */
-		if (rel.opts._type === CHART_TYPE.BAR3D) {
-			strXml += `<c:view3D><c:rotX val="${rel.opts.v3DRotX}"/><c:rotY val="${rel.opts.v3DRotY}"/><c:rAngAx val="${!rel.opts.v3DRAngAx ? 0 : 1}"/><c:perspective val="${rel.opts.v3DPerspective}"/></c:view3D>`
-		}
-
-		strXml += '<c:plotArea>'
-		// IMPORTANT: Dont specify layout to enable auto-fit: PPT does a great job maximizing space with all 4 TRBL locations
-		if (rel.opts.layout) {
-			strXml += '<c:layout>'
-			strXml += ' <c:manualLayout>'
-			strXml += '  <c:layoutTarget val="inner" />'
-			strXml += '  <c:xMode val="edge" />'
-			strXml += '  <c:yMode val="edge" />'
-			strXml += '  <c:x val="' + (rel.opts.layout.x || 0) + '" />'
-			strXml += '  <c:y val="' + (rel.opts.layout.y || 0) + '" />'
-			strXml += '  <c:w val="' + (rel.opts.layout.w || 1) + '" />'
-			strXml += '  <c:h val="' + (rel.opts.layout.h || 1) + '" />'
-			strXml += ' </c:manualLayout>'
-			strXml += '</c:layout>'
-		} else {
-			strXml += '<c:layout/>'
-		}
+	if (rel.opts.showTitle) {
+		strXml += genXmlTitle(
+			{
+				title: rel.opts.title || 'Chart Title',
+				color: rel.opts.titleColor,
+				fontFace: rel.opts.titleFontFace,
+				fontSize: rel.opts.titleFontSize || DEF_FONT_TITLE_SIZE,
+				titleAlign: rel.opts.titleAlign,
+				titleBold: rel.opts.titleBold,
+				titlePos: rel.opts.titlePos,
+				titleRotate: rel.opts.titleRotate,
+			},
+			typeof rel.opts.x === 'number' ? rel.opts.x : undefined,
+			typeof rel.opts.y === 'number' ? rel.opts.y : undefined
+		)
+		strXml += '<c:autoTitleDeleted val="0"/>'
+	} else {
+		// NOTE: Add autoTitleDeleted tag in else to prevent default creation of chart title even when showTitle is set to false
+		strXml += '<c:autoTitleDeleted val="1"/>'
 	}
 
-	// A: Create Chart XML -----------------------------------------------------------
+	/** Add 3D view tag
+	 * @see: https://c-rex.net/projects/samples/ooxml/e1/Part4/OOXML_P4_DOCX_perspective_topic_ID0E6BUQB.html
+	 */
+	if (rel.opts._type === CHART_TYPE.BAR3D) {
+		strXml += `<c:view3D><c:rotX val="${rel.opts.v3DRotX}"/><c:rotY val="${rel.opts.v3DRotY}"/><c:rAngAx val="${!rel.opts.v3DRAngAx ? 0 : 1}"/><c:perspective val="${rel.opts.v3DPerspective}"/></c:view3D>`
+	}
+
+	strXml += '<c:plotArea>'
+	// IMPORTANT: Dont specify layout to enable auto-fit: PPT does a great job maximizing space with all 4 TRBL locations
+	if (rel.opts.layout) {
+		strXml += '<c:layout>'
+		strXml += ' <c:manualLayout>'
+		strXml += '  <c:layoutTarget val="inner" />'
+		strXml += '  <c:xMode val="edge" />'
+		strXml += '  <c:yMode val="edge" />'
+		strXml += '  <c:x val="' + (rel.opts.layout.x || 0) + '" />'
+		strXml += '  <c:y val="' + (rel.opts.layout.y || 0) + '" />'
+		strXml += '  <c:w val="' + (rel.opts.layout.w || 1) + '" />'
+		strXml += '  <c:h val="' + (rel.opts.layout.h || 1) + '" />'
+		strXml += ' </c:manualLayout>'
+		strXml += '</c:layout>'
+	} else {
+		strXml += '<c:layout/>'
+	}
+
+	return strXml
+}
+
+function makeChartTypes (rel: ISlideRelChart): { xml: string; usesSecondaryValAxis: boolean } {
+	let strXml = ''
+	let usesSecondaryValAxis = false
+
 	if (Array.isArray(rel.opts._type)) {
 		rel.opts._type.forEach(type => {
 			// TODO: FIXME: theres `options` on chart rels??
@@ -94,7 +104,12 @@ export function makeXmlCharts (rel: ISlideRelChart): string {
 		strXml += makeChartType(rel.opts._type, rel.data, rel.opts, AXIS_ID_VALUE_PRIMARY, AXIS_ID_CATEGORY_PRIMARY, false)
 	}
 
-	// B: Axes -----------------------------------------------------------
+	return { xml: strXml, usesSecondaryValAxis }
+}
+
+function makeChartAxes (rel: ISlideRelChart, usesSecondaryValAxis: boolean): string {
+	let strXml = ''
+
 	if (rel.opts._type !== CHART_TYPE.PIE && rel.opts._type !== CHART_TYPE.DOUGHNUT) {
 		// Param check
 		if (rel.opts.valAxes && rel.opts.valAxes.length > 1 && !usesSecondaryValAxis) {
@@ -130,80 +145,81 @@ export function makeXmlCharts (rel: ISlideRelChart): string {
 		}
 	}
 
-	// C: Chart Properties and plotArea Options: Border, Data Table, Fill, Legend
-	{
-		// NOTE: DataTable goes between '</c:valAx>' and '<c:spPr>'
-		if (rel.opts.showDataTable) {
-			strXml += '<c:dTable>'
-			strXml += `  <c:showHorzBorder val="${!rel.opts.showDataTableHorzBorder ? 0 : 1}"/>`
-			strXml += `  <c:showVertBorder val="${!rel.opts.showDataTableVertBorder ? 0 : 1}"/>`
-			strXml += `  <c:showOutline    val="${!rel.opts.showDataTableOutline ? 0 : 1}"/>`
-			strXml += `  <c:showKeys       val="${!rel.opts.showDataTableKeys ? 0 : 1}"/>`
-			strXml += '  <c:spPr>'
-			strXml += '    <a:noFill/>'
-			strXml += '    <a:ln w="9525" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="tx1"><a:lumMod val="15000"/><a:lumOff val="85000"/></a:schemeClr></a:solidFill><a:round/></a:ln>'
-			strXml += '    <a:effectLst/>'
-			strXml += '  </c:spPr>'
-			strXml += '  <c:txPr>'
-			strXml += '   <a:bodyPr rot="0" spcFirstLastPara="1" vertOverflow="ellipsis" vert="horz" wrap="square" anchor="ctr" anchorCtr="1"/>'
-			strXml += '   <a:lstStyle/>'
-			strXml += '   <a:p>'
-			strXml += '     <a:pPr rtl="0">'
-			strXml += `       <a:defRPr sz="${Math.round((rel.opts.dataTableFontSize || DEF_FONT_SIZE) * 100)}" b="0" i="0" u="none" strike="noStrike" kern="1200" baseline="0">`
-			strXml += '         <a:solidFill><a:schemeClr val="tx1"><a:lumMod val="65000"/><a:lumOff val="35000"/></a:schemeClr></a:solidFill>'
-			strXml += '         <a:latin typeface="+mn-lt"/>'
-			strXml += '         <a:ea typeface="+mn-ea"/>'
-			strXml += '         <a:cs typeface="+mn-cs"/>'
-			strXml += '       </a:defRPr>'
-			strXml += '     </a:pPr>'
-			strXml += '    <a:endParaRPr lang="en-US"/>'
-			strXml += '   </a:p>'
-			strXml += ' </c:txPr>'
-			strXml += '</c:dTable>'
-		}
+	return strXml
+}
 
+function makePlotAreaAndLegend (rel: ISlideRelChart): string {
+	let strXml = ''
+
+	// NOTE: DataTable goes between '</c:valAx>' and '<c:spPr>'
+	if (rel.opts.showDataTable) {
+		strXml += '<c:dTable>'
+		strXml += `  <c:showHorzBorder val="${!rel.opts.showDataTableHorzBorder ? 0 : 1}"/>`
+		strXml += `  <c:showVertBorder val="${!rel.opts.showDataTableVertBorder ? 0 : 1}"/>`
+		strXml += `  <c:showOutline    val="${!rel.opts.showDataTableOutline ? 0 : 1}"/>`
+		strXml += `  <c:showKeys       val="${!rel.opts.showDataTableKeys ? 0 : 1}"/>`
 		strXml += '  <c:spPr>'
-
-		// OPTION: Fill
-		strXml += rel.opts.plotArea?.fill?.color ? genXmlColorSelection(rel.opts.plotArea?.fill) : '<a:noFill/>'
-
-		// OPTION: Border
-		strXml += rel.opts.plotArea?.border
-			? `<a:ln w="${valToPts(rel.opts.plotArea?.border?.pt)}" cap="flat">${genXmlColorSelection(rel.opts.plotArea?.border?.color)}</a:ln>`
-			: '<a:ln><a:noFill/></a:ln>'
-
-		// Close shapeProp/plotArea before Legend
+		strXml += '    <a:noFill/>'
+		strXml += '    <a:ln w="9525" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="tx1"><a:lumMod val="15000"/><a:lumOff val="85000"/></a:schemeClr></a:solidFill><a:round/></a:ln>'
 		strXml += '    <a:effectLst/>'
 		strXml += '  </c:spPr>'
-		strXml += '</c:plotArea>'
-
-		// OPTION: Legend
-		// IMPORTANT: Dont specify layout to enable auto-fit: PPT does a great job maximizing space with all 4 TRBL locations
-		if (rel.opts.showLegend) {
-			strXml += '<c:legend>'
-			strXml += '<c:legendPos val="' + rel.opts.legendPos + '"/>'
-			// strXml += '<c:layout/>'
-			strXml += '<c:overlay val="0"/>'
-			if (rel.opts.legendFontFace || rel.opts.legendFontSize || rel.opts.legendColor) {
-				strXml += '<c:txPr>'
-				strXml += '  <a:bodyPr/>'
-				strXml += '  <a:lstStyle/>'
-				strXml += '  <a:p>'
-				strXml += '    <a:pPr>'
-				strXml += rel.opts.legendFontSize ? `<a:defRPr sz="${Math.round(Number(rel.opts.legendFontSize) * 100)}">` : '<a:defRPr>'
-				if (rel.opts.legendColor) strXml += genXmlColorSelection(rel.opts.legendColor)
-				if (rel.opts.legendFontFace) strXml += '<a:latin typeface="' + rel.opts.legendFontFace + '"/>'
-				if (rel.opts.legendFontFace) strXml += '<a:cs    typeface="' + rel.opts.legendFontFace + '"/>'
-				strXml += '      </a:defRPr>'
-				strXml += '    </a:pPr>'
-				strXml += '    <a:endParaRPr lang="en-US"/>'
-				strXml += '  </a:p>'
-				strXml += '</c:txPr>'
-			}
-			strXml += '</c:legend>'
-		}
+		strXml += '  <c:txPr>'
+		strXml += '   <a:bodyPr rot="0" spcFirstLastPara="1" vertOverflow="ellipsis" vert="horz" wrap="square" anchor="ctr" anchorCtr="1"/>'
+		strXml += '   <a:lstStyle/>'
+		strXml += '   <a:p>'
+		strXml += '     <a:pPr rtl="0">'
+		strXml += `       <a:defRPr sz="${Math.round((rel.opts.dataTableFontSize || DEF_FONT_SIZE) * 100)}" b="0" i="0" u="none" strike="noStrike" kern="1200" baseline="0">`
+		strXml += '         <a:solidFill><a:schemeClr val="tx1"><a:lumMod val="65000"/><a:lumOff val="35000"/></a:schemeClr></a:solidFill>'
+		strXml += '         <a:latin typeface="+mn-lt"/>'
+		strXml += '         <a:ea typeface="+mn-ea"/>'
+		strXml += '         <a:cs typeface="+mn-cs"/>'
+		strXml += '       </a:defRPr>'
+		strXml += '     </a:pPr>'
+		strXml += '    <a:endParaRPr lang="en-US"/>'
+		strXml += '   </a:p>'
+		strXml += ' </c:txPr>'
+		strXml += '</c:dTable>'
 	}
 
+	strXml += '  <c:spPr>'
+	strXml += rel.opts.plotArea?.fill?.color ? genXmlColorSelection(rel.opts.plotArea?.fill) : '<a:noFill/>'
+	strXml += rel.opts.plotArea?.border
+		? `<a:ln w="${valToPts(rel.opts.plotArea?.border?.pt)}" cap="flat">${genXmlColorSelection(rel.opts.plotArea?.border?.color)}</a:ln>`
+		: '<a:ln><a:noFill/></a:ln>'
+	strXml += '    <a:effectLst/>'
+	strXml += '  </c:spPr>'
+	strXml += '</c:plotArea>'
+
+	// IMPORTANT: Dont specify layout to enable auto-fit: PPT does a great job maximizing space with all 4 TRBL locations
+	if (rel.opts.showLegend) {
+		strXml += '<c:legend>'
+		strXml += '<c:legendPos val="' + rel.opts.legendPos + '"/>'
+		// strXml += '<c:layout/>'
+		strXml += '<c:overlay val="0"/>'
+		if (rel.opts.legendFontFace || rel.opts.legendFontSize || rel.opts.legendColor) {
+			strXml += '<c:txPr>'
+			strXml += '  <a:bodyPr/>'
+			strXml += '  <a:lstStyle/>'
+			strXml += '  <a:p>'
+			strXml += '    <a:pPr>'
+			strXml += rel.opts.legendFontSize ? `<a:defRPr sz="${Math.round(Number(rel.opts.legendFontSize) * 100)}">` : '<a:defRPr>'
+			if (rel.opts.legendColor) strXml += genXmlColorSelection(rel.opts.legendColor)
+			if (rel.opts.legendFontFace) strXml += '<a:latin typeface="' + rel.opts.legendFontFace + '"/>'
+			if (rel.opts.legendFontFace) strXml += '<a:cs    typeface="' + rel.opts.legendFontFace + '"/>'
+			strXml += '      </a:defRPr>'
+			strXml += '    </a:pPr>'
+			strXml += '    <a:endParaRPr lang="en-US"/>'
+			strXml += '  </a:p>'
+			strXml += '</c:txPr>'
+		}
+		strXml += '</c:legend>'
+	}
+
+	return strXml
+}
+
+function makeChartSpaceEnd (rel: ISlideRelChart): string {
+	let strXml = ''
 	strXml += '  <c:plotVisOnly val="1"/>'
 	strXml += '  <c:dispBlanksAs val="' + rel.opts.displayBlanksAs + '"/>'
 	if (rel.opts._type === CHART_TYPE.SCATTER) strXml += '<c:showDLblsOverMax val="1"/>'
@@ -222,9 +238,7 @@ export function makeXmlCharts (rel: ISlideRelChart): string {
 	// E: DATA (Add relID)
 	strXml += '<c:externalData r:id="rId1"><c:autoUpdate val="0"/></c:externalData>'
 
-	// LAST: chartSpace end
 	strXml += '</c:chartSpace>'
-
 	return strXml
 }
 
@@ -1121,6 +1135,5 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
  * @param {string} valAxisId - value
  * @return {string} XML
  */
-
 
 
