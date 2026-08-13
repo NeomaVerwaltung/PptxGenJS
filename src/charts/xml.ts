@@ -121,6 +121,11 @@ function makeChartTypes (rel: ISlideRelChart): { xml: string; usesSecondaryValAx
  */
 function makeChartAxes (rel: ISlideRelChart, usesSecondaryValAxis: boolean): string {
 	let strXml = ''
+	const axisOptions = (axis: 'secondaryCatAxis' | 'secondaryValAxis', secondary: boolean): IChartOptsLib => {
+		if (!Array.isArray(rel.opts._type)) return rel.opts
+		const chart = rel.opts._type.find(type => Boolean(type.options?.[axis]) === secondary)
+		return chart ? { ...rel.opts, ...chart.options, _type: chart.type } : rel.opts
+	}
 
 	if (rel.opts._type !== CHART_TYPE.PIE && rel.opts._type !== CHART_TYPE.DOUGHNUT) {
 		// Param check
@@ -132,18 +137,18 @@ function makeChartAxes (rel: ISlideRelChart, usesSecondaryValAxis: boolean): str
 			if (!rel.opts.valAxes || rel.opts.valAxes.length !== rel.opts.catAxes.length) {
 				throw new Error('There must be the same number of value and category axes.')
 			}
-			strXml += makeCatAxis({ ...rel.opts, ...rel.opts.catAxes[0] }, AXIS_ID_CATEGORY_PRIMARY, AXIS_ID_VALUE_PRIMARY)
+			strXml += makeCatAxis({ ...axisOptions('secondaryCatAxis', false), ...rel.opts.catAxes[0] }, AXIS_ID_CATEGORY_PRIMARY, AXIS_ID_VALUE_PRIMARY)
 		} else {
-			strXml += makeCatAxis(rel.opts, AXIS_ID_CATEGORY_PRIMARY, AXIS_ID_VALUE_PRIMARY)
+			strXml += makeCatAxis(axisOptions('secondaryCatAxis', false), AXIS_ID_CATEGORY_PRIMARY, AXIS_ID_VALUE_PRIMARY)
 		}
 
 		if (rel.opts.valAxes) {
-			strXml += makeValAxis({ ...rel.opts, ...rel.opts.valAxes[0] }, AXIS_ID_VALUE_PRIMARY)
+			strXml += makeValAxis({ ...axisOptions('secondaryValAxis', false), ...rel.opts.valAxes[0] }, AXIS_ID_VALUE_PRIMARY)
 			if (rel.opts.valAxes[1]) {
-				strXml += makeValAxis({ ...rel.opts, ...rel.opts.valAxes[1] }, AXIS_ID_VALUE_SECONDARY)
+				strXml += makeValAxis({ ...axisOptions('secondaryValAxis', true), ...rel.opts.valAxes[1] }, AXIS_ID_VALUE_SECONDARY)
 			}
 		} else {
-			strXml += makeValAxis(rel.opts, AXIS_ID_VALUE_PRIMARY)
+			strXml += makeValAxis(axisOptions('secondaryValAxis', false), AXIS_ID_VALUE_PRIMARY)
 
 			// Add series axis for 3D bar
 			if (rel.opts._type === CHART_TYPE.BAR3D) {
@@ -153,7 +158,7 @@ function makeChartAxes (rel: ISlideRelChart, usesSecondaryValAxis: boolean): str
 
 		// Combo Charts: Add secondary axes after all vals
 		if (rel.opts?.catAxes && rel.opts?.catAxes[1]) {
-			strXml += makeCatAxis({ ...rel.opts, ...rel.opts.catAxes[1] }, AXIS_ID_CATEGORY_SECONDARY, AXIS_ID_VALUE_SECONDARY)
+			strXml += makeCatAxis({ ...axisOptions('secondaryCatAxis', true), ...rel.opts.catAxes[1] }, AXIS_ID_CATEGORY_SECONDARY, AXIS_ID_VALUE_SECONDARY)
 		}
 	}
 

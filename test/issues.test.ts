@@ -181,6 +181,18 @@ test('#1188: pie chart titles support italic text', async () => {
 	assert.match(title, /<a:rPr[^>]* i="1"/, 'pie title italic was not emitted')
 })
 
+test('#1355: a scatter chart keeps a value x-axis in a combo chart', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addChart([
+		{ type: pptx.ChartType.bar, data: [{ name: 'Bars', labels: ['Mon', 'Tue'], values: [17, 26] }], options: { barDir: 'bar' } },
+		{ type: pptx.ChartType.scatter, data: [{ name: 'X', labels: ['Mon', 'Tue'], values: [1, 2] }, { name: 'Y', labels: ['Mon', 'Tue'], values: [25, 35] }], options: { secondaryValAxis: true, secondaryCatAxis: true } },
+	], { x: 1, y: 1, w: 6, h: 3, valAxes: [{}, {}], catAxes: [{}, {}] })
+
+	const chart = await readChart(await writeZip(pptx))
+	assert.equal((chart.match(/<c:catAx>/g) ?? []).length, 1, 'scatter x-axis was emitted as a category axis')
+	assert.equal((chart.match(/<c:valAx>/g) ?? []).length, 3, 'scatter combo chart is missing a value axis')
+})
+
 test('#26: serAxisLabelPos is honored', async () => {
 	const pptx = new pptxgen()
 	pptx.addSlide().addChart(pptx.ChartType.bar3d, [{ name: 'Sales', labels: ['Q1', 'Q2'], values: [1, 2] }], {
