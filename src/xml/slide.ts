@@ -656,8 +656,11 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout): string {
 					const boxH = sizing.h ? getSmartParseNumber(sizing.h, 'Y', slide._presLayout) : cy
 					const boxX = getSmartParseNumber(sizing.x || 0, 'X', slide._presLayout)
 					const boxY = getSmartParseNumber(sizing.y || 0, 'Y', slide._presLayout)
+					const sourceSize = typeof slideItemObj.options.w === 'number' && typeof slideItemObj.options.h === 'number'
+						? { w: slideItemObj.options.w, h: slideItemObj.options.h }
+						: { w: imgWidth, h: imgHeight }
 
-					strSlideXml += ImageSizingXml[sizing.type]({ w: imgWidth, h: imgHeight }, { w: boxW, h: boxH, x: boxX, y: boxY })
+					strSlideXml += ImageSizingXml[sizing.type](sourceSize, { w: boxW, h: boxH, x: boxX, y: boxY })
 					imgWidth = boxW
 					imgHeight = boxH
 				} else {
