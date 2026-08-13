@@ -176,6 +176,10 @@ function resolveSlideObjectContext (slide: PresSlide | SlideLayout, slideItemObj
 	return { cx, cy, imgHeight, imgWidth, locationAttr, placeholderObj, rounding: options.rounding, sizing: options.sizing, x, y }
 }
 
+/**
+ * Render the single valid background representation for a slide-like part.
+ * Image backgrounds win over colors; the default master layout receives the scheme background needed by Keynote previews.
+ */
 function genXmlSlideBackground (slide: PresSlide | SlideLayout): string {
 	let strSlideXml = ''
 	// STEP 1: Add background color/image (ensure only a single `<p:bg>` tag is created, ex: when master-baskground has both `color` and `path`)
@@ -192,6 +196,7 @@ function genXmlSlideBackground (slide: PresSlide | SlideLayout): string {
 	return strSlideXml
 }
 
+/** Create the required group shape tree and its non-visual properties. */
 function genXmlSlideTreeStart (): string {
 	let strSlideXml = ''
 	// STEP 2: Continue slide by starting spTree node
@@ -203,6 +208,11 @@ function genXmlSlideTreeStart (): string {
 	return strSlideXml
 }
 
+/**
+ * Serialize slide objects in insertion order and retain the rendering-time normalization of each object's options.
+ *
+ * The local table counter and object index determine OOXML non-visual IDs, so callers must keep this phase contiguous.
+ */
 function genXmlSlideObjects (slide: PresSlide | SlideLayout): string {
 	let strSlideXml = ''
 	let intTableNum = 1
@@ -740,6 +750,10 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout): string {
 	return strSlideXml
 }
 
+/**
+ * Append the slide-number placeholder after ordinary objects when numbering is configured.
+ * Its last position is required by the existing master/layout/slide compatibility behavior.
+ */
 function genXmlSlideNumber (slide: PresSlide | SlideLayout): string {
 	let strSlideXml = ''
 	// STEP 4: Add slide numbers (if any) last
@@ -798,6 +812,7 @@ function genXmlSlideNumber (slide: PresSlide | SlideLayout): string {
 	return strSlideXml
 }
 
+/** Close the shape tree and the `p:cSld` wrapper opened by the public orchestrator. */
 function genXmlSlideEnd (): string {
 	let strSlideXml = ''
 	// STEP 5: Close spTree and finalize slide XML

@@ -30,6 +30,10 @@ export function makeXmlCharts (rel: ISlideRelChart): string {
 	return strXml
 }
 
+/**
+ * Open `c:chartSpace` and `c:plotArea`, including title state, optional 3D view, and manual layout.
+ * The matching closing/output phase is `makeChartSpaceEnd()`.
+ */
 function makeChartSpaceStart (rel: ISlideRelChart): string {
 	let strXml =
 		'<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
@@ -86,6 +90,10 @@ function makeChartSpaceStart (rel: ISlideRelChart): string {
 	return strXml
 }
 
+/**
+ * Render one chart-type block per series group and report whether any group uses the secondary value axis.
+ * The axis phase uses that flag to reject an incoherent multi-axis configuration.
+ */
 function makeChartTypes (rel: ISlideRelChart): { xml: string; usesSecondaryValAxis: boolean } {
 	let strXml = ''
 	let usesSecondaryValAxis = false
@@ -107,6 +115,9 @@ function makeChartTypes (rel: ISlideRelChart): { xml: string; usesSecondaryValAx
 	return { xml: strXml, usesSecondaryValAxis }
 }
 
+/**
+ * Validate and render category, value, secondary, and 3D series axes after all chart-type blocks.
+ */
 function makeChartAxes (rel: ISlideRelChart, usesSecondaryValAxis: boolean): string {
 	let strXml = ''
 
@@ -148,6 +159,7 @@ function makeChartAxes (rel: ISlideRelChart, usesSecondaryValAxis: boolean): str
 	return strXml
 }
 
+/** Complete the plot area, then append the optional data table and legend in schema order. */
 function makePlotAreaAndLegend (rel: ISlideRelChart): string {
 	let strXml = ''
 
@@ -218,6 +230,9 @@ function makePlotAreaAndLegend (rel: ISlideRelChart): string {
 	return strXml
 }
 
+/**
+ * Emit chart-level display settings, chart-area styling, and the `rId1` embedded-workbook reference before closing `c:chartSpace`.
+ */
 function makeChartSpaceEnd (rel: ISlideRelChart): string {
 	let strXml = ''
 	strXml += '  <c:plotVisOnly val="1"/>'
@@ -1135,5 +1150,4 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
  * @param {string} valAxisId - value
  * @return {string} XML
  */
-
 

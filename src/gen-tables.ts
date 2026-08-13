@@ -171,6 +171,7 @@ function parseTextToLines(cell: TableCell, colWidth: number): TableCell[][] {
 	return parsedLines
 }
 
+/** Write the parsed pagination inputs when verbose diagnostics are enabled. */
 function logTablePaginationInputs(tableProps: TableToSlidesProps, presLayout: PresLayout, tablePropX: number, tablePropY: number, tablePropW: number, tablePropH: number): void {
 	if (!isDebugEnabled()) return
 	debugLog('[[VERBOSE MODE]]')
@@ -194,6 +195,11 @@ function logTablePaginationInputs(tableProps: TableToSlidesProps, presLayout: Pr
 	debugLog(`| tableCalcW ...................................... = ${tablePropW / EMU}`)
 }
 
+/**
+ * Resolve the effective top/right/bottom/left slide margins, with master margins taking precedence.
+ *
+ * Mutates `tableProps.slideMargin` to retain the existing defaulting contract.
+ */
 function getTableSlideMargins(tableProps: TableToSlidesProps, masterSlide?: SlideLayout): [number, number, number, number] {
 	let margins = DEF_SLIDE_MARGIN_IN
 
@@ -212,6 +218,7 @@ function getTableSlideMargins(tableProps: TableToSlidesProps, masterSlide?: Slid
 	return margins
 }
 
+/** Count physical table-grid columns, expanding each declared colspan. */
 function getTableColumnCount(tableRows: TableCell[][]): number {
 	let numCols = 0
 	const firstRow = tableRows[0] || []
@@ -224,6 +231,7 @@ function getTableColumnCount(tableRows: TableCell[][]): number {
 	return numCols
 }
 
+/** Use an explicit table width or derive it from scalar/array column widths. */
 function getTableWidth(tableProps: TableToSlidesProps, tablePropW: number, numCols: number): number {
 	if (tablePropW || !tableProps.colW) return tablePropW
 	const tableCalcW = Array.isArray(tableProps.colW) ? tableProps.colW.reduce((p, n) => p + n) * EMU : tableProps.colW * numCols || 0
@@ -231,12 +239,18 @@ function getTableWidth(tableProps: TableToSlidesProps, tablePropW: number, numCo
 	return tableCalcW
 }
 
+/** Calculate the available table width in EMUs after the horizontal positioning rule. */
 function getUsableTableWidth(tableCalcW: number, tablePropX: number, margins: [number, number, number, number]): number {
 	const width = tableCalcW || inch2Emu((tablePropX ? tablePropX / EMU : margins[1]) + margins[3])
 	if (isDebugEnabled()) debugLog(`| emuSlideTabW .................................... = ${(width / EMU).toFixed(1)}`)
 	return width
 }
 
+/**
+ * Materialize a width for every column when callers did not supply an array.
+ *
+ * This deliberately mutates `tableProps.colW`: line wrapping later in the same flow consumes the normalized array.
+ */
 function ensureTableColumnWidths(tableRows: TableCell[][], tableProps: TableToSlidesProps, numCols: number, emuSlideTabW: number): void {
 	if (tableProps.colW && Array.isArray(tableProps.colW)) return
 
@@ -254,6 +268,10 @@ function ensureTableColumnWidths(tableRows: TableCell[][], tableProps: TableToSl
 	}
 }
 
+/**
+ * Compute the usable vertical table space for the current page.
+ * Continuation pages use their configured start position and must not shrink below an explicit table height.
+ */
 function getAvailableTableHeight(
 	tableProps: TableToSlidesProps,
 	presLayout: PresLayout,
@@ -280,6 +298,11 @@ function getAvailableTableHeight(
 	return height
 }
 
+/**
+ * Wrap rows into page-sized `TableRowSlide` models while preserving cell margins, rowspans, and repeated headers.
+ *
+ * `tableProps` and cell options retain their historic normalization mutations; the result is later rendered as table XML.
+ */
 function paginateTableRows(
 	tableRows: TableCell[][],
 	tableProps: TableToSlidesProps,

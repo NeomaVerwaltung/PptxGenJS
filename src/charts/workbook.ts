@@ -23,6 +23,7 @@ export async function createExcelWorksheet (chartObject: ISlideRelChart, zip: JS
 	return await addWorkbookToPresentation(chartObject, zipExcel, zip)
 }
 
+/** Create the archive folders required by the embedded XLSX package. */
 function addWorkbookFolders (zipExcel: JSZip): void {
 	zipExcel.folder('_rels')
 	zipExcel.folder('docProps')
@@ -33,6 +34,10 @@ function addWorkbookFolders (zipExcel: JSZip): void {
 	zipExcel.folder('xl/worksheets/_rels')
 }
 
+/**
+ * Write the fixed XLSX package parts: content types, root/workbook relationships, metadata, styles, theme, and workbook.
+ * These parts are independent of chart data and must exist before the data-specific files are added.
+ */
 function addCoreWorkbookFiles (zipExcel: JSZip): void {
 	// B: Add core contents
 	{
@@ -124,6 +129,10 @@ function addCoreWorkbookFiles (zipExcel: JSZip): void {
 	}
 }
 
+/**
+ * Write `xl/sharedStrings.xml` in the index order consumed by the worksheet writer.
+ * Category charts, scatter charts, bubble charts, and multi-level categories intentionally use different layouts.
+ */
 function addSharedStringsFile (chartObject: ISlideRelChart, zipExcel: JSZip): void {
 	const data = chartObject.data
 	const intBubbleCols = (data.length - 1) * 2 + 1
@@ -191,6 +200,7 @@ function addSharedStringsFile (chartObject: ISlideRelChart, zipExcel: JSZip): vo
 	}
 }
 
+/** Write table metadata and the calculated cell range for the embedded workbook. */
 function addTableFile (chartObject: ISlideRelChart, zipExcel: JSZip): void {
 	const data = chartObject.data
 	const intBubbleCols = (data.length - 1) * 2 + 1
@@ -236,6 +246,9 @@ function addTableFile (chartObject: ISlideRelChart, zipExcel: JSZip): void {
 	}
 }
 
+/**
+ * Write `xl/worksheets/sheet1.xml`, preserving zero values and multi-level-category merge/shared-string indexes.
+ */
 function addWorksheetFile (chartObject: ISlideRelChart, zipExcel: JSZip): void {
 	const data = chartObject.data
 	const intBubbleCols = (data.length - 1) * 2 + 1
@@ -545,6 +558,10 @@ function addWorksheetFile (chartObject: ISlideRelChart, zipExcel: JSZip): void {
 	}
 }
 
+/**
+ * Finish the nested XLSX archive, add it to the presentation, and write the matching chart relationship and chart XML.
+ * The generated chart XML references the relationship as `rId1`, so both parts must be emitted together.
+ */
 function addWorkbookToPresentation (chartObject: ISlideRelChart, zipExcel: JSZip, zip: JSZip): Promise<string> {
 	return new Promise((resolve, reject) => {
 		zipExcel

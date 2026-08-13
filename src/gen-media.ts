@@ -55,12 +55,18 @@ export function applyNaturalImageSizes(layout: PresSlide | SlideLayout): void {
 		})
 }
 
+/** Select relations that still need their local or remote media encoded. */
 function getMediaCandidates(layout: PresSlide | SlideLayout): ISlideRelMedia[] {
 	return layout._relsMedia.filter(
 		rel => rel.type !== 'online' && !rel.data && (!rel.path || (rel.path && !rel.path.includes('preencoded')))
 	)
 }
 
+/**
+ * Mark repeated source paths so only the first relation performs I/O.
+ *
+ * Mutates `isDuplicate`; subsequent helpers copy the first result to every duplicate.
+ */
 function markDuplicateMedia(candidates: ISlideRelMedia[]): void {
 	const paths = new Set<string>()
 	candidates.forEach(rel => {
@@ -70,17 +76,24 @@ function markDuplicateMedia(candidates: ISlideRelMedia[]): void {
 	})
 }
 
+/** Copy an encoded or broken source relation's data to every duplicate path. */
 function copyMediaToDuplicates(candidates: ISlideRelMedia[], rel: ISlideRelMedia): void {
 	candidates
 		.filter(duplicate => duplicate.isDuplicate && duplicate.path === rel.path)
 		.forEach(duplicate => (duplicate.data = rel.data))
 }
 
+/** Mark a failed source and all duplicates with the sentinel expected by package generation. */
 function markMediaBroken(candidates: ISlideRelMedia[], rel: ISlideRelMedia): void {
 	rel.data = IMG_BROKEN
 	copyMediaToDuplicates(candidates, rel)
 }
 
+/**
+ * Read one Node-local media source and encode it as base64.
+ *
+ * A read failure is recorded before rejection so duplicate references remain consistent.
+ */
 async function readNodeMediaFile(rel: ISlideRelMedia, candidates: ISlideRelMedia[], fs: typeof import('node:fs')): Promise<string> {
 	try {
 		const bitmap = fs.readFileSync(rel.path ?? '')
@@ -93,6 +106,9 @@ async function readNodeMediaFile(rel: ISlideRelMedia, candidates: ISlideRelMedia
 	}
 }
 
+/**
+ * Load one HTTP(S) source in Node, draining error responses and handling both request and response errors.
+ */
 function loadNodeMediaUrl(
 	rel: ISlideRelMedia,
 	candidates: ISlideRelMedia[],
@@ -127,6 +143,10 @@ function loadNodeMediaUrl(
 	})
 }
 
+/**
+ * Fetch one browser media source and convert its Blob response to a data URL.
+ * SVG previews are produced only after the source relation has been populated.
+ */
 function loadBrowserMedia(rel: ISlideRelMedia, candidates: ISlideRelMedia[]): Promise<string> {
 	return new Promise<string>((resolve, reject) => {
 		const xhr = new XMLHttpRequest()
@@ -156,6 +176,7 @@ function loadBrowserMedia(rel: ISlideRelMedia, candidates: ISlideRelMedia[]): Pr
 	})
 }
 
+/** Route one source relation to the loader valid for the active runtime. */
 async function encodeMediaRelation(
 	rel: ISlideRelMedia,
 	candidates: ISlideRelMedia[],
@@ -171,6 +192,10 @@ async function encodeMediaRelation(
 	return loadBrowserMedia(rel, candidates)
 }
 
+/**
+ * Append SVG preview work synchronously because the caller immediately snapshots `promises`.
+ * Node cannot rasterize SVG here, so it keeps the historical broken-preview sentinel behavior.
+ */
 function addSvgPreviewPromises(layout: PresSlide | SlideLayout, isNode: boolean, promises: Array<Promise<string>>): void {
 	layout._relsMedia
 		.filter(rel => rel.isSvgPng && rel.data)

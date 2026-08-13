@@ -75,6 +75,11 @@ export default defineConfig({
 					{ text: 'Deprecated Features', link: '/deprecated' },
 				],
 			},
+			{
+				text: 'Maintainers',
+				collapsed: true,
+				items: [{ text: 'Rendering Architecture', link: '/maintainer-rendering' }],
+			},
 		],
 		socialLinks: [{ icon: 'github', link: 'https://github.com/NeomaVerwaltung/PptxGenJS' }],
 		search: { provider: 'local' },
