@@ -5,6 +5,7 @@
 import { imageSize } from 'image-size'
 import { IMG_BROKEN, SLIDE_OBJECT_TYPES } from './core-enums'
 import { PresSlide, SlideLayout, ISlideRelMedia } from './core-interfaces'
+import { base64ToBytes, binaryStringToBase64, bytesToBase64 } from './gen-utils'
 
 /** Images are measured in pixels; PowerPoint slide dimensions are inches at 96 DPI */
 const IMAGE_DPI = 96
@@ -16,21 +17,6 @@ type NodeMediaModules = {
 }
 
 type LoadNodeMediaModules = () => Promise<void>
-
-/**
- * Decode a base64 (or data-url) string into bytes, in Node or the browser
- */
-function base64ToBytes(strData: string): Uint8Array {
-	const idxHdr = strData.indexOf('base64,')
-	const strB64 = idxHdr > -1 ? strData.substring(idxHdr + 'base64,'.length) : strData
-
-	if (typeof Buffer !== 'undefined') return new Uint8Array(Buffer.from(strB64, 'base64'))
-
-	const strBin = atob(strB64)
-	const bytes = new Uint8Array(strBin.length)
-	for (let idx = 0; idx < strBin.length; idx++) bytes[idx] = strBin.charCodeAt(idx)
-	return bytes
-}
 
 /**
  * Size images added without `w`/`h` to their natural dimensions (issue #34)
@@ -97,7 +83,7 @@ function markMediaBroken(candidates: ISlideRelMedia[], rel: ISlideRelMedia): voi
 async function readNodeMediaFile(rel: ISlideRelMedia, candidates: ISlideRelMedia[], fs: typeof import('node:fs')): Promise<string> {
 	try {
 		const bitmap = fs.readFileSync(rel.path ?? '')
-		rel.data = Buffer.from(bitmap).toString('base64')
+		rel.data = bytesToBase64(new Uint8Array(bitmap))
 		copyMediaToDuplicates(candidates, rel)
 		return 'done'
 	} catch (ex) {
@@ -132,7 +118,7 @@ function loadNodeMediaUrl(
 			res.setEncoding('binary') // IMPORTANT: Only binary encoding works
 			res.on('data', chunk => (raw += chunk))
 			res.on('end', () => {
-				rel.data = Buffer.from(raw, 'binary').toString('base64')
+				rel.data = binaryStringToBase64(raw)
 				copyMediaToDuplicates(candidates, rel)
 				resolve('done')
 			})
