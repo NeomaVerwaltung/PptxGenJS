@@ -7,10 +7,12 @@ import JSZip from 'jszip'
 import { makeXmlCharts } from './xml'
 import { getExcelColName } from './utils'
 
-function getDataTableFormats (chartObject: ISlideRelChart): (string | undefined)[] {
-	return Array.isArray(chartObject.opts._type)
+function getDataTableStyles (chartObject: ISlideRelChart): { customFormats: string[]; dataStyleIds: number[] } {
+	const dataTableFormats = Array.isArray(chartObject.opts._type)
 		? chartObject.opts._type.flatMap(type => Array(type.data.length).fill(type.options?.dataTableFormatCode ?? chartObject.opts.dataTableFormatCode))
 		: chartObject.data.map(() => chartObject.opts.dataTableFormatCode)
+	const customFormats = [...new Set(dataTableFormats.filter((format): format is string => !!format))]
+	return { customFormats, dataStyleIds: dataTableFormats.map(format => format ? customFormats.indexOf(format) + 1 : 0) }
 }
 
 function makeNumberStyles (formats: string[]): string {
@@ -27,11 +29,12 @@ function makeNumberStyles (formats: string[]): string {
  */
 export async function createExcelWorksheet (chartObject: ISlideRelChart, zip: JSZip): Promise<string> {
 	const zipExcel = new JSZip()
+	const dataTableStyles = getDataTableStyles(chartObject)
 	addWorkbookFolders(zipExcel)
-	addCoreWorkbookFiles(zipExcel, [...new Set(getDataTableFormats(chartObject).filter((format): format is string => !!format))])
+	addCoreWorkbookFiles(zipExcel, dataTableStyles.customFormats)
 	addSharedStringsFile(chartObject, zipExcel)
 	addTableFile(chartObject, zipExcel)
-	addWorksheetFile(chartObject, zipExcel)
+	addWorksheetFile(chartObject, zipExcel, dataTableStyles.dataStyleIds)
 	return await addWorkbookToPresentation(chartObject, zipExcel, zip)
 }
 
@@ -261,11 +264,8 @@ function addTableFile (chartObject: ISlideRelChart, zipExcel: JSZip): void {
 /**
  * Write `xl/worksheets/sheet1.xml`, preserving zero values and multi-level-category merge/shared-string indexes.
  */
-function addWorksheetFile (chartObject: ISlideRelChart, zipExcel: JSZip): void {
+function addWorksheetFile (chartObject: ISlideRelChart, zipExcel: JSZip, dataStyleIds: number[]): void {
 	const data = chartObject.data
-	const dataTableFormats = getDataTableFormats(chartObject)
-	const customFormats = [...new Set(dataTableFormats.filter((format): format is string => !!format))]
-	const dataStyleIds = dataTableFormats.map(format => format ? customFormats.indexOf(format) + 1 : 0)
 	const intBubbleCols = (data.length - 1) * 2 + 1
 	const IS_MULTI_CAT_AXES = (data[0]?.labels?.length ?? 0) > 1
 	const firstDataLabels = data[0]?.labels ?? []
