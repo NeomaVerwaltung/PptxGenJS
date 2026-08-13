@@ -484,6 +484,20 @@ export interface ThemeProps {
 	bodyFontFace?: string
 }
 
+/** Soft-edge effect (`a:softEdge`); radius is measured in points. */
+export interface SoftEdgeProps {
+	radius: number
+}
+
+/** Reflection effect (`a:reflection`); distances are points, direction is degrees. */
+export interface ReflectionProps {
+	blur?: number
+	distance?: number
+	direction?: number
+	opacity?: number
+	scaleY?: number
+}
+
 // image / media ==================================================================================
 export type MediaType = 'audio' | 'online' | 'video'
 
@@ -535,6 +549,10 @@ export interface ImageProps extends PositionProps, DataOrPathProps, ObjectNamePr
 	 * { type: 'outer', color: '000000', opacity: 0.5, blur: 20,  offset: 20, angle: 270 }
 	 */
 	shadow?: ShadowProps
+	/** Glow, soft-edge, and reflection are serialized into one DrawingML effect list. */
+	glow?: TextGlowProps
+	softEdge?: SoftEdgeProps
+	reflection?: ReflectionProps
 	/**
 	 * Image sizing options
 	 */
@@ -706,6 +724,10 @@ export interface ShapeProps extends PositionProps, ObjectNameProps {
 	 * TODO: need new demo.js entry for shape shadow
 	 */
 	shadow?: ShadowProps
+	/** Glow, soft-edge, and reflection are serialized into one DrawingML effect list. */
+	glow?: TextGlowProps
+	softEdge?: SoftEdgeProps
+	reflection?: ReflectionProps
 
 	/**
 	 * @deprecated v3.3.0
