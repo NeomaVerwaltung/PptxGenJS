@@ -95,11 +95,11 @@ import {
 	WriteFileProps,
 	WriteProps,
 } from './core-interfaces'
-import * as genCharts from './gen-charts'
+import * as genCharts from './charts'
 import * as genObj from './gen-objects'
 import * as genMedia from './gen-media'
 import * as genTable from './gen-tables'
-import * as genXml from './gen-xml'
+import * as genXml from './xml'
 import { warnDeprecatedOnce } from './gen-utils'
 
 const VERSION = '4.0.1'
