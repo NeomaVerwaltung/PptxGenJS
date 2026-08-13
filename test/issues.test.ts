@@ -181,6 +181,19 @@ test('#1188: pie chart titles support italic text', async () => {
 	assert.match(title, /<a:rPr[^>]* i="1"/, 'pie title italic was not emitted')
 })
 
+test('#1420: chart title and legend set the East Asian font slot', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addChart(pptx.ChartType.pie, [{ name: '状态', labels: ['智能驾驶', '已完成'], values: [5, 25] }], {
+		x: 1, y: 1, w: 4, h: 3,
+		showTitle: true, title: '销售部门整体业绩', titleFontFace: 'Microsoft YaHei',
+		showLegend: true, legendFontFace: 'Microsoft YaHei',
+	})
+
+	const chart = await readChart(await writeZip(pptx))
+	assert.match(chart, /<a:rPr[\s\S]*?<a:ea typeface="Microsoft YaHei"\/>/, 'title run is missing the East Asian font')
+	assert.match(chart, /<c:legend>[\s\S]*?<a:ea\s+typeface="Microsoft YaHei"\/>/, 'legend is missing the East Asian font')
+})
+
 test('#26: serAxisLabelPos is honored', async () => {
 	const pptx = new pptxgen()
 	pptx.addSlide().addChart(pptx.ChartType.bar3d, [{ name: 'Sales', labels: ['Q1', 'Q2'], values: [1, 2] }], {
