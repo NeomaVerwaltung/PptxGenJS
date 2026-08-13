@@ -171,152 +171,158 @@ function parseTextToLines(cell: TableCell, colWidth: number): TableCell[][] {
 	return parsedLines
 }
 
+/** Write the parsed pagination inputs when verbose diagnostics are enabled. */
+function logTablePaginationInputs(tableProps: TableToSlidesProps, presLayout: PresLayout, tablePropX: number, tablePropY: number, tablePropW: number, tablePropH: number): void {
+	if (!isDebugEnabled()) return
+	debugLog('[[VERBOSE MODE]]')
+	debugLog('|-- TABLE PROPS --------------------------------------------------------|')
+	debugLog(`| presLayout.width ................................ = ${(presLayout.width / EMU).toFixed(1)}`)
+	debugLog(`| presLayout.height ............................... = ${(presLayout.height / EMU).toFixed(1)}`)
+	debugLog(`| tableProps.x .................................... = ${typeof tableProps.x === 'number' ? (tableProps.x / EMU).toFixed(1) : tableProps.x}`)
+	debugLog(`| tableProps.y .................................... = ${typeof tableProps.y === 'number' ? (tableProps.y / EMU).toFixed(1) : tableProps.y}`)
+	debugLog(`| tableProps.w .................................... = ${typeof tableProps.w === 'number' ? (tableProps.w / EMU).toFixed(1) : tableProps.w}`)
+	debugLog(`| tableProps.h .................................... = ${typeof tableProps.h === 'number' ? (tableProps.h / EMU).toFixed(1) : tableProps.h}`)
+	debugLog(`| tableProps.slideMargin .......................... = ${tableProps.slideMargin ? String(tableProps.slideMargin) : ''}`)
+	debugLog(`| tableProps.margin ............................... = ${String(tableProps.margin)}`)
+	debugLog(`| tableProps.colW ................................. = ${String(tableProps.colW)}`)
+	debugLog(`| tableProps.autoPageSlideStartY .................. = ${tableProps.autoPageSlideStartY}`)
+	debugLog(`| tableProps.autoPageCharWeight ................... = ${tableProps.autoPageCharWeight}`)
+	debugLog('|-- CALCULATIONS -------------------------------------------------------|')
+	debugLog(`| tablePropX ...................................... = ${tablePropX / EMU}`)
+	debugLog(`| tablePropY ...................................... = ${tablePropY / EMU}`)
+	debugLog(`| tablePropW ...................................... = ${tablePropW / EMU}`)
+	debugLog(`| tablePropH ...................................... = ${tablePropH / EMU}`)
+	debugLog(`| tableCalcW ...................................... = ${tablePropW / EMU}`)
+}
+
 /**
- * Takes an array of table rows and breaks into an array of slides, which contain the calculated amount of table rows that fit on that slide
- * @param {TableCell[][]} tableRows - table rows
- * @param {TableToSlidesProps} tableProps - table2slides properties
- * @param {PresLayout} presLayout - presentation layout
- * @param {SlideLayout} masterSlide - master slide
- * @return {TableRowSlide[]} array of table rows
+ * Resolve the effective top/right/bottom/left slide margins, with master margins taking precedence.
+ *
+ * Mutates `tableProps.slideMargin` to retain the existing defaulting contract.
  */
-export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps: TableToSlidesProps = {}, presLayout: PresLayout, masterSlide?: SlideLayout): TableRowSlide[] {
-	let arrInchMargins = DEF_SLIDE_MARGIN_IN
-	let emuSlideTabW = EMU * 1
-	let emuSlideTabH = EMU * 1
-	let emuTabCurrH = 0
+function getTableSlideMargins(tableProps: TableToSlidesProps, masterSlide?: SlideLayout): [number, number, number, number] {
+	let margins = DEF_SLIDE_MARGIN_IN
+
+	// Important: Use default size as zero cell margin is causing our tables to be too large and touch bottom of slide!
+	if (!tableProps.slideMargin && tableProps.slideMargin !== 0) tableProps.slideMargin = DEF_SLIDE_MARGIN_IN[0]
+
+	if (masterSlide && typeof masterSlide._margin !== 'undefined') {
+		if (Array.isArray(masterSlide._margin)) margins = masterSlide._margin
+		else if (!isNaN(Number(masterSlide._margin))) margins = [Number(masterSlide._margin), Number(masterSlide._margin), Number(masterSlide._margin), Number(masterSlide._margin)]
+	} else if (tableProps.slideMargin || tableProps.slideMargin === 0) {
+		if (Array.isArray(tableProps.slideMargin)) margins = tableProps.slideMargin
+		else if (!isNaN(tableProps.slideMargin)) margins = [tableProps.slideMargin, tableProps.slideMargin, tableProps.slideMargin, tableProps.slideMargin]
+	}
+
+	if (isDebugEnabled()) debugLog(`| arrInchMargins .................................. = [${margins.join(', ')}]`)
+	return margins
+}
+
+/** Count physical table-grid columns, expanding each declared colspan. */
+function getTableColumnCount(tableRows: TableCell[][]): number {
 	let numCols = 0
-	const tableRowSlides: TableRowSlide[] = []
-	const tablePropX = getSmartParseNumber(tableProps.x, 'X', presLayout)
-	const tablePropY = getSmartParseNumber(tableProps.y, 'Y', presLayout)
-	const tablePropW = getSmartParseNumber(tableProps.w, 'X', presLayout)
-	const tablePropH = getSmartParseNumber(tableProps.h, 'Y', presLayout)
-	let tableCalcW = tablePropW
+	const firstRow = tableRows[0] || []
+	firstRow.forEach(cell => {
+		if (!cell) cell = { _type: SLIDE_OBJECT_TYPES.tablecell }
+		const cellOpts = cell.options || null
+		numCols += Number(cellOpts?.colspan ? cellOpts.colspan : 1)
+	})
+	if (isDebugEnabled()) debugLog(`| numCols ......................................... = ${numCols}`)
+	return numCols
+}
 
-	function calcSlideTabH(): void {
-		let emuStartY = 0
-		if (tableRowSlides.length === 0) emuStartY = tablePropY || inch2Emu(arrInchMargins[0])
-		if (tableRowSlides.length > 0) emuStartY = inch2Emu(tableProps.autoPageSlideStartY || tableProps.newSlideStartY || arrInchMargins[0])
-		emuSlideTabH = (tablePropH || presLayout.height) - emuStartY - inch2Emu(arrInchMargins[2])
-		// debugLog(`| startY .......................................... = ${(emuStartY / EMU).toFixed(1)}`)
-		// debugLog(`| emuSlideTabH .................................... = ${(emuSlideTabH / EMU).toFixed(1)}`)
-		if (tableRowSlides.length > 1) {
-			// D: RULE: Use margins for starting point after the initial Slide, not `opt.y` (ISSUE #43, ISSUE #47, ISSUE #48)
-			if (typeof tableProps.autoPageSlideStartY === 'number') {
-				emuSlideTabH = (tablePropH || presLayout.height) - inch2Emu(tableProps.autoPageSlideStartY + arrInchMargins[2])
-			} else if (typeof tableProps.newSlideStartY === 'number') {
-				// @deprecated v3.3.0
-				emuSlideTabH = (tablePropH || presLayout.height) - inch2Emu(tableProps.newSlideStartY + arrInchMargins[2])
-			} else if (tablePropY) {
-				emuSlideTabH = (tablePropH || presLayout.height) - inch2Emu((tablePropY / EMU < arrInchMargins[0] ? tablePropY / EMU : arrInchMargins[0]) + arrInchMargins[2])
-				// Use whichever is greater: area between margins or the table H provided (dont shrink usable area - the whole point of over-riding Y on paging is to *increase* usable space)
-				if (emuSlideTabH < tablePropH) emuSlideTabH = tablePropH
-			}
-		}
-	}
+/** Use an explicit table width or derive it from scalar/array column widths. */
+function getTableWidth(tableProps: TableToSlidesProps, tablePropW: number, numCols: number): number {
+	if (tablePropW || !tableProps.colW) return tablePropW
+	const tableCalcW = Array.isArray(tableProps.colW) ? tableProps.colW.reduce((p, n) => p + n) * EMU : tableProps.colW * numCols || 0
+	if (isDebugEnabled()) debugLog(`| tableCalcW ...................................... = ${tableCalcW / EMU}`)
+	return tableCalcW
+}
 
-	if (isDebugEnabled()) {
-		debugLog('[[VERBOSE MODE]]')
-		debugLog('|-- TABLE PROPS --------------------------------------------------------|')
-		debugLog(`| presLayout.width ................................ = ${(presLayout.width / EMU).toFixed(1)}`)
-		debugLog(`| presLayout.height ............................... = ${(presLayout.height / EMU).toFixed(1)}`)
-		debugLog(`| tableProps.x .................................... = ${typeof tableProps.x === 'number' ? (tableProps.x / EMU).toFixed(1) : tableProps.x}`)
-		debugLog(`| tableProps.y .................................... = ${typeof tableProps.y === 'number' ? (tableProps.y / EMU).toFixed(1) : tableProps.y}`)
-		debugLog(`| tableProps.w .................................... = ${typeof tableProps.w === 'number' ? (tableProps.w / EMU).toFixed(1) : tableProps.w}`)
-		debugLog(`| tableProps.h .................................... = ${typeof tableProps.h === 'number' ? (tableProps.h / EMU).toFixed(1) : tableProps.h}`)
-		debugLog(`| tableProps.slideMargin .......................... = ${tableProps.slideMargin ? String(tableProps.slideMargin) : ''}`)
-		debugLog(`| tableProps.margin ............................... = ${String(tableProps.margin)}`)
-		debugLog(`| tableProps.colW ................................. = ${String(tableProps.colW)}`)
-		debugLog(`| tableProps.autoPageSlideStartY .................. = ${tableProps.autoPageSlideStartY}`)
-		debugLog(`| tableProps.autoPageCharWeight ................... = ${tableProps.autoPageCharWeight}`)
-		debugLog('|-- CALCULATIONS -------------------------------------------------------|')
-		debugLog(`| tablePropX ...................................... = ${tablePropX / EMU}`)
-		debugLog(`| tablePropY ...................................... = ${tablePropY / EMU}`)
-		debugLog(`| tablePropW ...................................... = ${tablePropW / EMU}`)
-		debugLog(`| tablePropH ...................................... = ${tablePropH / EMU}`)
-		debugLog(`| tableCalcW ...................................... = ${tableCalcW / EMU}`)
-	}
+/** Calculate the available table width in EMUs after the horizontal positioning rule. */
+function getUsableTableWidth(tableCalcW: number, tablePropX: number, margins: [number, number, number, number]): number {
+	const width = tableCalcW || inch2Emu((tablePropX ? tablePropX / EMU : margins[1]) + margins[3])
+	if (isDebugEnabled()) debugLog(`| emuSlideTabW .................................... = ${(width / EMU).toFixed(1)}`)
+	return width
+}
 
-	// STEP 1: Calculate margins
-	{
-		// Important: Use default size as zero cell margin is causing our tables to be too large and touch bottom of slide!
-		if (!tableProps.slideMargin && tableProps.slideMargin !== 0) tableProps.slideMargin = DEF_SLIDE_MARGIN_IN[0]
+/**
+ * Materialize a width for every column when callers did not supply an array.
+ *
+ * This deliberately mutates `tableProps.colW`: line wrapping later in the same flow consumes the normalized array.
+ */
+function ensureTableColumnWidths(tableRows: TableCell[][], tableProps: TableToSlidesProps, numCols: number, emuSlideTabW: number): void {
+	if (tableProps.colW && Array.isArray(tableProps.colW)) return
 
-		if (masterSlide && typeof masterSlide._margin !== 'undefined') {
-			if (Array.isArray(masterSlide._margin)) arrInchMargins = masterSlide._margin
-			else if (!isNaN(Number(masterSlide._margin))) { arrInchMargins = [Number(masterSlide._margin), Number(masterSlide._margin), Number(masterSlide._margin), Number(masterSlide._margin)] }
-		} else if (tableProps.slideMargin || tableProps.slideMargin === 0) {
-			if (Array.isArray(tableProps.slideMargin)) arrInchMargins = tableProps.slideMargin
-			else if (!isNaN(tableProps.slideMargin)) arrInchMargins = [tableProps.slideMargin, tableProps.slideMargin, tableProps.slideMargin, tableProps.slideMargin]
-		}
-
-		if (isDebugEnabled()) debugLog(`| arrInchMargins .................................. = [${arrInchMargins.join(', ')}]`)
-	}
-
-	// STEP 2: Calculate number of columns
-	{
-		// NOTE: Cells may have a colspan, so merely taking the length of the [0] (or any other) row is not
-		// ....: sufficient to determine column count. Therefore, check each cell for a colspan and total cols as reqd
+	if (tableProps.colW && !isNaN(Number(tableProps.colW))) {
+		const arrColW: number[] = []
 		const firstRow = tableRows[0] || []
-		firstRow.forEach(cell => {
-			if (!cell) cell = { _type: SLIDE_OBJECT_TYPES.tablecell }
-			const cellOpts = cell.options || null
-			numCols += Number(cellOpts?.colspan ? cellOpts.colspan : 1)
+		firstRow.forEach(() => arrColW.push(Number(tableProps.colW)))
+		tableProps.colW = []
+		arrColW.forEach(val => {
+			if (Array.isArray(tableProps.colW)) tableProps.colW.push(val)
 		})
-		if (isDebugEnabled()) debugLog(`| numCols ......................................... = ${numCols}`)
+	} else {
+		tableProps.colW = []
+		for (let iCol = 0; iCol < numCols; iCol++) tableProps.colW.push(emuSlideTabW / EMU / numCols)
 	}
+}
 
-	// STEP 3: Calculate width using tableProps.colW if possible
-	if (!tablePropW && tableProps.colW) {
-		tableCalcW = Array.isArray(tableProps.colW) ? tableProps.colW.reduce((p, n) => p + n) * EMU : tableProps.colW * numCols || 0
-		if (isDebugEnabled()) debugLog(`| tableCalcW ...................................... = ${tableCalcW / EMU}`)
-	}
+/**
+ * Compute the usable vertical table space for the current page.
+ * Continuation pages use their configured start position and must not shrink below an explicit table height.
+ */
+function getAvailableTableHeight(
+	tableProps: TableToSlidesProps,
+	presLayout: PresLayout,
+	margins: [number, number, number, number],
+	tablePropY: number,
+	tablePropH: number,
+	slideCount: number
+): number {
+	let emuStartY = 0
+	if (slideCount === 0) emuStartY = tablePropY || inch2Emu(margins[0])
+	if (slideCount > 0) emuStartY = inch2Emu(tableProps.autoPageSlideStartY || tableProps.newSlideStartY || margins[0])
+	let height = (tablePropH || presLayout.height) - emuStartY - inch2Emu(margins[2])
 
-	// STEP 4: Calculate usable width now that total usable space is known (`emuSlideTabW`)
-	{
-		emuSlideTabW = tableCalcW || inch2Emu((tablePropX ? tablePropX / EMU : arrInchMargins[1]) + arrInchMargins[3])
-		if (isDebugEnabled()) debugLog(`| emuSlideTabW .................................... = ${(emuSlideTabW / EMU).toFixed(1)}`)
-	}
-
-	// STEP 5: Calculate column widths if not provided (emuSlideTabW will be used below to determine lines-per-col)
-	if (!tableProps.colW || !Array.isArray(tableProps.colW)) {
-		if (tableProps.colW && !isNaN(Number(tableProps.colW))) {
-			const arrColW: number[] = []
-			const firstRow = tableRows[0] || []
-			firstRow.forEach(() => arrColW.push(Number(tableProps.colW)))
-			tableProps.colW = []
-			arrColW.forEach(val => {
-				if (Array.isArray(tableProps.colW)) tableProps.colW.push(val)
-			})
-		} else {
-			// No column widths provided? Then distribute cols.
-			tableProps.colW = []
-			for (let iCol = 0; iCol < numCols; iCol++) {
-				tableProps.colW.push(emuSlideTabW / EMU / numCols)
-			}
+	if (slideCount > 1) {
+		if (typeof tableProps.autoPageSlideStartY === 'number') {
+			height = (tablePropH || presLayout.height) - inch2Emu(tableProps.autoPageSlideStartY + margins[2])
+		} else if (typeof tableProps.newSlideStartY === 'number') {
+			height = (tablePropH || presLayout.height) - inch2Emu(tableProps.newSlideStartY + margins[2])
+		} else if (tablePropY) {
+			height = (tablePropH || presLayout.height) - inch2Emu((tablePropY / EMU < margins[0] ? tablePropY / EMU : margins[0]) + margins[2])
+			if (height < tablePropH) height = tablePropH
 		}
 	}
+	return height
+}
 
-	// STEP 6: **MAIN** Iterate over rows, add table content, create new slides as rows overflow
+/**
+ * Wrap rows into page-sized `TableRowSlide` models while preserving cell margins, rowspans, and repeated headers.
+ *
+ * `tableProps` and cell options retain their historic normalization mutations; the result is later rendered as table XML.
+ */
+function paginateTableRows(
+	tableRows: TableCell[][],
+	tableProps: TableToSlidesProps,
+	presLayout: PresLayout,
+	margins: [number, number, number, number],
+	tablePropY: number,
+	tablePropH: number
+): TableRowSlide[] {
+	const tableRowSlides: TableRowSlide[] = []
 	let newTableRowSlide: TableRowSlide = { rows: [] }
+	let emuTabCurrH = 0
+
 	tableRows.forEach((row, iRow) => {
-		// A: Row variables
 		const rowCellLines: TableCell[] = []
 		let maxCellMarTopEmu = 0
 		let maxCellMarBtmEmu = 0
-
-		// B: Create new row in data model, calc `maxCellMar*`
 		let currTableRow: TableRow = []
 		row.forEach(cell => {
-			currTableRow.push({
-				_type: SLIDE_OBJECT_TYPES.tablecell,
-				text: [],
-				options: cell.options,
-			})
+			currTableRow.push({ _type: SLIDE_OBJECT_TYPES.tablecell, text: [], options: cell.options })
 
-			/** FUTURE: DEPRECATED:
-			 * - Backwards-Compat: Oops! Discovered we were still using points for cell margin before v3.8.0 (UGH!)
-			 * - We cant introduce a breaking change before v4.0, so...
-			 */
 			if (cell.options?.margin && cell.options.margin[0] >= 1) {
 				if (cell.options?.margin && cell.options.margin[0] && valToPts(cell.options.margin[0]) > maxCellMarTopEmu) maxCellMarTopEmu = valToPts(cell.options.margin[0])
 				else if (tableProps?.margin && tableProps.margin[0] && valToPts(tableProps.margin[0]) > maxCellMarTopEmu) maxCellMarTopEmu = valToPts(tableProps.margin[0])
@@ -330,127 +336,58 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 			}
 		})
 
-		// C: Calc usable vertical space/table height. Set default value first, adjust below when necessary.
-		calcSlideTabH()
-		emuTabCurrH += maxCellMarTopEmu + maxCellMarBtmEmu // Start row height with margins
+		let emuSlideTabH = getAvailableTableHeight(tableProps, presLayout, margins, tablePropY, tablePropH, tableRowSlides.length)
+		emuTabCurrH += maxCellMarTopEmu + maxCellMarBtmEmu
 		if (isDebugEnabled() && iRow === 0) debugLog(`| SLIDE [${tableRowSlides.length}]: emuSlideTabH ...... = ${(emuSlideTabH / EMU).toFixed(1)} `)
 
-		// D: --==[[ BUILD DATA SET ]]==-- (iterate over cells: split text into lines[], set `lineHeight`)
 		row.forEach((cell, iCell) => {
 			const newCell: TableCell = {
 				_type: SLIDE_OBJECT_TYPES.tablecell,
 				_lines: undefined,
-				_lineHeight: inch2Emu(
-					((cell.options?.fontSize ? cell.options.fontSize : tableProps.fontSize ? tableProps.fontSize : DEF_FONT_SIZE) *
-						(LINEH_MODIFIER + (tableProps.autoPageLineWeight ? tableProps.autoPageLineWeight : 0))) /
-					100
-				),
+				_lineHeight: inch2Emu(((cell.options?.fontSize ? cell.options.fontSize : tableProps.fontSize ? tableProps.fontSize : DEF_FONT_SIZE) * (LINEH_MODIFIER + (tableProps.autoPageLineWeight ? tableProps.autoPageLineWeight : 0))) / 100),
 				text: [],
 				options: cell.options,
 			}
-
-			// E-1: Exempt cells with `rowspan` from increasing lineHeight (or we could create a new slide when unecessary!)
 			if (newCell.options?.rowspan) newCell._lineHeight = 0
+			if (newCell.options) newCell.options.autoPageCharWeight = tableProps.autoPageCharWeight ? tableProps.autoPageCharWeight : undefined
 
-			// E-2: The parseTextToLines method uses `autoPageCharWeight`, so inherit from table options
-			if (newCell.options) newCell.options.autoPageCharWeight = tableProps.autoPageCharWeight ? tableProps.autoPageCharWeight : (undefined)
-
-			// E-3: **MAIN** Parse cell contents into lines based upon col width, font, etc
 			let totalColW = Array.isArray(tableProps.colW) ? tableProps.colW[iCell] : tableProps.colW ?? 0
 			if (cell.options?.colspan && Array.isArray(tableProps.colW)) {
 				const colspan = cell.options.colspan
 				totalColW = tableProps.colW.filter((_cell, idx) => idx >= iCell && idx < idx + colspan).reduce((prev, curr) => prev + curr)
 			}
-
-			// E-4: Create lines based upon available column width
 			newCell._lines = parseTextToLines(cell, totalColW)
-
-			// E-5: Add cell to array
 			rowCellLines.push(newCell)
 		})
 
-		/** E: --==[[ PAGE DATA SET ]]==--
-		 * Add text one-line-a-time to this row's cells until: lines are exhausted OR table height limit is hit
-		 *
-		 * Design:
-		 * - Building cells L-to-R/loop style wont work as one could be 100 lines and another 1 line
-		 * - Therefore, build the whole row, one-line-at-a-time, across each table columns
-		 * - Then, when the vertical size limit is hit is by any of the cells, make a new slide and continue adding any remaining lines
-		 *
-		 * Implementation:
-		 * - `rowCellLines` is an array of cells, one for each column in the table, with each cell containing an array of lines
-		 *
-		 * Sample Data:
-		 * - `rowCellLines` ..: [ TableCell, TableCell, TableCell ]
-		 * - `TableCell` .....: { _type: 'tablecell', _lines: TableCell[], _lineHeight: 10 }
-		 * - `_lines` ........: [ {_type: 'tablecell', text: 'cell-1,line-1', options: {…}}, {_type: 'tablecell', text: 'cell-1,line-2', options: {…}} }
-		 * - `_lines` is TableCell[] (the 1-N words in the line)
-		 * {
-		 *    _lines: [{ text:'cell-1,line-1' }, { text:'cell-1,line-2' }],                                                     // TOTAL-CELL-HEIGHT = 2
-		 *    _lines: [{ text:'cell-2,line-1' }, { text:'cell-2,line-2' }],                                                     // TOTAL-CELL-HEIGHT = 2
-		 *    _lines: [{ text:'cell-3,line-1' }, { text:'cell-3,line-2' }, { text:'cell-3,line-3' }, { text:'cell-3,line-4' }], // TOTAL-CELL-HEIGHT = 4
-		 * }
-		 *
-		 * Example: 2 rows, with the firstrow overflowing onto a new slide
-		 * SLIDE 1:
-		 *  |--------|--------|--------|--------|
-		 *  | line-1 | line-1 | line-1 | line-1 |
-		 *  |        |        | line-2 |        |
-		 *  |        |        | line-3 |        |
-		 *  |--------|--------|--------|--------|
-		 *
-		 * SLIDE 2:
-		 *  |--------|--------|--------|--------|
-		 *  |        |        | line-4 |        |
-		 *  |--------|--------|--------|--------|
-		 *  | line-1 | line-1 | line-1 | line-1 |
-		 *  |--------|--------|--------|--------|
-		 */
 		if (isDebugEnabled()) debugLog(`\n| SLIDE [${tableRowSlides.length}]: ROW [${iRow}]: START...`)
 		let currCellIdx = 0
 		let emuLineMaxH = 0
 		let isDone = false
 		while (!isDone) {
 			const srcCell: TableCell = rowCellLines[currCellIdx]
-			let tgtCell: TableCell = currTableRow[currCellIdx] // NOTE: may be redefined below (a new row may be created, thus changing this value)
+			let tgtCell: TableCell = currTableRow[currCellIdx]
 
-			// 1: calc emuLineMaxH
 			rowCellLines.forEach(cell => {
 				const lh = cell._lineHeight ?? 0
 				if (lh >= emuLineMaxH) emuLineMaxH = lh
 			})
 
-			// 2: create a new slide if there is insufficient room for the current row
 			if (emuTabCurrH + emuLineMaxH > emuSlideTabH) {
 				if (isDebugEnabled()) {
 					debugLog('\n|-----------------------------------------------------------------------|')
-					// prettier-ignore
 					debugLog(`|-- NEW SLIDE CREATED (currTabH+currLineH > maxH) => ${(emuTabCurrH / EMU).toFixed(2)} + ${((srcCell._lineHeight ?? 0) / EMU).toFixed(2)} > ${emuSlideTabH / EMU}`)
 					debugLog('|-----------------------------------------------------------------------|\n\n')
 				}
-
-				// A: add current row slide or it will be lost (only if it has rows and text)
 				if (currTableRow.length > 0 && currTableRow.map(cell => cell.text?.length ?? 0).reduce((p, n) => p + n) > 0) newTableRowSlide.rows.push(currTableRow)
-
-				// B: add current slide to Slides array
 				tableRowSlides.push(newTableRowSlide)
-
-				// C: reset working/curr slide to hold rows as they're created
-				const newRows: TableRow[] = []
-				newTableRowSlide = { rows: newRows }
-
-				// D: reset working/curr row
+				newTableRowSlide = { rows: [] }
 				currTableRow = []
 				row.forEach(cell => currTableRow.push({ _type: SLIDE_OBJECT_TYPES.tablecell, text: [], options: cell.options }))
-
-				// E: Calc usable vertical space/table height now as we may still be in the same row and code above ("C: Calc usable vertical space/table height.") calc may now be invalid
-				calcSlideTabH()
+				emuSlideTabH = getAvailableTableHeight(tableProps, presLayout, margins, tablePropY, tablePropH, tableRowSlides.length)
 				if (isDebugEnabled()) debugLog(`| SLIDE [${tableRowSlides.length}]: emuSlideTabH ...... = ${(emuSlideTabH / EMU).toFixed(1)} `)
-
-				// F: reset current table height for this new Slide, starting the row off with its cell margins
 				emuTabCurrH = maxCellMarTopEmu + maxCellMarBtmEmu
 
-				// G: handle repeat headers option /or/ Add new empty row to continue current lines into
 				if ((tableProps.addHeaderToEach || tableProps.autoPageRepeatHeader) && tableProps._arrObjTabHeadRows) {
 					tableProps._arrObjTabHeadRows.forEach(row => {
 						const newHeadRow: TableRow = []
@@ -461,57 +398,59 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 							if (lh > maxLineHeight) maxLineHeight = lh
 						})
 						newTableRowSlide.rows.push(newHeadRow)
-						emuTabCurrH += maxLineHeight + maxCellMarTopEmu + maxCellMarBtmEmu // repeated header rows carry cell margins too
+						emuTabCurrH += maxLineHeight + maxCellMarTopEmu + maxCellMarBtmEmu
 					})
 				}
-
 				tgtCell = currTableRow[currCellIdx]
 			}
 
-			// 3: set array of words that comprise this line
 			const currLine = srcCell._lines?.shift()
-
-			// 4: create new line by adding all words from curr line (or add empty if there are no words to avoid "needs repair" issue triggered when cells have null content)
 			if (Array.isArray(tgtCell.text)) {
 				if (currLine) tgtCell.text = tgtCell.text.concat(currLine)
 				else if (tgtCell.text.length === 0) tgtCell.text = tgtCell.text.concat({ _type: SLIDE_OBJECT_TYPES.tablecell, text: '' })
-				// IMPORTANT: ^^^ add empty if there are no words to avoid "needs repair" issue triggered when cells have null content
 			}
-
-			// 5: increase table height by the curr line height (if we're on the last column)
 			if (currCellIdx === rowCellLines.length - 1) emuTabCurrH += emuLineMaxH
-
-			// 6: advance column/cell index (or circle back to first one to continue adding lines)
 			currCellIdx = currCellIdx < rowCellLines.length - 1 ? currCellIdx + 1 : 0
-
-			// 7: WIP: done?
-			const brent = rowCellLines.map(cell => cell._lines?.length ?? 0).reduce((prev, next) => prev + next)
-			if (brent === 0) isDone = true
+			if (rowCellLines.map(cell => cell._lines?.length ?? 0).reduce((prev, next) => prev + next) === 0) isDone = true
 		}
 
-		// F: Flush/capture row buffer before it resets at the top of this loop
 		if (currTableRow.length > 0) newTableRowSlide.rows.push(currTableRow)
-
-		if (isDebugEnabled()) {
-			debugLog(
-				`- SLIDE [${tableRowSlides.length}]: ROW [${iRow}]: ...COMPLETE ...... emuTabCurrH = ${(emuTabCurrH / EMU).toFixed(2)} ( emuSlideTabH = ${(
-					emuSlideTabH / EMU
-				).toFixed(2)} )`
-			)
-		}
+		if (isDebugEnabled()) debugLog(`- SLIDE [${tableRowSlides.length}]: ROW [${iRow}]: ...COMPLETE ...... emuTabCurrH = ${(emuTabCurrH / EMU).toFixed(2)} ( emuSlideTabH = ${(emuSlideTabH / EMU).toFixed(2)} )`)
 	})
 
-	// STEP 7: Flush buffer / add final slide
 	tableRowSlides.push(newTableRowSlide)
+	return tableRowSlides
+}
 
+/**
+ * Takes an array of table rows and breaks into an array of slides, which contain the calculated amount of table rows that fit on that slide
+ * @param {TableCell[][]} tableRows - table rows
+ * @param {TableToSlidesProps} tableProps - table2slides properties
+ * @param {PresLayout} presLayout - presentation layout
+ * @param {SlideLayout} masterSlide - master slide
+ * @return {TableRowSlide[]} array of table rows
+ */
+export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps: TableToSlidesProps = {}, presLayout: PresLayout, masterSlide?: SlideLayout): TableRowSlide[] {
+	const tablePropX = getSmartParseNumber(tableProps.x, 'X', presLayout)
+	const tablePropY = getSmartParseNumber(tableProps.y, 'Y', presLayout)
+	const tablePropW = getSmartParseNumber(tableProps.w, 'X', presLayout)
+	const tablePropH = getSmartParseNumber(tableProps.h, 'Y', presLayout)
+
+	logTablePaginationInputs(tableProps, presLayout, tablePropX, tablePropY, tablePropW, tablePropH)
+
+	const margins = getTableSlideMargins(tableProps, masterSlide)
+	const numCols = getTableColumnCount(tableRows)
+	const tableCalcW = getTableWidth(tableProps, tablePropW, numCols)
+	const emuSlideTabW = getUsableTableWidth(tableCalcW, tablePropX, margins)
+	ensureTableColumnWidths(tableRows, tableProps, numCols, emuSlideTabW)
+
+	const tableRowSlides = paginateTableRows(tableRows, tableProps, presLayout, margins, tablePropY, tablePropH)
 	if (isDebugEnabled()) {
 		debugLog('\n|================================================|')
 		debugLog(`| FINAL: tableRowSlides.length = ${tableRowSlides.length}`)
 		tableRowSlides.forEach(slide => debugLog(slide))
 		debugLog('|================================================|\n\n')
 	}
-
-	// LAST:
 	return tableRowSlides
 }
 
