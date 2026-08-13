@@ -8,6 +8,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import JSZip from 'jszip'
 import pptxgen from '../src/pptxgen'
+import { genTableToSlides } from '../src/gen-tables'
 
 /** 4x2 px PNG - non-square on purpose, so a 1x1 inch default is obvious */
 const PNG_4x2 = 'image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAACCAIAAADwyuo0AAAADklEQVR4nGP4jwQYkDkANvEX6SAXxcIAAAAASUVORK5CYII='
@@ -225,6 +226,45 @@ test('#29: BorderProps accepts `width` (points) alongside the deprecated `pt`', 
 
 	assert.equal(await cellXml({ color: 'FF0000', width: 3 }), await cellXml({ color: 'FF0000', pt: 3 }), '`width` and `pt` produced different borders')
 	assert.ok((await cellXml({ color: 'FF0000', width: 3 })).includes('w="38100"'), '3pt border not emitted')
+})
+
+test('#1235: HTML table conversion preserves fractional border widths', async () => {
+	class Cell {
+		innerText = 'A'
+		offsetWidth = 100
+		getAttribute (): null { return null }
+	}
+	class Row {
+		cells = [new Cell()]
+	}
+	const cell = new Cell()
+	const row = new Row()
+	const globals = globalThis as unknown as Record<string, unknown>
+	const original = Object.fromEntries(['document', 'window', 'HTMLTableCellElement', 'HTMLTableRowElement'].map(key => [key, globals[key]]))
+	const styles: Record<string, string> = {
+		'background-color': 'rgba(0, 0, 0, 0)', 'border-bottom-color': 'rgb(0, 0, 0)', 'border-bottom-width': '0px',
+		'border-left-color': 'rgb(0, 0, 0)', 'border-left-width': '0.25px', 'border-right-color': 'rgb(0, 0, 0)', 'border-right-width': '0px',
+		'border-top-color': 'rgb(0, 0, 0)', 'border-top-width': '0px', color: 'rgb(0, 0, 0)', 'font-family': 'Arial', 'font-size': '12px',
+		'font-weight': 'normal', 'padding-bottom': '0px', 'padding-left': '0px', 'padding-right': '0px', 'padding-top': '0px', 'text-align': 'left', 'vertical-align': 'top',
+	}
+	Object.assign(globals, {
+		document: {
+			getElementById: () => ({}),
+			querySelector: () => null,
+			querySelectorAll: (selector: string) => selector === '#table tr:first-child td' ? [cell] : selector === '#table tbody tr' ? [row] : [],
+		},
+		window: { getComputedStyle: () => ({ getPropertyValue: (name: string) => styles[name] ?? '' }) },
+		HTMLTableCellElement: Cell,
+		HTMLTableRowElement: Row,
+	})
+
+	try {
+		const pptx = new pptxgen()
+		genTableToSlides(pptx, 'table', { w: 4 })
+		assert.ok((await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')).includes('<a:lnL w="3175"'), 'fractional CSS border was rounded')
+	} finally {
+		Object.assign(globals, original)
+	}
 })
 
 test('#29: defineLayout accepts `w`/`h` as aliases of `width`/`height`', () => {
