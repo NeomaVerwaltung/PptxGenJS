@@ -8,8 +8,8 @@ import { makeXmlCharts } from './xml'
 import { getExcelColName } from './utils'
 
 function getDataTableStyles (chartObject: ISlideRelChart): { customFormats: string[]; dataStyleIds: number[] } {
-	const dataTableFormats = Array.isArray(chartObject.opts._type)
-		? chartObject.opts._type.flatMap(type => Array(type.data.length).fill(type.options?.dataTableFormatCode ?? chartObject.opts.dataTableFormatCode))
+	const dataTableFormats: (string | undefined)[] = Array.isArray(chartObject.opts._type)
+		? chartObject.opts._type.flatMap(type => Array<string | undefined>(type.data.length).fill(type.options?.dataTableFormatCode ?? chartObject.opts.dataTableFormatCode))
 		: chartObject.data.map(() => chartObject.opts.dataTableFormatCode)
 	const customFormats = [...new Set(dataTableFormats.filter((format): format is string => !!format))]
 	return { customFormats, dataStyleIds: dataTableFormats.map(format => format ? customFormats.indexOf(format) + 1 : 0) }
