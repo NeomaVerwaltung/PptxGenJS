@@ -119,6 +119,19 @@ test('#38: multi-level category chart writes a coherent worksheet', async () => 
 	assert.ok(sheet.includes('<mergeCell ref="A2:A4"/>') && sheet.includes('<mergeCell ref="A5:A7"/>'), 'outer label rows were not merged')
 })
 
+test('#1466: flat categories use strRef while multi-level categories keep multiLvlStrRef', async () => {
+	const flat = new pptxgen()
+	flat.addSlide().addChart(flat.ChartType.bar, [{ name: 'Sales', labels: ['Q1', 'Q2'], values: [10, 20] }], { x: 1, y: 1, w: 6, h: 4 })
+	const flatChart = await readChart(await writeZip(flat))
+	assert.match(flatChart, /<c:cat>\s*<c:strRef>/, 'flat categories were not written as strRef')
+	assert.doesNotMatch(flatChart, /<c:multiLvlStrRef>/, 'flat categories used a multi-level reference')
+
+	const multiLevel = new pptxgen()
+	multiLevel.addSlide().addChart(multiLevel.ChartType.bar, [{ name: 'Sales', labels: [['Q1', 'Q2'], ['2026', '']], values: [10, 20] }], { x: 1, y: 1, w: 6, h: 4 })
+	const multiLevelChart = await readChart(await writeZip(multiLevel))
+	assert.match(multiLevelChart, /<c:cat>\s*<c:multiLvlStrRef>/, 'multi-level categories no longer use multiLvlStrRef')
+})
+
 test('#25: multi-type chart honors the options argument', async () => {
 	const pptx = new pptxgen()
 	pptx.addSlide().addChart(

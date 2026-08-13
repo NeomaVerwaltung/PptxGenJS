@@ -464,6 +464,14 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 						objLabels[0].forEach((label, idx) => (strXml += `<c:pt idx="${idx}"><c:v>${encodeXmlEntities(label)}</c:v></c:pt>`))
 						strXml += '    </c:numCache>'
 						strXml += '  </c:numRef>'
+					} else if (objLabels.length === 1) {
+						strXml += '  <c:strRef>'
+						strXml += `    <c:f>Sheet1!$A$2:$A$${objLabels[0].length + 1}</c:f>`
+						strXml += '    <c:strCache>'
+						strXml += `      <c:ptCount val="${objLabels[0].length}"/>`
+						objLabels[0].forEach((label, idx) => (strXml += `<c:pt idx="${idx}"><c:v>${encodeXmlEntities(label)}</c:v></c:pt>`))
+						strXml += '    </c:strCache>'
+						strXml += '  </c:strRef>'
 					} else {
 						strXml += '  <c:multiLvlStrRef>'
 						strXml += `    <c:f>Sheet1!$A$2:$${getExcelColName(objLabels.length)}$${objLabels[0].length + 1}</c:f>`
