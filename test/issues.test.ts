@@ -141,6 +141,16 @@ test('#26: serAxisLabelPos is honored', async () => {
 	assert.ok(chart.includes('val="high"'), 'serAxisLabelPos was ignored')
 })
 
+test('#976: scatter charts honor catAxisLabelPos', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addChart(pptx.ChartType.scatter, [
+		{ name: 'X', values: [1, 2] },
+		{ name: 'Y', values: [3, 4] },
+	], { x: 1, y: 1, w: 4, h: 3, catAxisLabelPos: 'low' })
+
+	assert.ok((await readChart(await writeZip(pptx))).includes('<c:tickLblPos val="low"/>'), 'scatter category-axis label position was ignored')
+})
+
 test('#34: image without w/h is sized from the image itself', async () => {
 	const pptx = new pptxgen()
 	pptx.addSlide().addImage({ data: PNG_4x2, x: 1, y: 1 })

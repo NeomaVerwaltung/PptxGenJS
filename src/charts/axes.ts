@@ -46,7 +46,7 @@ export function makeCatAxis (opts: IChartOptsLib, axisId: string, valAxisId: str
 	if (opts._type === CHART_TYPE.SCATTER) {
 		strXml += '  <c:majorTickMark val="none"/>'
 		strXml += '  <c:minorTickMark val="none"/>'
-		strXml += '  <c:tickLblPos val="nextTo"/>'
+		strXml += '  <c:tickLblPos val="' + (opts.catAxisLabelPos || 'nextTo') + '"/>'
 	} else {
 		strXml += '  <c:majorTickMark val="' + (opts.catAxisMajorTickMark || 'out') + '"/>'
 		strXml += '  <c:minorTickMark val="' + (opts.catAxisMinorTickMark || 'none') + '"/>'
@@ -281,4 +281,3 @@ export function makeSerAxis (opts: IChartOptsLib, axisId: string, valAxisId: str
  * @param {IChartPropsTitle} opts - options
  * @return {string} XML `<c:title>`
  */
-
