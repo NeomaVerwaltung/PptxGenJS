@@ -131,6 +131,16 @@ test('#25: multi-type chart honors the options argument', async () => {
 	assert.ok(chart.includes('<c:legend>'), 'options argument was discarded')
 })
 
+test('#1188: pie chart titles support italic text', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addChart(pptx.ChartType.pie, [{ name: 'Sales', labels: ['Q1'], values: [1] }], {
+		x: 1, y: 1, w: 4, h: 3, showTitle: true, title: 'Sales', titleItalic: true,
+	})
+
+	const title = (await readChart(await writeZip(pptx))).match(/<c:title>[\s\S]*?<\/c:title>/)?.[0] ?? ''
+	assert.match(title, /<a:rPr[^>]* i="1"/, 'pie title italic was not emitted')
+})
+
 test('#26: serAxisLabelPos is honored', async () => {
 	const pptx = new pptxgen()
 	pptx.addSlide().addChart(pptx.ChartType.bar3d, [{ name: 'Sales', labels: ['Q1', 'Q2'], values: [1, 2] }], {

@@ -9,6 +9,7 @@ export function genXmlTitle (opts: IChartPropsTitle, chartX?: number, chartY?: n
 	const rotate = opts.titleRotate ? `<a:bodyPr rot="${convertRotationDegrees(opts.titleRotate)}"/>` : '<a:bodyPr/>' // don't specify rotation to get default (ex. vertical for cat axis)
 	const sizeAttr = opts.fontSize ? `sz="${Math.round(opts.fontSize * 100)}"` : '' // only set the font size if specified.  Powerpoint will handle the default size
 	const titleBold = opts.titleBold ? 1 : 0
+	const titleItalic = opts.titleItalic ? 1 : 0
 
 	let layout = '<c:layout/>'
 	if (opts.titlePos && typeof opts.titlePos.x === 'number' && typeof opts.titlePos.y === 'number') {
@@ -31,13 +32,13 @@ export function genXmlTitle (opts: IChartPropsTitle, chartX?: number, chartY?: n
           <a:lstStyle/>
           <a:p>
             ${align}
-            <a:defRPr ${sizeAttr} b="${titleBold}" i="0" u="none" strike="noStrike">
+			<a:defRPr ${sizeAttr} b="${titleBold}" i="${titleItalic}" u="none" strike="noStrike">
               <a:solidFill>${createColorElement(opts.color || DEF_FONT_COLOR)}</a:solidFill>
               <a:latin typeface="${opts.fontFace || 'Arial'}"/>
             </a:defRPr>
           </a:pPr>
           <a:r>
-            <a:rPr ${sizeAttr} b="${titleBold}" i="0" u="none" strike="noStrike">
+			<a:rPr ${sizeAttr} b="${titleBold}" i="${titleItalic}" u="none" strike="noStrike">
               <a:solidFill>${createColorElement(opts.color || DEF_FONT_COLOR)}</a:solidFill>
               <a:latin typeface="${opts.fontFace || 'Arial'}"/>
             </a:rPr>
@@ -58,4 +59,3 @@ export function genXmlTitle (opts: IChartPropsTitle, chartX?: number, chartY?: n
  * @example 1 returns 'A'
  * @example 27 returns 'AA'
  */
-

@@ -1669,6 +1669,7 @@ export interface IChartPropsTitle extends TextBaseProps {
 	titleColor?: string
 	titleFontFace?: string
 	titleFontSize?: number
+	titleItalic?: boolean
 	titlePos?: { x: number, y: number }
 	titleRotate?: number
 }
