@@ -25,7 +25,7 @@ jobs:
       # dist/ is not committed (issue #16) - `npm ci` builds it via `prepare`. Verify before publishing,
       # so an incomplete build fails the job instead of shipping to npm and then failing on the upload.
       - name: Verify built dist files exist
-        run: ls -l dist/pptxgen.bundle.js dist/pptxgen.min.js dist/pptxgen.cjs.js dist/pptxgen.es.js
+        run: ls -l dist/*
       - name: Verify tag matches package.json version
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
@@ -37,7 +37,7 @@ jobs:
       - name: Upload built bundles to the release
         run: >
           gh release upload "$RELEASE_TAG"
-          dist/pptxgen.bundle.js dist/pptxgen.min.js dist/pptxgen.cjs.js dist/pptxgen.es.js
+          dist/*
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
           GITHUB_TOKEN: ${{ github.token }}

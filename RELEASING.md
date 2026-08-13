@@ -15,7 +15,7 @@ Follow the standard preparation below, then create and publish a **pre-release**
 5. Consolidate new type changes from `src/bld/*.ts` into `types/index.d.ts` and update the version in the header comment.
 6. Inspect the headers of the generated `dist/*.js` files.
 
-> `dist/` is not committed. When a GitHub Release is published, the release workflow rebuilds it (`npm ci` runs `prepare`), publishes the package to npm, and attaches `pptxgen.bundle.js`, `pptxgen.min.js`, `pptxgen.cjs.js` and `pptxgen.es.js` to that release.
+> `dist/` is not committed. When a GitHub Release is published, the release workflow rebuilds it (`npm ci` runs `prepare`), publishes the package to npm, and attaches every generated static asset in `dist/` to that release.
 
 ## Pre-release testing
 
