@@ -82,6 +82,18 @@ test('#18: slide master name is XML-escaped', async () => {
 	assert.ok(!/name="[^"]*&(?!amp;|quot;|lt;|gt;|apos;)/.test(xml), 'unescaped entity in cSld name')
 })
 
+test('#1443: notes master has no placeholder shapes PowerPoint repairs away', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addNotes('Speaker notes')
+
+	const zip = await writeZip(pptx)
+	const notesMaster = await readPart(zip, 'ppt/notesMasters/notesMaster1.xml')
+	const notesSlide = await readPart(zip, 'ppt/notesSlides/notesSlide1.xml')
+	assert.doesNotMatch(notesMaster, /<p:sp>/, 'notes master contains invalid placeholder shapes')
+	assert.match(notesMaster, /<p:spTree>[\s\S]*<\/p:spTree>/, 'notes master is missing its shape tree')
+	assert.match(notesSlide, /Speaker notes/, 'speaker notes were not preserved')
+})
+
 test('#21/#23: bubble chart workbook keeps zeros and has a valid table ref', async () => {
 	const pptx = new pptxgen()
 	const slide = pptx.addSlide()
