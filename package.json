@@ -37,7 +37,7 @@
 		"ship": "gulp ship",
 		"watch": "rollup -cw",
 		"docs:dev": "vitepress dev docs",
-		"docs:build": "vitepress build docs",
+		"docs:build": "vitepress build docs && node scripts/make-docs-portable.mjs",
 		"docs:preview": "vitepress preview docs",
 		"lint": "eslint src test",
 		"typecheck": "tsc --noEmit",
