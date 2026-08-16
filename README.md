@@ -83,6 +83,6 @@ PowerPoint shape definitions and portions of the XML generation are derived from
 
 ## License
 
-Copyright &copy; 2015-present [Brent Ely](https://github.com/gitbrent/), &copy; 2026-present [NEOMA GmbH](https://neo-ma.de)
+Copyright &copy; 2015-2022 [Brent Ely](https://github.com/gitbrent/), &copy; 2026-present [NEOMA GmbH](https://neo-ma.de)
 
 Licensed under the [MIT License](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/LICENSE).
