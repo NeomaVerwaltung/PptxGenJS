@@ -218,6 +218,16 @@ test('#1188: pie chart titles support italic text', async () => {
 	assert.match(title, /<a:rPr[^>]* i="1"/, 'pie title italic was not emitted')
 })
 
+test('#1245: scatter axis can cross at zero', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addChart(pptx.ChartType.scatter, [
+		{ name: 'X', values: [0, 1] },
+		{ name: 'Y', values: [90, 80] },
+	], { x: 1, y: 1, w: 4, h: 3, valAxisCrossesAt: 0 })
+
+	assert.ok((await readChart(await writeZip(pptx))).includes('<c:crossesAt val="0"/>'), 'zero was replaced with an invalid axis crossing')
+})
+
 test('#1355: a scatter chart keeps a value x-axis in a combo chart', async () => {
 	const pptx = new pptxgen()
 	pptx.addSlide().addChart([
