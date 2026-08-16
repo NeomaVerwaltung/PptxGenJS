@@ -14,20 +14,25 @@ import {
 	ISlideObject,
 	ObjectOptions,
 	PresSlide,
+	ReflectionProps,
 	ShadowProps,
 	ShapeLineProps,
 	SlideLayout,
+	SoftEdgeProps,
 	TableCell,
 	TableCellProps,
 	TableProps,
+	TextGlowProps,
 } from '../core-interfaces'
 import {
 	convertRotationDegrees,
 	createColorElement,
+	createGlowElement,
 	encodeXmlEntities,
 	genXmlColorSelection,
 	getSmartParseNumber,
 	inch2Emu,
+	resolveGlowOptions,
 	valToPts,
 } from '../gen-utils'
 
@@ -108,14 +113,13 @@ function genXmlLine (line: ShapeLineProps): string {
 }
 
 /**
- * Create the `a:effectLst` shadow block for a shape/image
- * @note pure - unit conversion must NOT be written back to the caller's options object, else a second
- * export would convert the already-converted values again (issue #20)
- * @param {ShadowProps} shadow - shadow options as supplied by the caller
- * @return {string} XML
+ * Create one shadow child for an `a:effectLst`.
+ * @note Pure: XML unit conversion does not mutate the caller's options.
+ * @param {ShadowProps} shadow - shadow options
+ * @return {string} shadow XML
  */
-function genXmlShadow (shadow: ShadowProps): string {
-	const type = shadow.type || 'outer'
+function genXmlShadowElement (shadow: ShadowProps): string {
+	const type = shadow.type === 'inner' ? 'inner' : 'outer'
 	const blur = valToPts(shadow.blur ?? 8)
 	const offset = valToPts(shadow.offset ?? 4)
 	const angle = Math.round((shadow.angle ?? 270) * 60000)
@@ -123,7 +127,40 @@ function genXmlShadow (shadow: ShadowProps): string {
 	const color = shadow.color || DEF_TEXT_SHADOW.color
 	const attrs = type === 'outer' ? 'sx="100000" sy="100000" kx="0" ky="0" algn="bl" rotWithShape="0"' : ''
 
-	return `<a:effectLst><a:${type}Shdw ${attrs} blurRad="${blur}" dist="${offset}" dir="${angle}"><a:srgbClr val="${color}"><a:alpha val="${opacity}"/></a:srgbClr></a:${type}Shdw></a:effectLst>`
+	return `<a:${type}Shdw ${attrs} blurRad="${blur}" dist="${offset}" dir="${angle}"><a:srgbClr val="${color}"><a:alpha val="${opacity}"/></a:srgbClr></a:${type}Shdw>`
+}
+
+/**
+ * Create one soft-edge child for an `a:effectLst`.
+ * @param {SoftEdgeProps} softEdge - soft-edge options
+ * @return {string} soft-edge XML
+ */
+function genXmlSoftEdgeElement (softEdge: SoftEdgeProps): string {
+	return `<a:softEdge rad="${valToPts(softEdge.radius)}"/>`
+}
+
+/**
+ * Create one reflection child for an `a:effectLst`.
+ * @param {ReflectionProps} reflection - reflection options
+ * @return {string} reflection XML
+ */
+function genXmlReflectionElement (reflection: ReflectionProps): string {
+	return `<a:reflection blurRad="${valToPts(reflection.blur ?? 0)}" stA="${Math.round((reflection.opacity ?? 0.5) * 100000)}" endA="0" dist="${valToPts(reflection.distance ?? 0)}" dir="${Math.round((reflection.direction ?? 0) * 60000)}" sy="${Math.round((reflection.scaleY ?? -1) * 100000)}" algn="bl" rotWithShape="0"/>`
+}
+
+/**
+ * Create one ordered DrawingML effect list for a shape or image.
+ * @param {object} opts - supported effect options
+ * @return {string} effect-list XML, or an empty string when no effects are set
+ */
+function genXmlEffectLst (opts: { shadow?: ShadowProps, glow?: TextGlowProps, softEdge?: SoftEdgeProps, reflection?: ReflectionProps }): string {
+	const effects: string[] = []
+	const glow = resolveGlowOptions(opts.glow)
+	if (glow) effects.push(createGlowElement(glow))
+	if (opts.shadow && opts.shadow.type !== 'none') effects.push(genXmlShadowElement(opts.shadow))
+	if (opts.reflection) effects.push(genXmlReflectionElement(opts.reflection))
+	if (opts.softEdge) effects.push(genXmlSoftEdgeElement(opts.softEdge))
+	return effects.length ? `<a:effectLst>${effects.join('')}</a:effectLst>` : ''
 }
 
 interface SlideObjectContext {
@@ -177,14 +214,11 @@ function resolveSlideObjectContext (slide: PresSlide | SlideLayout, slideItemObj
 }
 
 /**
- * Transforms a slide or slideLayout to resulting XML string - Creates `ppt/slide*.xml`
- * @param {PresSlide|SlideLayout} slideObject - slide object created within createSlideObject
- * @return {string} XML string with <p:cSld> as the root
+ * Render the single valid background representation for a slide-like part.
+ * Image backgrounds win over colors; the default master layout receives the scheme background needed by Keynote previews.
  */
-export function slideObjectToXml (slide: PresSlide | SlideLayout): string {
-	let strSlideXml: string = slide._name ? `<p:cSld name="${encodeXmlEntities(slide._name)}">` : '<p:cSld>'
-	let intTableNum = 1
-
+function genXmlSlideBackground (slide: PresSlide | SlideLayout): string {
+	let strSlideXml = ''
 	// STEP 1: Add background color/image (ensure only a single `<p:bg>` tag is created, ex: when master-baskground has both `color` and `path`)
 	if (slide._bkgdImgRid) {
 		strSlideXml += `<p:bg><p:bgPr><a:blipFill dpi="0" rotWithShape="1"><a:blip r:embed="rId${slide._bkgdImgRid}"><a:lum/></a:blip><a:srcRect/><a:stretch><a:fillRect/></a:stretch></a:blipFill><a:effectLst/></p:bgPr></p:bg>`
@@ -196,12 +230,29 @@ export function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 		strSlideXml += '<p:bg><p:bgRef idx="1001"><a:schemeClr val="bg1"/></p:bgRef></p:bg>'
 	}
 
+	return strSlideXml
+}
+
+/** Create the required group shape tree and its non-visual properties. */
+function genXmlSlideTreeStart (): string {
+	let strSlideXml = ''
 	// STEP 2: Continue slide by starting spTree node
 	strSlideXml += '<p:spTree>'
 	strSlideXml += '<p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>'
 	strSlideXml += '<p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/>'
 	strSlideXml += '<a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>'
 
+	return strSlideXml
+}
+
+/**
+ * Serialize slide objects in insertion order and retain the rendering-time normalization of each object's options.
+ *
+ * The local table counter and object index determine OOXML non-visual IDs, so callers must keep this phase contiguous.
+ */
+function genXmlSlideObjects (slide: PresSlide | SlideLayout): string {
+	let strSlideXml = ''
+	let intTableNum = 1
 	// STEP 3: Loop over all Slide.data objects and add them to this slide
 	slide._slideObjects.forEach((slideObject: ISlideObject, idx: number) => {
 		const slideItemObj = { ...slideObject, options: slideObject.options ?? {} }
@@ -574,10 +625,7 @@ export function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 				// shape Type: LINE: line color
 				if (slideItemObj.options.line) strSlideXml += genXmlLine(slideItemObj.options.line)
 
-				// EFFECTS > SHADOW: REF: @see http://officeopenxml.com/drwSp-effects.php
-				if (slideItemObj.options.shadow && slideItemObj.options.shadow.type !== 'none') {
-					strSlideXml += genXmlShadow(slideItemObj.options.shadow)
-				}
+				strSlideXml += genXmlEffectLst(slideItemObj.options)
 
 				/* TODO: FUTURE: Text wrapping (copied from MS-PPTX export)
 					// Commented out b/c i'm not even sure this works - current code produces text that wraps in shapes and textboxes, so...
@@ -642,8 +690,11 @@ export function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 					const boxH = sizing.h ? getSmartParseNumber(sizing.h, 'Y', slide._presLayout) : cy
 					const boxX = getSmartParseNumber(sizing.x || 0, 'X', slide._presLayout)
 					const boxY = getSmartParseNumber(sizing.y || 0, 'Y', slide._presLayout)
+					const sourceSize = typeof slideItemObj.options.w === 'number' && typeof slideItemObj.options.h === 'number'
+						? { w: slideItemObj.options.w, h: slideItemObj.options.h }
+						: { w: imgWidth, h: imgHeight }
 
-					strSlideXml += ImageSizingXml[sizing.type]({ w: imgWidth, h: imgHeight }, { w: boxW, h: boxH, x: boxX, y: boxY })
+					strSlideXml += ImageSizingXml[sizing.type](sourceSize, { w: boxW, h: boxH, x: boxX, y: boxY })
 					imgWidth = boxW
 					imgHeight = boxH
 				} else {
@@ -660,10 +711,7 @@ export function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 				// OUTLINE: picture border/frame (issue #35)
 				if (slideItemObj.options.line) strSlideXml += genXmlLine(slideItemObj.options.line)
 
-				// EFFECTS > SHADOW: REF: @see http://officeopenxml.com/drwSp-effects.php
-				if (slideItemObj.options.shadow && slideItemObj.options.shadow.type !== 'none') {
-					strSlideXml += genXmlShadow(slideItemObj.options.shadow)
-				}
+				strSlideXml += genXmlEffectLst(slideItemObj.options)
 				strSlideXml += '</p:spPr>'
 				strSlideXml += '</p:pic>'
 				break
@@ -733,6 +781,15 @@ export function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 		}
 	})
 
+	return strSlideXml
+}
+
+/**
+ * Append the slide-number placeholder after ordinary objects when numbering is configured.
+ * Its last position is required by the existing master/layout/slide compatibility behavior.
+ */
+function genXmlSlideNumber (slide: PresSlide | SlideLayout): string {
+	let strSlideXml = ''
 	// STEP 4: Add slide numbers (if any) last
 	if (slide._slideNumberProps) {
 		// Set some defaults (done here b/c SlideNumber canbe added to masters or slides and has numerous entry points)
@@ -786,11 +843,31 @@ export function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 		strSlideXml += '</p:txBody></p:sp>'
 	}
 
+	return strSlideXml
+}
+
+/** Close the shape tree and the `p:cSld` wrapper opened by the public orchestrator. */
+function genXmlSlideEnd (): string {
+	let strSlideXml = ''
 	// STEP 5: Close spTree and finalize slide XML
 	strSlideXml += '</p:spTree>'
 	strSlideXml += '</p:cSld>'
 
-	// LAST: Return
+	return strSlideXml
+}
+
+/**
+ * Transforms a slide or slideLayout to resulting XML string - Creates `ppt/slide*.xml`
+ * @param {PresSlide|SlideLayout} slideObject - slide object created within createSlideObject
+ * @return {string} XML string with <p:cSld> as the root
+ */
+export function slideObjectToXml (slide: PresSlide | SlideLayout): string {
+	let strSlideXml = slide._name ? `<p:cSld name="${encodeXmlEntities(slide._name)}">` : '<p:cSld>'
+	strSlideXml += genXmlSlideBackground(slide)
+	strSlideXml += genXmlSlideTreeStart()
+	strSlideXml += genXmlSlideObjects(slide)
+	strSlideXml += genXmlSlideNumber(slide)
+	strSlideXml += genXmlSlideEnd()
 	return strSlideXml
 }
 

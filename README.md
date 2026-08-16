@@ -2,8 +2,9 @@
 
 ![GitHub Repo stars](https://img.shields.io/github/stars/NeomaVerwaltung/PptxGenJS?style=flat-square)
 ![GitHub License](https://img.shields.io/github/license/NeomaVerwaltung/PptxGenJS?style=flat-square)
+[![npm version](https://img.shields.io/npm/v/%40neo-ma/pptxgenjs?style=flat-square)](https://www.npmjs.com/package/@neo-ma/pptxgenjs)
 
-PptxGenJS is a JavaScript library for generating PowerPoint presentations programmatically. It runs in Node.js, browsers, and bundler-based environments (React, Angular, Vite, Webpack, Electron), and requires no PowerPoint installation or license. Output is standards-compliant Open Office XML (OOXML), compatible with Microsoft PowerPoint, Apple Keynote, LibreOffice Impress, and Google Slides (via import).
+PptxGenJS is a JavaScript library for generating PowerPoint presentations programmatically. It runs in Node.js, browsers, and bundler-based environments (React, Angular, Vite, Webpack, Electron), and requires no PowerPoint installation or license. Output is standards-compliant [Open Office XML (OOXML)](https://ecma-international.org/publications-and-standards/standards/ecma-376/), compatible with Microsoft PowerPoint, Apple Keynote, LibreOffice Impress, and Google Slides (via import). For PowerPoint-specific behavior, see Microsoft's [Office implementation notes](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/1fd4a662-8623-49c0-82f0-18fa91b413b8).
 
 ## About this fork
 

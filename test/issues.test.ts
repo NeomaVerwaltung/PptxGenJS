@@ -8,6 +8,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import JSZip from 'jszip'
 import pptxgen from '../src/pptxgen'
+import { genTableToSlides } from '../src/gen-tables'
 
 /** 4x2 px PNG - non-square on purpose, so a 1x1 inch default is obvious */
 const PNG_4x2 = 'image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAACCAIAAADwyuo0AAAADklEQVR4nGP4jwQYkDkANvEX6SAXxcIAAAAASUVORK5CYII='
@@ -58,6 +59,41 @@ test('#20: shadow options are not mutated, so a second export matches the first'
 	assert.ok(first.includes('dir="2700000"'), 'shadow angle not converted for XML')
 })
 
+test('#84: shape effects share one ordered effect list', async () => {
+	const shadow = { type: 'outer' as const, color: '000000', opacity: 0.5, blur: 2, offset: 3, angle: 270 }
+	const glow = { size: 8, color: '00AAFF', opacity: 0.6 }
+	const softEdge = { radius: 4 }
+	const reflection = { blur: 2, distance: 3, direction: 90, opacity: 0.4, scaleY: -1 }
+	const pptx = new pptxgen()
+	pptx.addSlide().addShape(pptx.ShapeType.rect, { x: 1, y: 1, w: 2, h: 1, fill: { color: 'FF0000' }, shadow, glow, softEdge, reflection })
+
+	const xml = await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')
+	const effectList = /<a:effectLst>[\s\S]*?<\/a:effectLst>/.exec(xml)?.[0] ?? ''
+	assert.equal((xml.match(/<a:effectLst>/g) ?? []).length, 1, 'effects were emitted in multiple effect lists')
+	assert.ok(effectList.indexOf('<a:glow ') < effectList.indexOf('<a:outerShdw '), 'glow must precede outer shadow')
+	assert.ok(effectList.indexOf('<a:outerShdw ') < effectList.indexOf('<a:reflection '), 'shadow must precede reflection')
+	assert.ok(effectList.indexOf('<a:reflection ') < effectList.indexOf('<a:softEdge '), 'reflection must precede soft edge')
+	assert.ok(effectList.includes('stA="40000"'), 'reflection opacity was not converted')
+	assert.equal(shadow.angle, 270, 'caller shadow options were mutated')
+	assert.equal(glow.size, 8, 'caller glow options were mutated')
+	assert.equal(softEdge.radius, 4, 'caller soft-edge options were mutated')
+	assert.equal(reflection.direction, 90, 'caller reflection options were mutated')
+})
+
+test('#1083: rich text writes one paragraph-properties element per paragraph', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addText([
+		{ text: 'Normal ' },
+		{ text: 'bold', options: { bold: true } },
+		{ text: ' normal' },
+	], { x: 1, y: 1, w: 4, h: 1, bullet: { type: 'bullet' } })
+
+	const xml = await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')
+	const paragraph = xml.match(/<a:p>[\s\S]*?<\/a:p>/)?.[0] ?? ''
+	assert.equal((paragraph.match(/<a:pPr/g) ?? []).length, 1, 'rich text emitted multiple paragraph-properties elements')
+	assert.ok(paragraph.includes('<a:t>bold</a:t>'), 'rich-text runs were not preserved')
+})
+
 test('#18: slide master name is XML-escaped', async () => {
 	const pptx = new pptxgen()
 	pptx.defineSlideMaster({ title: 'R&D "Q3" Master', objects: [] })
@@ -65,6 +101,18 @@ test('#18: slide master name is XML-escaped', async () => {
 
 	const xml = await readPart(await writeZip(pptx), 'ppt/slideMasters/slideMaster1.xml')
 	assert.ok(!/name="[^"]*&(?!amp;|quot;|lt;|gt;|apos;)/.test(xml), 'unescaped entity in cSld name')
+})
+
+test('#1443: notes master has no placeholder shapes PowerPoint repairs away', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addNotes('Speaker notes')
+
+	const zip = await writeZip(pptx)
+	const notesMaster = await readPart(zip, 'ppt/notesMasters/notesMaster1.xml')
+	const notesSlide = await readPart(zip, 'ppt/notesSlides/notesSlide1.xml')
+	assert.doesNotMatch(notesMaster, /<p:sp>/, 'notes master contains invalid placeholder shapes')
+	assert.match(notesMaster, /<p:spTree>[\s\S]*<\/p:spTree>/, 'notes master is missing its shape tree')
+	assert.match(notesSlide, /Speaker notes/, 'speaker notes were not preserved')
 })
 
 test('#21/#23: bubble chart workbook keeps zeros and has a valid table ref', async () => {
@@ -119,6 +167,35 @@ test('#38: multi-level category chart writes a coherent worksheet', async () => 
 	assert.ok(sheet.includes('<mergeCell ref="A2:A4"/>') && sheet.includes('<mergeCell ref="A5:A7"/>'), 'outer label rows were not merged')
 })
 
+test('#1466: flat categories use strRef while multi-level categories keep multiLvlStrRef', async () => {
+	const flat = new pptxgen()
+	flat.addSlide().addChart(flat.ChartType.bar, [{ name: 'Sales', labels: ['Q1', 'Q2'], values: [10, 20] }], { x: 1, y: 1, w: 6, h: 4 })
+	const flatChart = await readChart(await writeZip(flat))
+	assert.match(flatChart, /<c:cat>\s*<c:strRef>/, 'flat categories were not written as strRef')
+	assert.doesNotMatch(flatChart, /<c:multiLvlStrRef>/, 'flat categories used a multi-level reference')
+
+	const multiLevel = new pptxgen()
+	multiLevel.addSlide().addChart(multiLevel.ChartType.bar, [{ name: 'Sales', labels: [['Q1', 'Q2'], ['2026', '']], values: [10, 20] }], { x: 1, y: 1, w: 6, h: 4 })
+	const multiLevelChart = await readChart(await writeZip(multiLevel))
+	assert.match(multiLevelChart, /<c:cat>\s*<c:multiLvlStrRef>/, 'multi-level categories no longer use multiLvlStrRef')
+})
+
+test('#1430: embedded workbook preserves per-series data table formats and zeros', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addChart([
+		{ type: pptx.ChartType.bar, data: [{ name: 'ABC', labels: ['2012', '2013'], values: [100000, 0] }], options: { dataTableFormatCode: '₹#,##0' } },
+		{ type: pptx.ChartType.line, data: [{ name: 'Share', labels: ['2012', '2013'], values: [0.17, 0] }], options: { dataTableFormatCode: '0%' } },
+	], [], { x: 1, y: 1, w: 6, h: 4 })
+
+	const xlsx = await readEmbeddedXlsx(await writeZip(pptx))
+	const sheet = await readPart(xlsx, 'xl/worksheets/sheet1.xml')
+	const styles = await readPart(xlsx, 'xl/styles.xml')
+	assert.match(sheet, /<c r="B3" s="1"><v>0<\/v><\/c>/, 'currency zero has no worksheet style')
+	assert.match(sheet, /<c r="C3" s="2"><v>0<\/v><\/c>/, 'percentage zero has no worksheet style')
+	assert.match(styles, /numFmtId="164" formatCode="₹#,##0"/, 'currency number format is absent')
+	assert.match(styles, /numFmtId="165" formatCode="0%"/, 'percentage number format is absent')
+})
+
 test('#25: multi-type chart honors the options argument', async () => {
 	const pptx = new pptxgen()
 	pptx.addSlide().addChart(
@@ -129,6 +206,16 @@ test('#25: multi-type chart honors the options argument', async () => {
 
 	const chart = await readChart(await writeZip(pptx))
 	assert.ok(chart.includes('<c:legend>'), 'options argument was discarded')
+})
+
+test('#1188: pie chart titles support italic text', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addChart(pptx.ChartType.pie, [{ name: 'Sales', labels: ['Q1'], values: [1] }], {
+		x: 1, y: 1, w: 4, h: 3, showTitle: true, title: 'Sales', titleItalic: true,
+	})
+
+	const title = (await readChart(await writeZip(pptx))).match(/<c:title>[\s\S]*?<\/c:title>/)?.[0] ?? ''
+	assert.match(title, /<a:rPr[^>]* i="1"/, 'pie title italic was not emitted')
 })
 
 test('#1420: chart title and legend set the East Asian font slot', async () => {
@@ -144,6 +231,18 @@ test('#1420: chart title and legend set the East Asian font slot', async () => {
 	assert.match(chart, /<c:legend>[\s\S]*?<a:ea\s+typeface="Microsoft YaHei"\/>/, 'legend is missing the East Asian font')
 })
 
+test('#1355: a scatter chart keeps a value x-axis in a combo chart', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addChart([
+		{ type: pptx.ChartType.bar, data: [{ name: 'Bars', labels: ['Mon', 'Tue'], values: [17, 26] }], options: { barDir: 'bar' } },
+		{ type: pptx.ChartType.scatter, data: [{ name: 'X', labels: ['Mon', 'Tue'], values: [1, 2] }, { name: 'Y', labels: ['Mon', 'Tue'], values: [25, 35] }], options: { secondaryValAxis: true, secondaryCatAxis: true } },
+	], { x: 1, y: 1, w: 6, h: 3, valAxes: [{}, {}], catAxes: [{}, {}] })
+
+	const chart = await readChart(await writeZip(pptx))
+	assert.equal((chart.match(/<c:catAx>/g) ?? []).length, 1, 'scatter x-axis was emitted as a category axis')
+	assert.equal((chart.match(/<c:valAx>/g) ?? []).length, 3, 'scatter combo chart is missing a value axis')
+})
+
 test('#26: serAxisLabelPos is honored', async () => {
 	const pptx = new pptxgen()
 	pptx.addSlide().addChart(pptx.ChartType.bar3d, [{ name: 'Sales', labels: ['Q1', 'Q2'], values: [1, 2] }], {
@@ -152,6 +251,16 @@ test('#26: serAxisLabelPos is honored', async () => {
 
 	const chart = await readChart(await writeZip(pptx))
 	assert.ok(chart.includes('val="high"'), 'serAxisLabelPos was ignored')
+})
+
+test('#976: scatter charts honor catAxisLabelPos', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addChart(pptx.ChartType.scatter, [
+		{ name: 'X', values: [1, 2] },
+		{ name: 'Y', values: [3, 4] },
+	], { x: 1, y: 1, w: 4, h: 3, catAxisLabelPos: 'low' })
+
+	assert.ok((await readChart(await writeZip(pptx))).includes('<c:tickLblPos val="low"/>'), 'scatter category-axis label position was ignored')
 })
 
 test('#34: image without w/h is sized from the image itself', async () => {
@@ -165,6 +274,18 @@ test('#34: image without w/h is sized from the image itself', async () => {
 	// 4x2 px at 96 DPI = 0.0417 x 0.0208 inch; 1 inch = 914400 EMU
 	assert.equal(Number(ext[1]), Math.round((4 / 96) * 914400))
 	assert.equal(Number(ext[2]), Math.round((2 / 96) * 914400))
+})
+
+test('#1286: contain sizing preserves the ratio of mixed pixel dimensions', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addImage({
+		data: PNG_4x2,
+		x: '19%', y: '54%', w: 2899, h: 97,
+		sizing: { type: 'contain', w: '36%', h: '3%' },
+	})
+
+	const xml = await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')
+	assert.ok(xml.includes('<a:srcRect l="0" r="0" t="-20047" b="-20047"/>'), 'contain sizing mixed image units and produced invalid crop XML')
 })
 
 test('#39: auto-paged tables account for cell margins', async () => {
@@ -204,6 +325,45 @@ test('#29: BorderProps accepts `width` (points) alongside the deprecated `pt`', 
 
 	assert.equal(await cellXml({ color: 'FF0000', width: 3 }), await cellXml({ color: 'FF0000', pt: 3 }), '`width` and `pt` produced different borders')
 	assert.ok((await cellXml({ color: 'FF0000', width: 3 })).includes('w="38100"'), '3pt border not emitted')
+})
+
+test('#1235: HTML table conversion preserves fractional border widths', async () => {
+	class Cell {
+		innerText = 'A'
+		offsetWidth = 100
+		getAttribute (): null { return null }
+	}
+	class Row {
+		cells = [new Cell()]
+	}
+	const cell = new Cell()
+	const row = new Row()
+	const globals = globalThis as unknown as Record<string, unknown>
+	const original = Object.fromEntries(['document', 'window', 'HTMLTableCellElement', 'HTMLTableRowElement'].map(key => [key, globals[key]]))
+	const styles: Record<string, string> = {
+		'background-color': 'rgba(0, 0, 0, 0)', 'border-bottom-color': 'rgb(0, 0, 0)', 'border-bottom-width': '0px',
+		'border-left-color': 'rgb(0, 0, 0)', 'border-left-width': '0.25px', 'border-right-color': 'rgb(0, 0, 0)', 'border-right-width': '0px',
+		'border-top-color': 'rgb(0, 0, 0)', 'border-top-width': '0px', color: 'rgb(0, 0, 0)', 'font-family': 'Arial', 'font-size': '12px',
+		'font-weight': 'normal', 'padding-bottom': '0px', 'padding-left': '0px', 'padding-right': '0px', 'padding-top': '0px', 'text-align': 'left', 'vertical-align': 'top',
+	}
+	Object.assign(globals, {
+		document: {
+			getElementById: () => ({}),
+			querySelector: () => null,
+			querySelectorAll: (selector: string) => selector === '#table tr:first-child td' ? [cell] : selector === '#table tbody tr' ? [row] : [],
+		},
+		window: { getComputedStyle: () => ({ getPropertyValue: (name: string) => styles[name] ?? '' }) },
+		HTMLTableCellElement: Cell,
+		HTMLTableRowElement: Row,
+	})
+
+	try {
+		const pptx = new pptxgen()
+		genTableToSlides(pptx, 'table', { w: 4 })
+		assert.ok((await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')).includes('<a:lnL w="3175"'), 'fractional CSS border was rounded')
+	} finally {
+		Object.assign(globals, original)
+	}
 })
 
 test('#29: defineLayout accepts `w`/`h` as aliases of `width`/`height`', () => {
