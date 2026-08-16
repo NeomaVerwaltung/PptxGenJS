@@ -114,6 +114,9 @@ function genXmlLine (line: ShapeLineProps): string {
 
 /**
  * Create one shadow child for an `a:effectLst`.
+ * @note Pure: XML unit conversion does not mutate the caller's options.
+ * @param {ShadowProps} shadow - shadow options
+ * @return {string} shadow XML
  */
 function genXmlShadowElement (shadow: ShadowProps): string {
 	const type = shadow.type === 'inner' ? 'inner' : 'outer'
@@ -127,14 +130,29 @@ function genXmlShadowElement (shadow: ShadowProps): string {
 	return `<a:${type}Shdw ${attrs} blurRad="${blur}" dist="${offset}" dir="${angle}"><a:srgbClr val="${color}"><a:alpha val="${opacity}"/></a:srgbClr></a:${type}Shdw>`
 }
 
+/**
+ * Create one soft-edge child for an `a:effectLst`.
+ * @param {SoftEdgeProps} softEdge - soft-edge options
+ * @return {string} soft-edge XML
+ */
 function genXmlSoftEdgeElement (softEdge: SoftEdgeProps): string {
 	return `<a:softEdge rad="${valToPts(softEdge.radius)}"/>`
 }
 
+/**
+ * Create one reflection child for an `a:effectLst`.
+ * @param {ReflectionProps} reflection - reflection options
+ * @return {string} reflection XML
+ */
 function genXmlReflectionElement (reflection: ReflectionProps): string {
 	return `<a:reflection blurRad="${valToPts(reflection.blur ?? 0)}" stA="${Math.round((reflection.opacity ?? 0.5) * 100000)}" endA="0" dist="${valToPts(reflection.distance ?? 0)}" dir="${Math.round((reflection.direction ?? 0) * 60000)}" sy="${Math.round((reflection.scaleY ?? -1) * 100000)}" algn="bl" rotWithShape="0"/>`
 }
 
+/**
+ * Create one ordered DrawingML effect list for a shape or image.
+ * @param {object} opts - supported effect options
+ * @return {string} effect-list XML, or an empty string when no effects are set
+ */
 function genXmlEffectLst (opts: { shadow?: ShadowProps, glow?: TextGlowProps, softEdge?: SoftEdgeProps, reflection?: ReflectionProps }): string {
 	const effects: string[] = []
 	const glow = resolveGlowOptions(opts.glow)
