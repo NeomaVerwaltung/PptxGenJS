@@ -229,6 +229,16 @@ test('#1420: chart title and legend set the East Asian font slot', async () => {
 	const chart = await readChart(await writeZip(pptx))
 	assert.match(chart, /<a:rPr[\s\S]*?<a:ea typeface="Microsoft YaHei"\/>/, 'title run is missing the East Asian font')
 	assert.match(chart, /<c:legend>[\s\S]*?<a:ea\s+typeface="Microsoft YaHei"\/>/, 'legend is missing the East Asian font')
+  })
+
+test('#1245: scatter axis can cross at zero', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addChart(pptx.ChartType.scatter, [
+		{ name: 'X', values: [0, 1] },
+		{ name: 'Y', values: [90, 80] },
+	], { x: 1, y: 1, w: 4, h: 3, valAxisCrossesAt: 0 })
+
+	assert.ok((await readChart(await writeZip(pptx))).includes('<c:crossesAt val="0"/>'), 'zero was replaced with an invalid axis crossing')
 })
 
 test('#1355: a scatter chart keeps a value x-axis in a combo chart', async () => {

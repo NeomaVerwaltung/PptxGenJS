@@ -78,7 +78,7 @@ export function makeCatAxis (opts: IChartOptsLib, axisId: string, valAxisId: str
 	strXml += '  </a:p>'
 	strXml += ' </c:txPr>'
 	strXml += ' <c:crossAx val="' + valAxisId + '"/>'
-	strXml += ` <c:${typeof opts.valAxisCrossesAt === 'number' ? 'crossesAt' : 'crosses'} val="${opts.valAxisCrossesAt || 'autoZero'}"/>`
+	strXml += ` <c:${typeof opts.valAxisCrossesAt === 'number' ? 'crossesAt' : 'crosses'} val="${opts.valAxisCrossesAt ?? 'autoZero'}"/>`
 	strXml += ' <c:auto val="1"/>'
 	strXml += ' <c:lblAlgn val="ctr"/>'
 	strXml += ` <c:noMultiLvlLbl val="${opts.catAxisMultiLevelLabels ? 0 : 1}"/>`
