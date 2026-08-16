@@ -5,12 +5,14 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
 	title: 'PptxGenJS · NEOMA',
 	description: 'Create PowerPoint presentations with JavaScript. NEOMA-maintained fork of PptxGenJS.',
-	base: '/',
+	// Keep the artifact portable: it is served under /PptxGenJS/ today and can
+	// later be mounted at a custom-domain root without another build.
+	base: './',
 	head: [
-		['link', { rel: 'icon', type: 'image/svg+xml', href: '/neoma-icon.svg' }],
+		['link', { rel: 'icon', type: 'image/svg+xml', href: './neoma-icon.svg' }],
 	],
 	themeConfig: {
-		logo: { light: '/neoma-icon.svg', dark: '/neoma-icon-dark.svg' },
+		logo: { light: './neoma-icon.svg', dark: './neoma-icon-dark.svg' },
 		nav: [
 			{ text: 'Docs', link: '/introduction' },
 			{ text: 'Quick Start', link: '/quick-start' },
