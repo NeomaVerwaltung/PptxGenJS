@@ -1,13 +1,10 @@
 # Release Procedure
 
-This document describes the release process for the NEOMA distribution of PptxGenJS. Maintainers must complete this checklist before publishing to npm or GitHub.
+This document describes the release process for the NEOMA distribution of PptxGenJS. A published GitHub Release triggers the npm publication and bundle upload.
 
 ## Beta releases
 
-1. Update the version in `package.json` (for example, `4.1.0-beta.0`).
-2. Update the version constant in `src/pptxgen.ts`.
-3. Build the library: npm scripts > `ship`.
-4. Publish: `npm publish --tag beta`.
+Follow the standard preparation below, then create and publish a **pre-release** in GitHub for a tag such as `v4.1.0-beta.0`. The release workflow publishes the corresponding npm package under the `beta` tag and attaches the bundles.
 
 ## Build and update files
 
@@ -18,8 +15,7 @@ This document describes the release process for the NEOMA distribution of PptxGe
 5. Consolidate new type changes from `src/bld/*.ts` into `types/index.d.ts` and update the version in the header comment.
 6. Inspect the headers of the generated `dist/*.js` files.
 
-> `dist/` is not committed. The release workflow rebuilds it (`npm ci` runs `prepare`) and attaches
-> `pptxgen.bundle.js`, `pptxgen.min.js`, `pptxgen.cjs.js` and `pptxgen.es.js` to the GitHub Release.
+> `dist/` is not committed. When a GitHub Release is published, the release workflow rebuilds it (`npm ci` runs `prepare`), publishes the package to npm, and attaches every generated static asset in `dist/` to that release.
 
 ## Pre-release testing
 
@@ -44,16 +40,9 @@ Confirm the following before publishing:
 
 1. Commit all changes.
 2. Merge the working branch into `main`.
-3. Copy the CHANGELOG entry and draft a new release on the [Releases page](https://github.com/NeomaVerwaltung/PptxGenJS/releases).
-4. Use "Version x.x.x" as the title and "vX.X.X" as the tag.
-5. Verify the title and tag on the Releases page, then publish.
-
-## Release: npm
-
-```bash
-cd ~/GitHub/PptxGenJS
-npm publish
-```
+3. Draft a new release on the [Releases page](https://github.com/NeomaVerwaltung/PptxGenJS/releases), using the release commit as the target.
+4. Use "Version x.x.x" as the title and "vX.X.X" as the tag; generate or paste the release notes from `CHANGELOG.md`.
+5. Verify the title, tag, and target commit, then publish the release. This starts the release workflow; it publishes npm and uploads the generated bundles to the same GitHub Release.
 
 ## Post-release tasks
 

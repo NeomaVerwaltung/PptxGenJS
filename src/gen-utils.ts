@@ -26,6 +26,32 @@ export function debugLog (...args: unknown[]): void {
 	if (isDebugEnabled()) console.debug(`[${DEBUG_NS}]`, ...args)
 }
 
+/** Encode bytes as base64 without referencing Node's Buffer global. */
+export function bytesToBase64 (bytes: Uint8Array): string {
+	let binary = ''
+	const chunkSize = 0x8000
+	for (let offset = 0; offset < bytes.length; offset += chunkSize) binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize))
+	return btoa(binary)
+}
+
+/** Decode a base64 string or data URL without referencing Node's Buffer global. */
+export function base64ToBytes (data: string): Uint8Array {
+	const marker = 'base64,'
+	const base64 = data.includes(marker) ? data.slice(data.indexOf(marker) + marker.length) : data
+	const binary = atob(base64)
+	return Uint8Array.from(binary, character => character.charCodeAt(0))
+}
+
+/** Encode UTF-8 text as base64. */
+export function utf8ToBase64 (text: string): string {
+	return bytesToBase64(new TextEncoder().encode(text))
+}
+
+/** Encode a Node binary string as base64. */
+export function binaryStringToBase64 (text: string): string {
+	return bytesToBase64(Uint8Array.from(text, character => character.charCodeAt(0) & 0xff))
+}
+
 /** friendly `dataLabelPosition` names mapped to their OOXML `c:dLblPos` codes (the codes stay accepted too) */
 const DATA_LABEL_POS_CODES: Record<string, string> = {
 	bottom: 'b',

@@ -59,6 +59,27 @@ test('#20: shadow options are not mutated, so a second export matches the first'
 	assert.ok(first.includes('dir="2700000"'), 'shadow angle not converted for XML')
 })
 
+test('#84: shape effects share one ordered effect list', async () => {
+	const shadow = { type: 'outer' as const, color: '000000', opacity: 0.5, blur: 2, offset: 3, angle: 270 }
+	const glow = { size: 8, color: '00AAFF', opacity: 0.6 }
+	const softEdge = { radius: 4 }
+	const reflection = { blur: 2, distance: 3, direction: 90, opacity: 0.4, scaleY: -1 }
+	const pptx = new pptxgen()
+	pptx.addSlide().addShape(pptx.ShapeType.rect, { x: 1, y: 1, w: 2, h: 1, fill: { color: 'FF0000' }, shadow, glow, softEdge, reflection })
+
+	const xml = await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')
+	const effectList = /<a:effectLst>[\s\S]*?<\/a:effectLst>/.exec(xml)?.[0] ?? ''
+	assert.equal((xml.match(/<a:effectLst>/g) ?? []).length, 1, 'effects were emitted in multiple effect lists')
+	assert.ok(effectList.indexOf('<a:glow ') < effectList.indexOf('<a:outerShdw '), 'glow must precede outer shadow')
+	assert.ok(effectList.indexOf('<a:outerShdw ') < effectList.indexOf('<a:reflection '), 'shadow must precede reflection')
+	assert.ok(effectList.indexOf('<a:reflection ') < effectList.indexOf('<a:softEdge '), 'reflection must precede soft edge')
+	assert.ok(effectList.includes('stA="40000"'), 'reflection opacity was not converted')
+	assert.equal(shadow.angle, 270, 'caller shadow options were mutated')
+	assert.equal(glow.size, 8, 'caller glow options were mutated')
+	assert.equal(softEdge.radius, 4, 'caller soft-edge options were mutated')
+	assert.equal(reflection.direction, 90, 'caller reflection options were mutated')
+})
+
 test('#1083: rich text writes one paragraph-properties element per paragraph', async () => {
 	const pptx = new pptxgen()
 	pptx.addSlide().addText([
@@ -159,6 +180,22 @@ test('#1466: flat categories use strRef while multi-level categories keep multiL
 	assert.match(multiLevelChart, /<c:cat>\s*<c:multiLvlStrRef>/, 'multi-level categories no longer use multiLvlStrRef')
 })
 
+test('#1430: embedded workbook preserves per-series data table formats and zeros', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addChart([
+		{ type: pptx.ChartType.bar, data: [{ name: 'ABC', labels: ['2012', '2013'], values: [100000, 0] }], options: { dataTableFormatCode: '₹#,##0' } },
+		{ type: pptx.ChartType.line, data: [{ name: 'Share', labels: ['2012', '2013'], values: [0.17, 0] }], options: { dataTableFormatCode: '0%' } },
+	], [], { x: 1, y: 1, w: 6, h: 4 })
+
+	const xlsx = await readEmbeddedXlsx(await writeZip(pptx))
+	const sheet = await readPart(xlsx, 'xl/worksheets/sheet1.xml')
+	const styles = await readPart(xlsx, 'xl/styles.xml')
+	assert.match(sheet, /<c r="B3" s="1"><v>0<\/v><\/c>/, 'currency zero has no worksheet style')
+	assert.match(sheet, /<c r="C3" s="2"><v>0<\/v><\/c>/, 'percentage zero has no worksheet style')
+	assert.match(styles, /numFmtId="164" formatCode="₹#,##0"/, 'currency number format is absent')
+	assert.match(styles, /numFmtId="165" formatCode="0%"/, 'percentage number format is absent')
+})
+
 test('#25: multi-type chart honors the options argument', async () => {
 	const pptx = new pptxgen()
 	pptx.addSlide().addChart(
@@ -189,6 +226,18 @@ test('#1245: scatter axis can cross at zero', async () => {
 	], { x: 1, y: 1, w: 4, h: 3, valAxisCrossesAt: 0 })
 
 	assert.ok((await readChart(await writeZip(pptx))).includes('<c:crossesAt val="0"/>'), 'zero was replaced with an invalid axis crossing')
+})
+
+test('#1355: a scatter chart keeps a value x-axis in a combo chart', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addChart([
+		{ type: pptx.ChartType.bar, data: [{ name: 'Bars', labels: ['Mon', 'Tue'], values: [17, 26] }], options: { barDir: 'bar' } },
+		{ type: pptx.ChartType.scatter, data: [{ name: 'X', labels: ['Mon', 'Tue'], values: [1, 2] }, { name: 'Y', labels: ['Mon', 'Tue'], values: [25, 35] }], options: { secondaryValAxis: true, secondaryCatAxis: true } },
+	], { x: 1, y: 1, w: 6, h: 3, valAxes: [{}, {}], catAxes: [{}, {}] })
+
+	const chart = await readChart(await writeZip(pptx))
+	assert.equal((chart.match(/<c:catAx>/g) ?? []).length, 1, 'scatter x-axis was emitted as a category axis')
+	assert.equal((chart.match(/<c:valAx>/g) ?? []).length, 3, 'scatter combo chart is missing a value axis')
 })
 
 test('#26: serAxisLabelPos is honored', async () => {

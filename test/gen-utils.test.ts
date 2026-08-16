@@ -20,6 +20,10 @@ import {
 	genXmlColorSelection,
 	getNewRelId,
 	correctShadowOptions,
+	base64ToBytes,
+	binaryStringToBase64,
+	bytesToBase64,
+	utf8ToBase64,
 } from '../src/gen-utils'
 import { PresLayout, PresSlide, ShadowProps } from '../src/core-interfaces'
 
@@ -79,6 +83,13 @@ test('getUuid', () => {
 	assert.match(getUuid('xxxxxxxx'), /^[0-9a-f]{8}$/)
 	assert.match(getUuid('y'), /^[89ab]$/, 'the "y" nibble is constrained per RFC4122')
 	assert.notEqual(getUuid('xxxxxxxx-xxxx'), getUuid('xxxxxxxx-xxxx'), 'values are random')
+})
+
+test('base64 helpers preserve binary and UTF-8 data without Buffer', () => {
+	assert.equal(bytesToBase64(Uint8Array.from([0, 1, 255])), 'AAH/')
+	assert.deepEqual(base64ToBytes('data:application/octet-stream;base64,AAH/'), Uint8Array.from([0, 1, 255]))
+	assert.equal(utf8ToBase64('Grüße'), 'R3LDvMOfZQ==')
+	assert.equal(binaryStringToBase64('\x00\xff'), 'AP8=')
 })
 
 test('createColorElement: hex', () => {
