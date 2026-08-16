@@ -86,7 +86,7 @@ export default defineConfig({
 		footer: {
 			message:
 				'Released under the MIT License. · <a href="https://www.neo-ma.de/impressum">Impressum</a> · <a href="https://www.neo-ma.de/datenschutz">Datenschutz</a>',
-			copyright: 'Copyright © 2015-present Brent Ely · © 2026-present NEOMA GmbH',
+			copyright: 'Copyright © 2015-2022 Brent Ely · © 2026-present NEOMA GmbH',
 		},
 		editLink: {
 			pattern: 'https://github.com/NeomaVerwaltung/PptxGenJS/edit/master/docs/:path',
