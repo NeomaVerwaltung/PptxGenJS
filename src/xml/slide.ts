@@ -14,20 +14,25 @@ import {
 	ISlideObject,
 	ObjectOptions,
 	PresSlide,
+	ReflectionProps,
 	ShadowProps,
 	ShapeLineProps,
 	SlideLayout,
+	SoftEdgeProps,
 	TableCell,
 	TableCellProps,
 	TableProps,
+	TextGlowProps,
 } from '../core-interfaces'
 import {
 	convertRotationDegrees,
 	createColorElement,
+	createGlowElement,
 	encodeXmlEntities,
 	genXmlColorSelection,
 	getSmartParseNumber,
 	inch2Emu,
+	resolveGlowOptions,
 	valToPts,
 } from '../gen-utils'
 
@@ -108,14 +113,13 @@ function genXmlLine (line: ShapeLineProps): string {
 }
 
 /**
- * Create the `a:effectLst` shadow block for a shape/image
- * @note pure - unit conversion must NOT be written back to the caller's options object, else a second
- * export would convert the already-converted values again (issue #20)
- * @param {ShadowProps} shadow - shadow options as supplied by the caller
- * @return {string} XML
+ * Create one shadow child for an `a:effectLst`.
+ * @note Pure: XML unit conversion does not mutate the caller's options.
+ * @param {ShadowProps} shadow - shadow options
+ * @return {string} shadow XML
  */
-function genXmlShadow (shadow: ShadowProps): string {
-	const type = shadow.type || 'outer'
+function genXmlShadowElement (shadow: ShadowProps): string {
+	const type = shadow.type === 'inner' ? 'inner' : 'outer'
 	const blur = valToPts(shadow.blur ?? 8)
 	const offset = valToPts(shadow.offset ?? 4)
 	const angle = Math.round((shadow.angle ?? 270) * 60000)
@@ -123,7 +127,40 @@ function genXmlShadow (shadow: ShadowProps): string {
 	const color = shadow.color || DEF_TEXT_SHADOW.color
 	const attrs = type === 'outer' ? 'sx="100000" sy="100000" kx="0" ky="0" algn="bl" rotWithShape="0"' : ''
 
-	return `<a:effectLst><a:${type}Shdw ${attrs} blurRad="${blur}" dist="${offset}" dir="${angle}"><a:srgbClr val="${color}"><a:alpha val="${opacity}"/></a:srgbClr></a:${type}Shdw></a:effectLst>`
+	return `<a:${type}Shdw ${attrs} blurRad="${blur}" dist="${offset}" dir="${angle}"><a:srgbClr val="${color}"><a:alpha val="${opacity}"/></a:srgbClr></a:${type}Shdw>`
+}
+
+/**
+ * Create one soft-edge child for an `a:effectLst`.
+ * @param {SoftEdgeProps} softEdge - soft-edge options
+ * @return {string} soft-edge XML
+ */
+function genXmlSoftEdgeElement (softEdge: SoftEdgeProps): string {
+	return `<a:softEdge rad="${valToPts(softEdge.radius)}"/>`
+}
+
+/**
+ * Create one reflection child for an `a:effectLst`.
+ * @param {ReflectionProps} reflection - reflection options
+ * @return {string} reflection XML
+ */
+function genXmlReflectionElement (reflection: ReflectionProps): string {
+	return `<a:reflection blurRad="${valToPts(reflection.blur ?? 0)}" stA="${Math.round((reflection.opacity ?? 0.5) * 100000)}" endA="0" dist="${valToPts(reflection.distance ?? 0)}" dir="${Math.round((reflection.direction ?? 0) * 60000)}" sy="${Math.round((reflection.scaleY ?? -1) * 100000)}" algn="bl" rotWithShape="0"/>`
+}
+
+/**
+ * Create one ordered DrawingML effect list for a shape or image.
+ * @param {object} opts - supported effect options
+ * @return {string} effect-list XML, or an empty string when no effects are set
+ */
+function genXmlEffectLst (opts: { shadow?: ShadowProps, glow?: TextGlowProps, softEdge?: SoftEdgeProps, reflection?: ReflectionProps }): string {
+	const effects: string[] = []
+	const glow = resolveGlowOptions(opts.glow)
+	if (glow) effects.push(createGlowElement(glow))
+	if (opts.shadow && opts.shadow.type !== 'none') effects.push(genXmlShadowElement(opts.shadow))
+	if (opts.reflection) effects.push(genXmlReflectionElement(opts.reflection))
+	if (opts.softEdge) effects.push(genXmlSoftEdgeElement(opts.softEdge))
+	return effects.length ? `<a:effectLst>${effects.join('')}</a:effectLst>` : ''
 }
 
 interface SlideObjectContext {
@@ -588,10 +625,7 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout): string {
 				// shape Type: LINE: line color
 				if (slideItemObj.options.line) strSlideXml += genXmlLine(slideItemObj.options.line)
 
-				// EFFECTS > SHADOW: REF: @see http://officeopenxml.com/drwSp-effects.php
-				if (slideItemObj.options.shadow && slideItemObj.options.shadow.type !== 'none') {
-					strSlideXml += genXmlShadow(slideItemObj.options.shadow)
-				}
+				strSlideXml += genXmlEffectLst(slideItemObj.options)
 
 				/* TODO: FUTURE: Text wrapping (copied from MS-PPTX export)
 					// Commented out b/c i'm not even sure this works - current code produces text that wraps in shapes and textboxes, so...
@@ -677,10 +711,7 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout): string {
 				// OUTLINE: picture border/frame (issue #35)
 				if (slideItemObj.options.line) strSlideXml += genXmlLine(slideItemObj.options.line)
 
-				// EFFECTS > SHADOW: REF: @see http://officeopenxml.com/drwSp-effects.php
-				if (slideItemObj.options.shadow && slideItemObj.options.shadow.type !== 'none') {
-					strSlideXml += genXmlShadow(slideItemObj.options.shadow)
-				}
+				strSlideXml += genXmlEffectLst(slideItemObj.options)
 				strSlideXml += '</p:spPr>'
 				strSlideXml += '</p:pic>'
 				break

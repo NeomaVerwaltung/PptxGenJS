@@ -59,6 +59,27 @@ test('#20: shadow options are not mutated, so a second export matches the first'
 	assert.ok(first.includes('dir="2700000"'), 'shadow angle not converted for XML')
 })
 
+test('#84: shape effects share one ordered effect list', async () => {
+	const shadow = { type: 'outer' as const, color: '000000', opacity: 0.5, blur: 2, offset: 3, angle: 270 }
+	const glow = { size: 8, color: '00AAFF', opacity: 0.6 }
+	const softEdge = { radius: 4 }
+	const reflection = { blur: 2, distance: 3, direction: 90, opacity: 0.4, scaleY: -1 }
+	const pptx = new pptxgen()
+	pptx.addSlide().addShape(pptx.ShapeType.rect, { x: 1, y: 1, w: 2, h: 1, fill: { color: 'FF0000' }, shadow, glow, softEdge, reflection })
+
+	const xml = await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')
+	const effectList = /<a:effectLst>[\s\S]*?<\/a:effectLst>/.exec(xml)?.[0] ?? ''
+	assert.equal((xml.match(/<a:effectLst>/g) ?? []).length, 1, 'effects were emitted in multiple effect lists')
+	assert.ok(effectList.indexOf('<a:glow ') < effectList.indexOf('<a:outerShdw '), 'glow must precede outer shadow')
+	assert.ok(effectList.indexOf('<a:outerShdw ') < effectList.indexOf('<a:reflection '), 'shadow must precede reflection')
+	assert.ok(effectList.indexOf('<a:reflection ') < effectList.indexOf('<a:softEdge '), 'reflection must precede soft edge')
+	assert.ok(effectList.includes('stA="40000"'), 'reflection opacity was not converted')
+	assert.equal(shadow.angle, 270, 'caller shadow options were mutated')
+	assert.equal(glow.size, 8, 'caller glow options were mutated')
+	assert.equal(softEdge.radius, 4, 'caller soft-edge options were mutated')
+	assert.equal(reflection.direction, 90, 'caller reflection options were mutated')
+})
+
 test('#1083: rich text writes one paragraph-properties element per paragraph', async () => {
 	const pptx = new pptxgen()
 	pptx.addSlide().addText([
