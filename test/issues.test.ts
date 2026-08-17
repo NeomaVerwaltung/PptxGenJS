@@ -229,7 +229,7 @@ test('#1420: chart title and legend set the East Asian font slot', async () => {
 	const chart = await readChart(await writeZip(pptx))
 	assert.match(chart, /<a:rPr[\s\S]*?<a:ea typeface="Microsoft YaHei"\/>/, 'title run is missing the East Asian font')
 	assert.match(chart, /<c:legend>[\s\S]*?<a:ea\s+typeface="Microsoft YaHei"\/>/, 'legend is missing the East Asian font')
-  })
+})
 
 test('#1245: scatter axis can cross at zero', async () => {
 	const pptx = new pptxgen()
@@ -457,6 +457,30 @@ test('#28: a dataLabelPosition invalid for the chart type is dropped with a warn
 	} finally {
 		console.warn = orig
 	}
+})
+
+test('#80: pie labels honor their requested position and custom text', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addChart(pptx.ChartType.pie, [{ name: 'Share', labels: ['A', 'B', 'C'], values: [30, 50, 20], dataLabels: ['Alpha & Co', 'Beta', 'Gamma'] }], {
+		x: 0.5, y: 0.5, w: 4, h: 3, showPercent: true, dataLabelPosition: 'outsideEnd', dataLabelFontSize: 12,
+	})
+
+	const chart = await readChart(await writeZip(pptx))
+	assert.ok(chart.includes('<c:dLblPos val="outEnd"/>'), 'pie position was not honored')
+	assert.ok(chart.includes('<a:t>Alpha &amp; Co</a:t>'), 'custom pie label was not XML-escaped')
+	assert.ok(chart.includes('sz="1200"'), 'custom pie label ignored the configured font size')
+	const firstLabel = /<c:dLbl>[\s\S]*?<\/c:dLbl>/.exec(chart)?.[0] ?? ''
+	assert.ok(firstLabel.includes('<c:showVal val="0"/>'), 'custom labels must not be combined with numeric values')
+})
+
+test('#80: custom labels are additive for series-based charts', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addChart(pptx.ChartType.bar, [{ name: 'Sales', labels: ['A', 'B'], values: [10, 20], dataLabels: ['Q1', 'Q2'] }], {
+		x: 0.5, y: 0.5, w: 4, h: 3, showValue: true, dataLabelPosition: 'outsideEnd',
+	})
+	const chart = await readChart(await writeZip(pptx))
+	assert.ok(chart.includes('<a:t>Q1</a:t>'), 'custom series label missing')
+	assert.ok(chart.includes('<c:showVal val="0"/>'), 'custom series label was combined with the numeric value')
 })
 
 test('#31: `compression` is honoured for every outputType, not just STREAM', async () => {

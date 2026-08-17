@@ -30,6 +30,21 @@ export function makeXmlCharts (rel: ISlideRelChart): string {
 	return strXml
 }
 
+function genXmlDataLabelRichText (text: string, opts: IChartOptsLib): string {
+	const size = Math.round((opts.dataLabelFontSize || DEF_FONT_SIZE) * 100)
+	let xml = '<c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r>'
+	xml += `<a:rPr lang="${opts.lang || 'en-US'}" dirty="0" sz="${size}" b="${opts.dataLabelFontBold ? 1 : 0}" i="${opts.dataLabelFontItalic ? 1 : 0}">`
+	xml += `<a:solidFill>${createColorElement(opts.dataLabelColor || DEF_FONT_COLOR)}</a:solidFill><a:latin typeface="${opts.dataLabelFontFace || 'Arial'}"/></a:rPr>`
+	xml += `<a:t>${encodeXmlEntities(text)}</a:t></a:r></a:p></c:rich></c:tx>`
+	return xml
+}
+
+function genXmlCustomDataLabel (text: string, index: number, opts: IChartOptsLib): string {
+	let xml = `<c:dLbl><c:idx val="${index}"/>${genXmlDataLabelRichText(text, opts)}`
+	if (opts.dataLabelPosition) xml += `<c:dLblPos val="${opts.dataLabelPosition}"/>`
+	return xml + '<c:showLegendKey val="0"/><c:showVal val="0"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbl>'
+}
+
 /**
  * Open `c:chartSpace` and `c:plotArea`, including title state, optional 3D view, and manual layout.
  * The matching closing/output phase is `makeChartSpaceEnd()`.
@@ -392,6 +407,9 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 				// NOTE: [20190117] Adding these to RADAR chart causes unrecoverable corruption!
 				if (chartType !== CHART_TYPE.RADAR) {
 					strXml += '<c:dLbls>'
+					obj.dataLabels?.forEach((value, index) => {
+						if (typeof value === 'string') strXml += genXmlCustomDataLabel(value, index, opts)
+					})
 					strXml += `<c:numFmt formatCode="${encodeXmlEntities(opts.dataLabelFormatCode) || 'General'}" sourceLinked="0"/>`
 					if (opts.dataLabelBkgrdColors) strXml += `<c:spPr><a:solidFill>${createColorElement(seriesColor)}</a:solidFill></c:spPr>`
 					strXml += '<c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr>'
@@ -1071,9 +1089,12 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 			// 3: "Data Label" block for every data Label
 			strXml += '<c:dLbls>'
 			chartDataLabels[0].forEach((_label, idx) => {
+				const customLabel = optsChartData.dataLabels?.[idx]
+				const isCustomLabel = typeof customLabel === 'string'
 				strXml += '<c:dLbl>'
 				strXml += ` <c:idx val="${idx}"/>`
-				strXml += `  <c:numFmt formatCode="${encodeXmlEntities(opts.dataLabelFormatCode) || 'General'}" sourceLinked="0"/>`
+				if (isCustomLabel) strXml += genXmlDataLabelRichText(customLabel, opts)
+				else strXml += `  <c:numFmt formatCode="${encodeXmlEntities(opts.dataLabelFormatCode) || 'General'}" sourceLinked="0"/>`
 				strXml += '  <c:spPr/><c:txPr>'
 				strXml += '   <a:bodyPr/><a:lstStyle/>'
 				strXml += '   <a:p><a:pPr>'
@@ -1086,10 +1107,10 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 				strXml += '    </c:txPr>'
 				if (opts.dataLabelPosition) strXml += `<c:dLblPos val="${opts.dataLabelPosition}"/>`
 				strXml += '    <c:showLegendKey val="0"/>'
-				strXml += '    <c:showVal val="' + (opts.showValue ? '1' : '0') + '"/>'
-				strXml += '    <c:showCatName val="' + (opts.showLabel ? '1' : '0') + '"/>'
-				strXml += '    <c:showSerName val="' + (opts.showSerName ? '1' : '0') + '"/>'
-				strXml += '    <c:showPercent val="' + (opts.showPercent ? '1' : '0') + '"/>'
+				strXml += '    <c:showVal val="' + (isCustomLabel ? '0' : opts.showValue ? '1' : '0') + '"/>'
+				strXml += '    <c:showCatName val="' + (isCustomLabel ? '0' : opts.showLabel ? '1' : '0') + '"/>'
+				strXml += '    <c:showSerName val="' + (isCustomLabel ? '0' : opts.showSerName ? '1' : '0') + '"/>'
+				strXml += '    <c:showPercent val="' + (isCustomLabel ? '0' : opts.showPercent ? '1' : '0') + '"/>'
 				strXml += '    <c:showBubbleSize val="0"/>'
 				strXml += '  </c:dLbl>'
 			})
@@ -1105,7 +1126,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 			strXml += '        </a:pPr>'
 			strXml += '      </a:p>'
 			strXml += '    </c:txPr>'
-			strXml += chartType === CHART_TYPE.PIE ? '<c:dLblPos val="ctr"/>' : ''
+			strXml += chartType === CHART_TYPE.PIE ? `<c:dLblPos val="${opts.dataLabelPosition ?? 'ctr'}"/>` : ''
 			strXml += '    <c:showLegendKey val="0"/>'
 			strXml += '    <c:showVal val="0"/>'
 			strXml += '    <c:showCatName val="1"/>'

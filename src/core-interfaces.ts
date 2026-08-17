@@ -1306,6 +1306,10 @@ export interface OptsChartData {
 	 * @example 'FF0000' // this series is red, the rest follow `chartColors`
 	 */
 	color?: string
+	/**
+	 * Per-point custom data label text. Defined entries replace the numeric label at that index.
+	 */
+	dataLabels?: string[]
 }
 // Used internally, probably shouldn't be used by end users
 export interface IOptsChartData extends OptsChartData {
