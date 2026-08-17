@@ -309,19 +309,26 @@ function paginateTableRows(
 	presLayout: PresLayout,
 	margins: [number, number, number, number],
 	tablePropY: number,
-	tablePropH: number
+	tablePropH: number,
+	numCols: number
 ): TableRowSlide[] {
 	const tableRowSlides: TableRowSlide[] = []
 	let newTableRowSlide: TableRowSlide = { rows: [] }
 	let emuTabCurrH = 0
+	const activeRowSpans = new Map<number, { activeRowIndex: number, cell: TableCell, remaining: number }>()
 
 	tableRows.forEach((row, iRow) => {
 		const rowCellLines: TableCell[] = []
 		let maxCellMarTopEmu = 0
 		let maxCellMarBtmEmu = 0
+		let activeCellIndex = 0
 		let currTableRow: TableRow = []
-		row.forEach(cell => {
+		for (let columnIndex = 0; columnIndex < numCols; ++columnIndex) {
+			const activeRowSpan = activeRowSpans.get(columnIndex)
+			const cell = activeRowSpan && activeRowSpan.activeRowIndex < iRow ? activeRowSpan.cell : row[activeCellIndex++]
+			if (!activeRowSpan && cell?.options?.rowspan) activeRowSpans.set(columnIndex, { activeRowIndex: iRow, cell, remaining: cell.options.rowspan })
 			currTableRow.push({ _type: SLIDE_OBJECT_TYPES.tablecell, text: [], options: cell.options })
+			if (activeRowSpan && activeRowSpan.activeRowIndex < iRow) continue
 
 			if (cell.options?.margin && cell.options.margin[0] >= 1) {
 				if (cell.options?.margin && cell.options.margin[0] && valToPts(cell.options.margin[0]) > maxCellMarTopEmu) maxCellMarTopEmu = valToPts(cell.options.margin[0])
@@ -334,13 +341,16 @@ function paginateTableRows(
 				if (cell.options?.margin && cell.options.margin[2] && inch2Emu(cell.options.margin[2]) > maxCellMarBtmEmu) maxCellMarBtmEmu = inch2Emu(cell.options.margin[2])
 				else if (tableProps?.margin && tableProps.margin[2] && inch2Emu(tableProps.margin[2]) > maxCellMarBtmEmu) maxCellMarBtmEmu = inch2Emu(tableProps.margin[2])
 			}
-		})
+		}
 
 		let emuSlideTabH = getAvailableTableHeight(tableProps, presLayout, margins, tablePropY, tablePropH, tableRowSlides.length)
 		emuTabCurrH += maxCellMarTopEmu + maxCellMarBtmEmu
 		if (isDebugEnabled() && iRow === 0) debugLog(`| SLIDE [${tableRowSlides.length}]: emuSlideTabH ...... = ${(emuSlideTabH / EMU).toFixed(1)} `)
 
-		row.forEach((cell, iCell) => {
+		activeCellIndex = 0
+		for (let columnIndex = 0; columnIndex < numCols; ++columnIndex) {
+			const activeRowSpan = activeRowSpans.get(columnIndex)
+			const cell = activeRowSpan && activeRowSpan.activeRowIndex < iRow ? activeRowSpan.cell : row[activeCellIndex++]
 			const newCell: TableCell = {
 				_type: SLIDE_OBJECT_TYPES.tablecell,
 				_lines: undefined,
@@ -351,19 +361,30 @@ function paginateTableRows(
 			if (newCell.options?.rowspan) newCell._lineHeight = 0
 			if (newCell.options) newCell.options.autoPageCharWeight = tableProps.autoPageCharWeight ? tableProps.autoPageCharWeight : undefined
 
-			let totalColW = Array.isArray(tableProps.colW) ? tableProps.colW[iCell] : tableProps.colW ?? 0
+			let totalColW = Array.isArray(tableProps.colW) ? tableProps.colW[columnIndex] : tableProps.colW ?? 0
 			if (cell.options?.colspan && Array.isArray(tableProps.colW)) {
 				const colspan = cell.options.colspan
-				totalColW = tableProps.colW.filter((_cell, idx) => idx >= iCell && idx < idx + colspan).reduce((prev, curr) => prev + curr)
+				totalColW = tableProps.colW.filter((_cell, idx) => idx >= columnIndex && idx < columnIndex + colspan).reduce((prev, curr) => prev + curr)
 			}
-			newCell._lines = parseTextToLines(cell, totalColW)
+			newCell._lines = activeRowSpan && activeRowSpan.activeRowIndex < iRow ? [] : parseTextToLines(cell, totalColW)
 			rowCellLines.push(newCell)
-		})
+		}
 
 		if (isDebugEnabled()) debugLog(`\n| SLIDE [${tableRowSlides.length}]: ROW [${iRow}]: START...`)
 		let currCellIdx = 0
 		let emuLineMaxH = 0
 		let isDone = false
+		const flushCurrentRowToSlide = (tableSlide: TableRowSlide, rowToAdd: TableRow): void => {
+			const headerRows = (tableProps.addHeaderToEach || tableProps.autoPageRepeatHeader) && tableProps._arrObjTabHeadRows ? tableProps._arrObjTabHeadRows.length : 0
+			if (tableSlide.rows.length === headerRows) {
+				tableSlide.rows.push(rowToAdd)
+			} else {
+				tableSlide.rows.push(rowToAdd.filter((_cell, index) => {
+					const activeSpan = activeRowSpans.get(index)
+					return !(activeSpan && activeSpan.activeRowIndex < iRow)
+				}))
+			}
+		}
 		while (!isDone) {
 			const srcCell: TableCell = rowCellLines[currCellIdx]
 			let tgtCell: TableCell = currTableRow[currCellIdx]
@@ -379,11 +400,20 @@ function paginateTableRows(
 					debugLog(`|-- NEW SLIDE CREATED (currTabH+currLineH > maxH) => ${(emuTabCurrH / EMU).toFixed(2)} + ${((srcCell._lineHeight ?? 0) / EMU).toFixed(2)} > ${emuSlideTabH / EMU}`)
 					debugLog('|-----------------------------------------------------------------------|\n\n')
 				}
-				if (currTableRow.length > 0 && currTableRow.map(cell => cell.text?.length ?? 0).reduce((p, n) => p + n) > 0) newTableRowSlide.rows.push(currTableRow)
+				if (currTableRow.length > 0 && currTableRow.map(cell => cell.text?.length ?? 0).reduce((p, n) => p + n) > 0) flushCurrentRowToSlide(newTableRowSlide, currTableRow)
 				tableRowSlides.push(newTableRowSlide)
 				newTableRowSlide = { rows: [] }
 				currTableRow = []
-				row.forEach(cell => currTableRow.push({ _type: SLIDE_OBJECT_TYPES.tablecell, text: [], options: cell.options }))
+				activeCellIndex = 0
+				for (let columnIndex = 0; columnIndex < numCols; ++columnIndex) {
+					const activeRowSpan = activeRowSpans.get(columnIndex)
+					const cell = activeRowSpan && activeRowSpan.activeRowIndex < iRow ? activeRowSpan.cell : row[activeCellIndex++]
+					currTableRow.push({
+						_type: SLIDE_OBJECT_TYPES.tablecell,
+						text: [],
+						options: { ...cell?.options, ...(cell?.options?.rowspan && activeRowSpan ? { rowspan: activeRowSpan.remaining } : {}) },
+					})
+				}
 				emuSlideTabH = getAvailableTableHeight(tableProps, presLayout, margins, tablePropY, tablePropH, tableRowSlides.length)
 				if (isDebugEnabled()) debugLog(`| SLIDE [${tableRowSlides.length}]: emuSlideTabH ...... = ${(emuSlideTabH / EMU).toFixed(1)} `)
 				emuTabCurrH = maxCellMarTopEmu + maxCellMarBtmEmu
@@ -409,12 +439,16 @@ function paginateTableRows(
 				if (currLine) tgtCell.text = tgtCell.text.concat(currLine)
 				else if (tgtCell.text.length === 0) tgtCell.text = tgtCell.text.concat({ _type: SLIDE_OBJECT_TYPES.tablecell, text: '' })
 			}
-			if (currCellIdx === rowCellLines.length - 1) emuTabCurrH += emuLineMaxH
-			currCellIdx = currCellIdx < rowCellLines.length - 1 ? currCellIdx + 1 : 0
+			if (currCellIdx === numCols - 1) emuTabCurrH += emuLineMaxH
+			currCellIdx = currCellIdx < numCols - 1 ? currCellIdx + 1 : 0
 			if (rowCellLines.map(cell => cell._lines?.length ?? 0).reduce((prev, next) => prev + next) === 0) isDone = true
 		}
 
-		if (currTableRow.length > 0) newTableRowSlide.rows.push(currTableRow)
+		if (currTableRow.length > 0) flushCurrentRowToSlide(newTableRowSlide, currTableRow)
+		for (const [columnIndex, rowSpan] of activeRowSpans) {
+			rowSpan.remaining--
+			if (rowSpan.remaining === 0) activeRowSpans.delete(columnIndex)
+		}
 		if (isDebugEnabled()) debugLog(`- SLIDE [${tableRowSlides.length}]: ROW [${iRow}]: ...COMPLETE ...... emuTabCurrH = ${(emuTabCurrH / EMU).toFixed(2)} ( emuSlideTabH = ${(emuSlideTabH / EMU).toFixed(2)} )`)
 	})
 
@@ -444,7 +478,7 @@ export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps:
 	const emuSlideTabW = getUsableTableWidth(tableCalcW, tablePropX, margins)
 	ensureTableColumnWidths(tableRows, tableProps, numCols, emuSlideTabW)
 
-	const tableRowSlides = paginateTableRows(tableRows, tableProps, presLayout, margins, tablePropY, tablePropH)
+	const tableRowSlides = paginateTableRows(tableRows, tableProps, presLayout, margins, tablePropY, tablePropH, numCols)
 	if (isDebugEnabled()) {
 		debugLog('\n|================================================|')
 		debugLog(`| FINAL: tableRowSlides.length = ${tableRowSlides.length}`)

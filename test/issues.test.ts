@@ -486,6 +486,37 @@ test('#36: tables without style options still emit an empty a:tblPr', async () =
 	assert.ok((await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')).includes('<a:tblPr/>'))
 })
 
+test('#79: autoPageRepeatHeader marks firstRow and respects an explicit override', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addTable(
+		[['Header A', 'Header B'], ...Array.from({ length: 40 }, (_, index) => [`Row ${index}`, 'Value'])],
+		{ x: 0.5, y: 0.5, w: 8, autoPage: true, autoPageRepeatHeader: true, fontSize: 18 }
+	)
+	const zip = await writeZip(pptx)
+	const slideFiles = zip.file(/ppt\/slides\/slide\d+\.xml/) ?? []
+	assert.ok(slideFiles.length > 1, 'table did not paginate')
+	for (const slideFile of slideFiles) {
+		const xml = await slideFile.async('string')
+		assert.ok(xml.includes('<a:tblPr firstRow="1"/>'), `header semantics missing from ${slideFile.name}`)
+	}
+
+	const override = new pptxgen()
+	override.addSlide().addTable([['Header A', 'Header B'], ['A', 'B']], { x: 0.5, y: 0.5, w: 8, autoPageRepeatHeader: true, firstRow: false })
+	assert.ok((await readPart(await writeZip(override), 'ppt/slides/slide1.xml')).includes('<a:tblPr firstRow="0"/>'), 'explicit firstRow:false was ignored')
+
+	const rowspan = new pptxgen()
+	rowspan.addSlide().addTable(
+		[[{ text: 'Spans all rows', options: { rowspan: 41 } }, 'First'], ...Array.from({ length: 40 }, (_, index) => [`Row ${index}`])],
+		{ x: 0.5, y: 0.5, w: 8, h: 2, autoPage: true }
+	)
+	const rowspanSlides = (await writeZip(rowspan)).file(/ppt\/slides\/slide\d+\.xml/) ?? []
+	assert.ok(rowspanSlides.length > 1, 'rowspan table did not paginate')
+	for (const slideFile of rowspanSlides) {
+		const rows = (await slideFile.async('string')).match(/<a:tr\b[\s\S]*?<\/a:tr>/g) ?? []
+		assert.ok(rows.every(row => (row.match(/<a:tc(?:\s|>)/g) ?? []).length === 2), `rowspan changed a column position in ${slideFile.name}`)
+	}
+})
+
 test('#35: images accept a line/outline and emit it in the picture spPr', async () => {
 	const pptx = new pptxgen()
 	pptx.addSlide().addImage({ data: PNG_4x2, x: 1, y: 1, w: 2, h: 1, line: { color: 'FF0000', width: 2, dashType: 'dash' } })

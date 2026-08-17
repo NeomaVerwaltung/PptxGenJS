@@ -78,8 +78,9 @@ const ImageSizingXml = {
  * @return {string} XML
  */
 function genXmlTblPr (opts: TableProps): string {
+	const firstRow = opts.firstRow ?? (opts.autoPageRepeatHeader ? true : undefined)
 	const flags: Array<[string, boolean | undefined]> = [
-		['firstRow', opts.firstRow],
+		['firstRow', firstRow],
 		['lastRow', opts.lastRow],
 		['firstCol', opts.firstCol],
 		['lastCol', opts.lastCol],
