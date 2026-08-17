@@ -2039,6 +2039,10 @@ declare namespace PptxGenJS {
 		 * @example 'FF0000' // this series is red, the rest follow `chartColors`
 		 */
 		color?: string
+		/**
+		 * Per-point custom data label text. Defined entries replace the numeric label at that index.
+		 */
+		dataLabels?: string[]
 	}
 	export interface OptsChartGridLine {
 		/**
