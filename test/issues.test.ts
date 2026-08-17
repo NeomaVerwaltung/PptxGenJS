@@ -115,6 +115,25 @@ test('#1443: notes master has no placeholder shapes PowerPoint repairs away', as
 	assert.match(notesSlide, /Speaker notes/, 'speaker notes were not preserved')
 })
 
+test('#102: negative line deltas use non-negative extents without reversing arrows', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addShape(pptx.ShapeType.line, {
+		x: 3,
+		y: 3,
+		w: -1.533,
+		h: -1.218,
+		line: { color: '000000', beginArrowType: 'triangle', endArrowType: 'stealth' },
+	})
+
+	const xml = await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')
+	const transform = /<a:xfrm flipH="1" flipV="1"><a:off x="(\d+)" y="(\d+)"\/><a:ext cx="(\d+)" cy="(\d+)"\/><\/a:xfrm>/.exec(xml)
+	assert.ok(transform, 'negative line was not normalized with axis flips')
+	assert.ok(Number(transform[1]) < 3 * 914400 && Number(transform[2]) < 3 * 914400, 'line offset did not retain its endpoints')
+	assert.ok(Number(transform[3]) > 0 && Number(transform[4]) > 0, 'line extents must be non-negative')
+	assert.match(xml, /<a:headEnd type="triangle"/, 'line start arrow was not retained')
+	assert.match(xml, /<a:tailEnd type="stealth"/, 'line end arrow was not retained')
+})
+
 test('#21/#23: bubble chart workbook keeps zeros and has a valid table ref', async () => {
 	const pptx = new pptxgen()
 	const slide = pptx.addSlide()

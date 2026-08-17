@@ -8,6 +8,7 @@ import {
 	DEF_TEXT_SHADOW,
 	EMU,
 	SLDNUMFLDID,
+	SHAPE_TYPE,
 	SLIDE_OBJECT_TYPES,
 } from '../core-enums'
 import {
@@ -206,9 +207,27 @@ function resolveSlideObjectContext (slide: PresSlide | SlideLayout, slideItemObj
 		if (placeholderObj.options?.h === 0 || placeholderObj.options?.h) cy = getSmartParseNumber(placeholderObj.options.h, 'Y', slide._presLayout)
 	}
 
+	// DrawingML extents cannot be negative. Lines use their frame as endpoint deltas,
+	// so move a negative delta into the offset and flip that axis to retain endpoints
+	// (and therefore head/tail arrow direction).
+	let flipH = options.flipH
+	let flipV = options.flipV
+	if (slideItemObj.shape === SHAPE_TYPE.LINE) {
+		if (cx < 0) {
+			x += cx
+			cx = -cx
+			flipH = !flipH
+		}
+		if (cy < 0) {
+			y += cy
+			cy = -cy
+			flipV = !flipV
+		}
+	}
+
 	let locationAttr = ''
-	if (options.flipH) locationAttr += ' flipH="1"'
-	if (options.flipV) locationAttr += ' flipV="1"'
+	if (flipH) locationAttr += ' flipH="1"'
+	if (flipV) locationAttr += ' flipV="1"'
 	if (options.rotate) locationAttr += ` rot="${convertRotationDegrees(options.rotate)}"`
 
 	return { cx, cy, imgHeight, imgWidth, locationAttr, placeholderObj, rounding: options.rounding, sizing: options.sizing, x, y }
