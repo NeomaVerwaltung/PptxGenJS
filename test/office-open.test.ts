@@ -26,7 +26,7 @@ test('office: LibreOffice opens and converts a generated presentation', async ()
 		pptx.defaultImageDpi = 220
 		pptx.readonlyRecommended = true
 		const slide = pptx.addSlide({ transition: { type: 'wipe', direction: 'left', speed: 'slow' } })
-		slide.addText('OOXML consumer smoke test', { x: 0.5, y: 0.5, w: 5, h: 0.5 })
+		slide.addText('OOXML consumer smoke test', { x: 0.5, y: 0.5, w: 5, h: 0.5, animation: { type: 'fadeIn' } })
 		slide.addText([
 			{ text: 'ratio ' },
 			{ text: 'a/b', options: { omml: '<m:f><m:num><m:r><m:t>a</m:t></m:r></m:num><m:den><m:r><m:t>b</m:t></m:r></m:den></m:f>' } },
@@ -36,6 +36,7 @@ test('office: LibreOffice opens and converts a generated presentation', async ()
 		const mediaSlide = pptx.addSlide()
 		mediaSlide.addMedia({ type: 'video', data: 'video/mp4;base64,QQ==', x: 0.5, y: 0.5, w: 4, h: 2.5, autoplay: true, loop: true, mute: true })
 		mediaSlide.addMedia({ type: 'audio', data: 'audio/mp3;base64,QQ==', x: 5, y: 0.5, w: 2, h: 2, autoplay: true })
+		mediaSlide.addText('animated with media', { x: 0.5, y: 3.5, w: 5, h: 0.5, animation: { type: 'wipeIn', direction: 'left', trigger: 'afterPrevious' } })
 		const gradientSlide = pptx.addSlide()
 		gradientSlide.background = { type: 'gradient', gradient: { angle: 45, stops: [{ color: 'FFFFFF', position: 0 }, { color: 'E7E6E6', position: 100 }] } }
 		gradientSlide.addShape(pptx.ShapeType.rect, {

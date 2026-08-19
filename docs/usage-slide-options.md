@@ -76,3 +76,34 @@ similar transition rather than failing to open the file.
 Directions accept friendly aliases (`left`, `right`, `up`, `down`, `horizontal`, `vertical`,
 `topLeft`, `bottomRight`, ...). A direction the effect does not support is ignored with a warning, as
 are an unknown `type`, an out-of-range `spokes`, and a non-numeric `duration`/`advTm`.
+## Animations
+
+Set `animation` on any object you add to a slide.
+
+```typescript
+slide.addText('Headline', { x: 1, y: 1, w: 6, h: 1, animation: { type: 'fadeIn' } });
+slide.addText('Subtitle', { x: 1, y: 2, w: 6, h: 1, animation: { type: 'wipeIn', direction: 'left', trigger: 'withPrevious' } });
+slide.addShape(pptx.ShapeType.rect, { x: 1, y: 3, w: 3, h: 1, animation: { type: 'zoomOut', trigger: 'afterPrevious', delay: 250 } });
+```
+
+### Animation Props (`AnimationProps`)
+
+| Option      | Type   | Default   | Description                                             |
+| :---------- | :----- | :-------- | :------------------------------------------------------ |
+| `type`      | string |           | **required** - preset (see below)                       |
+| `trigger`   | string | `onClick` | `onClick`, `withPrevious`, or `afterPrevious`            |
+| `direction` | string |           | for presets that take one (see below)                   |
+| `delay`     | number | `0`       | delay before the effect starts (milliseconds)            |
+| `duration`  | number | `500`     | effect length (milliseconds)                            |
+
+**Entrance**: `appear`, `fadeIn`, `wipeIn`, `zoomIn` — **Exit**: `disappear`, `fadeOut`, `wipeOut`, `zoomOut`.
+
+`wipeIn`/`wipeOut` take `direction: 'up' | 'right' | 'down' | 'left'` (default `up`);
+`zoomIn`/`zoomOut` take `direction: 'in' | 'out'`. `appear`/`disappear` are instant and take none.
+
+`withPrevious` and `afterPrevious` join the click group before them, so a run of them plays together
+with (or after) the preceding `onClick` effect.
+
+Motion-path and emphasis effects are not supported yet. An unknown preset or trigger is skipped with a
+warning; an unsupported `direction`, a negative `delay`, and a non-numeric `duration` fall back to
+their defaults.
