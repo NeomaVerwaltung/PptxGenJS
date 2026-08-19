@@ -121,3 +121,35 @@ or cell positions. Turn it off to write `ppt/presProps.xml` exactly as versions 
 ```typescript
 pptx.chartTrackingRefBased = false;
 ```
+
+## Slide Show Options
+
+```typescript
+pptx.slideShow = { mode: 'kiosk', loop: true, useTimings: false };
+pptx.slideShow = { mode: 'browse', browseMode: true, laserColor: 'FF0000' };
+```
+
+| Option          | Type    | Default   | Description                                                       |
+| :-------------- | :------ | :-------- | :---------------------------------------------------------------- |
+| `mode`          | string  | `present` | `present` (full screen), `browse` (windowed), `kiosk` (self-running) |
+| `loop`          | boolean | `false`   | restart after the last slide                                      |
+| `showNarration` | boolean | `true`    | play recorded narration                                           |
+| `showAnimation` | boolean | `true`    | play animations                                                   |
+| `useTimings`    | boolean | `true`    | use the recorded slide timings                                    |
+| `browseMode`    | boolean |           | show the browse-mode UI (PowerPoint 2010+)                        |
+| `laserColor`    | Color   |           | laser-pointer color (PowerPoint 2010+)                            |
+
+## Image and View Preferences
+
+```typescript
+pptx.defaultImageDpi = 220;        // PowerPoint's own default; 0 = do not compress
+pptx.discardImageEditData = true;  // smaller file, picture edits no longer undoable
+pptx.readonlyRecommended = true;   // PowerPoint suggests opening read-only
+```
+
+All of the above are opt-in: while unset, `ppt/presProps.xml` is written exactly as in prior versions.
+An unknown `slideShow.mode`, a negative `defaultImageDpi`, and a non-boolean flag are ignored with a
+warning.
+
+Recorded laser traces (`p14:laserTraceLst`) and show-event lists (`p14:showEvtLst`) are recordings
+PowerPoint captures while presenting, not authoring options, so PptxGenJS does not generate them.
