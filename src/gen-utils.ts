@@ -3,7 +3,7 @@
  */
 
 import { EMU, REGEX_HEX_COLOR, DEF_FONT_COLOR, DEF_TEXT_GLOW, ONEPT, SchemeColor, SCHEME_COLORS } from './core-enums'
-import { PresLayout, TextGlowProps, PresSlide, SlideLayout, ShapeFillProps, Color, ShapeLineProps, Coord, ShadowProps } from './core-interfaces'
+import { PresLayout, TextGlowProps, PresSlide, SlideLayout, ShapeFillProps, Color, ShapeLineProps, Coord, ShadowProps, ShapeGradientProps, ShapeGradientStopProps } from './core-interfaces'
 
 /** debug namespace, used for both the log prefix and the `NODE_DEBUG` section name */
 const DEBUG_NS = 'pptxgenjs'
@@ -317,6 +317,41 @@ export function createGlowElement (glow: ResolvedGlowProps): string {
 	return strXml
 }
 
+/** Clamp a user-supplied percent (0-100) and drop non-finite values. */
+function clampPercent (value: number | undefined, fallback: number): number {
+	if (typeof value !== 'number' || !isFinite(value)) return fallback
+	return Math.min(100, Math.max(0, value))
+}
+
+/**
+ * Create a DrawingML `a:gradFill` element
+ * - `a:gs@pos` and `a:alpha@val` are ST_Percentage in 1000ths of a percent (0-100000)
+ * - `a:lin@ang` is ST_PositiveFixedAngle in 60000ths of a degree (0-21599999)
+ * @param {ShapeGradientProps} gradient - gradient props (already known to have 2+ stops)
+ * @returns {string} XML string
+ */
+function createGradientFillElement (gradient: ShapeGradientProps): string {
+	const stops = [...gradient.stops]
+		.map((stop, idx): ShapeGradientStopProps & { _idx: number } => ({ ...stop, _idx: idx }))
+		.sort((a, b) => clampPercent(a.position, 0) - clampPercent(b.position, 0) || a._idx - b._idx)
+	const gsLst = stops
+		.map(stop => {
+			const pos = Math.round(clampPercent(stop.position, 0) * 1000)
+			const alpha = typeof stop.transparency === 'number' ? `<a:alpha val="${Math.round((100 - clampPercent(stop.transparency, 0)) * 1000)}"/>` : ''
+			return `<a:gs pos="${pos}">${createColorElement(stop.color, alpha)}</a:gs>`
+		})
+		.join('')
+
+	// `a:lin@ang` is ST_PositiveFixedAngle, so normalize into 0-359 before scaling
+	const angleDeg = typeof gradient.angle === 'number' && isFinite(gradient.angle) ? (((gradient.angle % 360) + 360) % 360) : 90
+	const geometry =
+		gradient.type === 'radial'
+			? '<a:path path="circle"><a:fillToRect l="50000" t="50000" r="50000" b="50000"/></a:path>'
+			: `<a:lin ang="${Math.round(angleDeg * 60000)}" scaled="${gradient.scaled === true ? 1 : 0}"/>`
+
+	return `<a:gradFill rotWithShape="${gradient.rotateWithShape === false ? 0 : 1}"><a:gsLst>${gsLst}</a:gsLst>${geometry}</a:gradFill>`
+}
+
 /**
  * Create color selection
  * @param {Color | ShapeFillProps | ShapeLineProps} props fill props
@@ -327,11 +362,13 @@ export function genXmlColorSelection (props: Color | ShapeFillProps | ShapeLineP
 	let colorVal = ''
 	let internalElements = ''
 	let outText = ''
+	let gradient: ShapeGradientProps | undefined
 
 	if (props) {
 		if (typeof props === 'string') colorVal = props
 		else {
 			if (props.type) fillType = props.type
+			if (props.gradient) gradient = props.gradient
 			if (props.color) colorVal = props.color
 			if (props.alpha) internalElements += `<a:alpha val="${Math.round((100 - props.alpha) * 1000)}"/>` // DEPRECATED: @deprecated v3.3.0
 			if (props.transparency) internalElements += `<a:alpha val="${Math.round((100 - props.transparency) * 1000)}"/>`
@@ -340,6 +377,15 @@ export function genXmlColorSelection (props: Color | ShapeFillProps | ShapeLineP
 		switch (fillType) {
 			case 'solid':
 				outText += `<a:solidFill>${createColorElement(colorVal, internalElements)}</a:solidFill>`
+				break
+			case 'gradient':
+				// MS-PPT requires 2+ stops; anything less is not a gradient, so degrade to the solid fill path
+				if (gradient && Array.isArray(gradient.stops) && gradient.stops.length >= 2) {
+					outText += createGradientFillElement(gradient)
+				} else {
+					console.warn('[pptxgenjs] `fill.type:"gradient"` requires `fill.gradient.stops` with at least 2 stops - solid fill used instead')
+					outText += `<a:solidFill>${createColorElement(colorVal || gradient?.stops?.[0]?.color, internalElements)}</a:solidFill>`
+				}
 				break
 			default: // @note need a statement as having only "break" is removed by rollup, then tiggers "no-default" js-linter
 				outText += ''

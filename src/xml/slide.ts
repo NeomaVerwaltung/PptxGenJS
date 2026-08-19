@@ -105,7 +105,7 @@ function genXmlTblPr (opts: TableProps): string {
  */
 function genXmlLine (line: ShapeLineProps): string {
 	let xml = line.width ? `<a:ln w="${valToPts(line.width)}">` : '<a:ln>'
-	if (line.color) xml += genXmlColorSelection(line)
+	if (line.color || line.type === 'gradient') xml += genXmlColorSelection(line)
 	if (line.dashType) xml += `<a:prstDash val="${line.dashType}"/>`
 	if (line.beginArrowType) xml += `<a:headEnd type="${line.beginArrowType}"/>`
 	if (line.endArrowType) xml += `<a:tailEnd type="${line.endArrowType}"/>`
@@ -242,7 +242,7 @@ function genXmlSlideBackground (slide: PresSlide | SlideLayout): string {
 	// STEP 1: Add background color/image (ensure only a single `<p:bg>` tag is created, ex: when master-baskground has both `color` and `path`)
 	if (slide._bkgdImgRid) {
 		strSlideXml += `<p:bg><p:bgPr><a:blipFill dpi="0" rotWithShape="1"><a:blip r:embed="rId${slide._bkgdImgRid}"><a:lum/></a:blip><a:srcRect/><a:stretch><a:fillRect/></a:stretch></a:blipFill><a:effectLst/></p:bgPr></p:bg>`
-	} else if (slide.background?.color) {
+	} else if (slide.background?.color || slide.background?.type === 'gradient') {
 		// NOTE: `<a:effectLst/>` is required by PowerPoint (matches image-bg path above); omitting it triggers the repair dialog
 		strSlideXml += `<p:bg><p:bgPr>${genXmlColorSelection(slide.background)}<a:effectLst/></p:bgPr></p:bg>`
 	} else if (!slide.bkgd && slide._name && slide._name === DEF_PRES_LAYOUT_NAME) {
@@ -449,7 +449,12 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout): string {
 									? cell._optImp.fill
 									: ''
 						fillColor = fillColor || cellOpts.fill ? cellOpts.fill : ''
-						const cellFill = fillColor ? genXmlColorSelection(fillColor) : ''
+						// A gradient needs the whole fill object; the color-only path above cannot carry stops
+						const cellFillProps = cell._optImp?.fill ?? cellOpts.fill
+						const cellFill =
+							typeof cellFillProps === 'object' && cellFillProps?.type === 'gradient'
+								? genXmlColorSelection(cellFillProps)
+								: fillColor ? genXmlColorSelection(fillColor) : ''
 
 						let cellMargin = cellOpts.margin === 0 || cellOpts.margin ? cellOpts.margin : DEF_CELL_MARGIN_IN
 						if (!Array.isArray(cellMargin) && typeof cellMargin === 'number') cellMargin = [cellMargin, cellMargin, cellMargin, cellMargin]

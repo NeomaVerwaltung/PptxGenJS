@@ -1014,6 +1014,55 @@ declare namespace PptxGenJS {
 		rotateWithShape?: boolean
 	}
 	// used by: shape, table, text
+	export interface ShapeGradientStopProps {
+		/**
+		 * Stop color
+		 * - `HexColor` or `ThemeColor`
+		 */
+		color: Color
+		/**
+		 * Stop position along the gradient (percent)
+		 * - range: 0-100
+		 */
+		position: number
+		/**
+		 * Transparency (percent)
+		 * - range: 0-100
+		 * @default 0
+		 */
+		transparency?: number
+	}
+	export interface ShapeGradientProps {
+		/**
+		 * Gradient geometry
+		 * @default 'linear'
+		 */
+		type?: 'linear' | 'radial'
+		/**
+		 * Linear gradient angle (degrees, clockwise)
+		 * - 0 = left-to-right, 90 = top-to-bottom
+		 * - normalized into the range 0-359
+		 * - ignored when `type` is `'radial'`
+		 * @default 90
+		 */
+		angle?: number
+		/**
+		 * Whether the linear gradient angle scales with the fill region
+		 * @default false
+		 */
+		scaled?: boolean
+		/**
+		 * Whether the gradient rotates with its shape
+		 * @default true
+		 */
+		rotateWithShape?: boolean
+		/**
+		 * Gradient color stops
+		 * - MS-PPT requires **at least 2 stops**; fewer falls back to a solid fill
+		 * - stops are sorted by `position` before they are written
+		 */
+		stops: ShapeGradientStopProps[]
+	}
 	export interface ShapeFillProps {
 		/**
 		 * Fill color
@@ -1033,7 +1082,13 @@ declare namespace PptxGenJS {
 		 * Fill type
 		 * @default 'solid'
 		 */
-		type?: 'none' | 'solid'
+		type?: 'none' | 'solid' | 'gradient'
+		/**
+		 * Gradient fill definition
+		 * - required when `type` is `'gradient'`
+		 * @example { type:'gradient', gradient:{ angle:90, stops:[{ color:'FF0000', position:0 }, { color:'0000FF', position:100 }] } }
+		 */
+		gradient?: ShapeGradientProps
 
 		/**
 		 * Transparency (percent)

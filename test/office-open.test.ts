@@ -26,6 +26,17 @@ test('office: LibreOffice opens and converts a generated presentation', async ()
 		slide.addText('OOXML consumer smoke test', { x: 0.5, y: 0.5, w: 5, h: 0.5 })
 		slide.addTable([['Region', 'Sales'], ['West', '20']], { x: 0.5, y: 1.5, w: 5 })
 		slide.addChart(pptx.ChartType.bar, [{ name: 'Sales', labels: ['Q1', 'Q2'], values: [10, 20] }], { x: 0.5, y: 3, w: 6, h: 3 })
+		const gradientSlide = pptx.addSlide()
+		gradientSlide.background = { type: 'gradient', gradient: { angle: 45, stops: [{ color: 'FFFFFF', position: 0 }, { color: 'E7E6E6', position: 100 }] } }
+		gradientSlide.addShape(pptx.ShapeType.rect, {
+			x: 0.5,
+			y: 0.5,
+			w: 4,
+			h: 2,
+			fill: { type: 'gradient', gradient: { stops: [{ color: 'FF0000', position: 0 }, { color: '0000FF', position: 100, transparency: 20 }] } },
+			line: { type: 'gradient', width: 2, gradient: { type: 'radial', stops: [{ color: '00FF00', position: 0 }, { color: '000000', position: 100 }] } },
+		})
+		gradientSlide.addTable([[{ text: 'gradient cell', options: { fill: { type: 'gradient', gradient: { stops: [{ color: '111111', position: 0 }, { color: '888888', position: 100 }] } } } }]], { x: 0.5, y: 3, w: 4 })
 		await writeFile(presentationPath, (await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
 
 		await execFile(officeBinary, ['--headless', '--convert-to', 'pdf', '--outdir', directory, presentationPath], { timeout: 60_000 })

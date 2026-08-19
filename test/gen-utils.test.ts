@@ -26,6 +26,7 @@ import {
 	utf8ToBase64,
 } from '../src/gen-utils'
 import { PresLayout, PresSlide, ShadowProps } from '../src/core-interfaces'
+import { DEF_FONT_COLOR } from '../src/core-enums'
 
 // 10in x 7.5in layout expressed in EMU
 const LAYOUT = { name: 'TEST', width: 9144000, height: 6858000 } as PresLayout
@@ -125,7 +126,64 @@ test('genXmlColorSelection', () => {
 		genXmlColorSelection({ type: 'solid', color: 'FF0000', transparency: 50 }),
 		'<a:solidFill><a:srgbClr val="FF0000"><a:alpha val="50000"/></a:srgbClr></a:solidFill>'
 	)
-	assert.equal(genXmlColorSelection({ type: 'gradient' as 'solid', color: 'FF0000' }), '', 'non-solid fills are not emitted')
+	assert.equal(genXmlColorSelection({ type: 'none', color: 'FF0000' }), '', 'unsupported fill types are not emitted')
+})
+
+test('genXmlColorSelection: gradient fill', () => {
+	assert.equal(
+		genXmlColorSelection({ type: 'gradient', gradient: { stops: [{ color: 'FF0000', position: 0 }, { color: '0000FF', position: 100 }] } }),
+		'<a:gradFill rotWithShape="1"><a:gsLst><a:gs pos="0"><a:srgbClr val="FF0000"/></a:gs><a:gs pos="100000"><a:srgbClr val="0000FF"/></a:gs></a:gsLst><a:lin ang="5400000" scaled="0"/></a:gradFill>',
+		'default is a 90deg linear gradient that rotates with the shape'
+	)
+	assert.equal(
+		genXmlColorSelection({
+			type: 'gradient',
+			gradient: {
+				type: 'radial',
+				rotateWithShape: false,
+				stops: [{ color: '0000FF', position: 100 }, { color: 'accent1', position: 0, transparency: 25 }],
+			},
+		}),
+		'<a:gradFill rotWithShape="0"><a:gsLst><a:gs pos="0"><a:schemeClr val="accent1"><a:alpha val="75000"/></a:schemeClr></a:gs><a:gs pos="100000"><a:srgbClr val="0000FF"/></a:gs></a:gsLst>' +
+			'<a:path path="circle"><a:fillToRect l="50000" t="50000" r="50000" b="50000"/></a:path></a:gradFill>',
+		'stops are sorted by position; scheme colors, transparency, and radial geometry are supported'
+	)
+	assert.equal(
+		genXmlColorSelection({ type: 'gradient', gradient: { angle: -90, scaled: true, stops: [{ color: 'FF0000', position: 0 }, { color: '0000FF', position: 100 }] } }),
+		'<a:gradFill rotWithShape="1"><a:gsLst><a:gs pos="0"><a:srgbClr val="FF0000"/></a:gs><a:gs pos="100000"><a:srgbClr val="0000FF"/></a:gs></a:gsLst><a:lin ang="16200000" scaled="1"/></a:gradFill>',
+		'negative angles normalize into ST_PositiveFixedAngle'
+	)
+})
+
+test('genXmlColorSelection: gradient input validation', () => {
+	const orig = console.warn
+	const warnings: string[] = []
+	console.warn = (msg: string) => warnings.push(msg)
+	try {
+		assert.equal(
+			genXmlColorSelection({ type: 'gradient', gradient: { stops: [{ color: '00FF00', position: 0 }] } }),
+			'<a:solidFill><a:srgbClr val="00FF00"/></a:solidFill>',
+			'fewer than 2 stops degrades to a solid fill'
+		)
+		assert.equal(
+			genXmlColorSelection({ type: 'gradient' } as unknown as Parameters<typeof genXmlColorSelection>[0]),
+			`<a:solidFill><a:srgbClr val="${DEF_FONT_COLOR}"/></a:solidFill>`,
+			'a missing gradient degrades to a solid fill'
+		)
+		assert.equal(warnings.length, 3, 'each degraded gradient warns, plus the invalid-color warning for the missing gradient')
+	} finally {
+		console.warn = orig
+	}
+
+	// out-of-range/non-finite stop positions and angles must never reach the XML as NaN or > 100000
+	const xml = genXmlColorSelection({
+		type: 'gradient',
+		gradient: { angle: NaN, stops: [{ color: 'FF0000', position: 999 }, { color: '0000FF', position: -50 }, { color: '00FF00', position: 'x' as unknown as number }] },
+	})
+	assert.doesNotMatch(xml, /NaN/, 'no NaN attributes')
+	assert.equal(xml, '<a:gradFill rotWithShape="1"><a:gsLst>' +
+		'<a:gs pos="0"><a:srgbClr val="0000FF"/></a:gs><a:gs pos="0"><a:srgbClr val="00FF00"/></a:gs><a:gs pos="100000"><a:srgbClr val="FF0000"/></a:gs>' +
+		'</a:gsLst><a:lin ang="5400000" scaled="0"/></a:gradFill>', 'positions clamp to 0-100 and a non-finite angle falls back to 90deg')
 })
 
 test('getNewRelId', () => {
