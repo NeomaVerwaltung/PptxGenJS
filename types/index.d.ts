@@ -2875,6 +2875,11 @@ declare namespace PptxGenJS {
 		/** Slide transition (`<p:transition>`) */
 		transition?: SlideTransitionProps
 		/**
+		 * Stable identity for this slide across saves (MS-PPTX 2.2.9 `p14:creationId`)
+		 * - `true` assigns one, or pass your own unsigned 32-bit value
+		 */
+		creationId?: boolean | number
+		/**
 		 * Slide number options
 		 */
 		slideNumber?: SlideNumberProps
@@ -3111,6 +3116,10 @@ declare namespace PptxGenJS {
 		hidden: boolean
 		/** Slide transition (`<p:transition>`) */
 		transition?: SlideTransitionProps
+		/**
+		 * Stable identity for this slide across saves (MS-PPTX 2.2.9 `p14:creationId`)
+		 */
+		creationId?: boolean | number
 		/**
 		 * Slide number options
 		 */

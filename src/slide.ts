@@ -162,6 +162,19 @@ export default class Slide {
 	}
 
 	/**
+	 * Stable identity for this slide across saves (MS-PPTX `p14:creationId`)
+	 * @type {boolean | number}
+	 */
+	private _creationId?: boolean | number
+	public set creationId(value: boolean | number | undefined) {
+		this._creationId = value
+	}
+
+	public get creationId(): boolean | number | undefined {
+		return this._creationId
+	}
+
+	/**
 	 * @type {SlideNumberProps}
 	 */
 	public set slideNumber(value: SlideNumberProps) {

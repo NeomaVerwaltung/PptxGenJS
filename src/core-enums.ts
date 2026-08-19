@@ -29,6 +29,19 @@ export const MS_PPTX_NS = {
 } as const
 
 /**
+ * Bases for the MS-PPTX tracking ids (`ST_UnsignedInt`)
+ * - ids are derived from a base plus an index rather than randomised: MS-PPTX only requires
+ *   uniqueness within a scope, and a deterministic value keeps exports reproducible
+ * - `modId` keeps the value earlier versions hard-coded, so the first table on a slide is unchanged
+ */
+export const MS_PPTX_ID_BASE = {
+	/** `p14:creationId` - unique per slide */
+	creationId: 2147483648,
+	/** `p14:modId` - unique per shape on a slide */
+	modId: 1579011935,
+} as const
+
+/**
  * Every OOXML extension URI this library emits, with the namespace it carries.
  *
  * This is the registry behind the MS-PPTX conformance profile in `docs/ms-pptx-profile.md`: an

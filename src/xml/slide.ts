@@ -7,6 +7,7 @@ import {
 	DEF_PRES_LAYOUT_NAME,
 	DEF_TEXT_SHADOW,
 	EMU,
+	MS_PPTX_ID_BASE,
 	OOXML_EXT,
 	SLDNUMFLDID,
 	SHAPE_TYPE,
@@ -97,6 +98,17 @@ function genXmlTblPr (opts: TableProps): string {
 	if (!attrs && !opts.tableStyleId) return '<a:tblPr/>'
 	// NOTE: `a:tableStyleId` must be the last child of `a:tblPr` per the schema
 	return opts.tableStyleId ? `<a:tblPr${attrs}><a:tableStyleId>${encodeXmlEntities(opts.tableStyleId)}</a:tableStyleId></a:tblPr>` : `<a:tblPr${attrs}/>`
+}
+
+/**
+ * Modification id for a shape, unique on its slide (MS-PPTX 2.3.1.19)
+ * - derived from a base plus the shape's own index rather than randomised: MS-PPTX only requires
+ *   uniqueness within the slide, and deriving it keeps exports reproducible and free of state
+ * @param {number} objectIndex - index of the shape among the slide's objects
+ * @returns {number} `p14:modId` value
+ */
+function shapeModId (objectIndex: number): number {
+	return MS_PPTX_ID_BASE.modId + objectIndex
 }
 
 /**
@@ -311,7 +323,8 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout): string {
 				strXml = `<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="${intTableNum * (slide._slideNum ?? 0) + 1}" name="${slideItemObj.options.objectName}"/>`
 				strXml +=
 					'<p:cNvGraphicFramePr><a:graphicFrameLocks noGrp="1"/></p:cNvGraphicFramePr>' +
-					`  <p:nvPr><p:extLst><p:ext uri="${OOXML_EXT.modId.uri}"><p14:modId xmlns:p14="${OOXML_EXT.modId.ns}" val="1579011935"/></p:ext></p:extLst></p:nvPr>` +
+					// MS-PPTX 2.3.1.19: each `p14:modId` must be unique on the slide, so it cannot be a constant
+					`  <p:nvPr><p:extLst><p:ext uri="${OOXML_EXT.modId.uri}"><p14:modId xmlns:p14="${OOXML_EXT.modId.ns}" val="${shapeModId(idx)}"/></p:ext></p:extLst></p:nvPr>` +
 					'</p:nvGraphicFramePr>'
 				strXml += `<p:xfrm><a:off x="${x || (x === 0 ? 0 : EMU)}" y="${y || (y === 0 ? 0 : EMU)}"/><a:ext cx="${cx || (cx === 0 ? 0 : EMU)}" cy="${cy || EMU
 				}"/></p:xfrm>`
@@ -874,13 +887,42 @@ function genXmlSlideNumber (slide: PresSlide | SlideLayout): string {
 }
 
 /** Close the shape tree and the `p:cSld` wrapper opened by the public orchestrator. */
-function genXmlSlideEnd (): string {
+function genXmlSlideEnd (slide: PresSlide | SlideLayout): string {
 	let strSlideXml = ''
-	// STEP 5: Close spTree and finalize slide XML
+	// STEP 5: Close spTree, add any cSld extensions, and finalize slide XML
 	strSlideXml += '</p:spTree>'
+	strSlideXml += genXmlCreationId(slide)
 	strSlideXml += '</p:cSld>'
 
 	return strSlideXml
+}
+
+/**
+ * Create the `p:cSld` extension carrying this slide's creation id, or `''` when unset
+ * - MS-PPTX 2.2.9 / 2.3.1.4: a stable identity for the slide across saves
+ * - the generated value is cached on the slide so repeated exports keep the same id
+ * @param {PresSlide | SlideLayout} slide - slide object
+ * @returns {string} XML string
+ */
+function genXmlCreationId (slide: PresSlide | SlideLayout): string {
+	const requested = slide.creationId
+	if (!requested) return ''
+
+	if (typeof requested === 'number') {
+		// `ST_UnsignedInt`: a non-integer or out-of-range value would trigger the repair dialog
+		if (!isFinite(requested) || requested < 0 || requested > 0xffffffff || Math.floor(requested) !== requested) {
+			console.warn(`[pptxgenjs] creationId must be an integer between 0 and 4294967295 - "${String(requested)}" ignored`)
+			return ''
+		}
+	} else if (requested !== true) {
+		console.warn(`[pptxgenjs] creationId must be \`true\` or an unsigned 32-bit integer - "${String(requested)}" ignored`)
+		return ''
+	} else {
+		// unique per slide and reproducible - see MS_PPTX_ID_BASE
+		slide.creationId = MS_PPTX_ID_BASE.creationId + (slide._slideNum ?? 0)
+	}
+
+	return `<p:extLst><p:ext uri="${OOXML_EXT.creationId.uri}"><p14:creationId xmlns:p14="${OOXML_EXT.creationId.ns}" val="${String(slide.creationId)}"/></p:ext></p:extLst>`
 }
 
 /**
@@ -894,7 +936,7 @@ export function slideObjectToXml (slide: PresSlide | SlideLayout): string {
 	strSlideXml += genXmlSlideTreeStart()
 	strSlideXml += genXmlSlideObjects(slide)
 	strSlideXml += genXmlSlideNumber(slide)
-	strSlideXml += genXmlSlideEnd()
+	strSlideXml += genXmlSlideEnd(slide)
 	return strSlideXml
 }
 
