@@ -49,7 +49,7 @@ slide.addText("ShapeType.line", {
 | Name         | Type                                                                    | Description         | Possible Values                                             |
 | :----------- | :---------------------------------------------------------------------- | :------------------ | :---------------------------------------------------------- |
 | `align`      | string                                                                  | alignment           | `left` or `center` or `right`. Default: `left`              |
-| `fill`       | `ShapeFillProps`       | fill props          | Fill color/transparency props                               |
+| `fill`       | `ShapeFillProps`       | fill props          | Fill color/transparency props, or a gradient (see below)    |
 | `flipH`      | boolean                                                                 | flip Horizontal     | `true` or `false`                                           |
 | `flipV`      | boolean                                                                 | flip Vertical       | `true` or `false`                                           |
 | `hyperlink`  | `HyperlinkProps`  | hyperlink props     | (see type link)                                             |
@@ -62,3 +62,33 @@ slide.addText("ShapeType.line", {
 ## Examples
 
 ![Shapes with Text Demo](./assets/ex-shape-slide.png)
+
+## Gradient Fills
+
+Set `fill.type` (or `line.type`) to `gradient` and supply at least two color stops. Gradients work anywhere a
+`ShapeFillProps` is accepted: shape fills, shape/line outlines, table cell fills, and slide backgrounds.
+
+### Gradient Props (`ShapeGradientProps`)
+
+| Name              | Type                        | Default  | Description                                                          |
+| :---------------- | :-------------------------- | :------- | :------------------------------------------------------------------- |
+| `stops`           | `ShapeGradientStopProps[]`  |          | **required** - 2 or more `{ color, position, transparency? }` stops   |
+| `type`            | string                      | `linear` | `linear` or `radial`                                                 |
+| `angle`           | number                      | `90`     | linear angle (degrees, clockwise): 0 = left-to-right, 90 = top-to-bottom |
+| `scaled`          | boolean                     | `false`  | whether the linear angle scales with the fill region                 |
+| `rotateWithShape` | boolean                     | `true`   | whether the gradient rotates with its shape                          |
+
+Stop `position` and `transparency` are percents (0-100) and are clamped to that range; stops are sorted by
+`position` before they are written. Fewer than two stops falls back to a solid fill with a console warning.
+
+```javascript
+const slide = pptx.addSlide()
+
+slide.background = { type: 'gradient', gradient: { angle: 45, stops: [{ color: 'FFFFFF', position: 0 }, { color: 'E7E6E6', position: 100 }] } }
+
+slide.addShape(pptx.ShapeType.rect, {
+    x: 1, y: 1, w: 4, h: 2,
+    fill: { type: 'gradient', gradient: { stops: [{ color: 'FF0000', position: 0 }, { color: '0000FF', position: 100, transparency: 20 }] } },
+    line: { type: 'gradient', width: 2, gradient: { type: 'radial', stops: [{ color: '00FF00', position: 0 }, { color: '000000', position: 100 }] } },
+})
+```

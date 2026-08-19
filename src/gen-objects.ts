@@ -742,6 +742,7 @@ export function addShapeDefinition(target: PresSlide | SlideLayout, shapeName: S
 	const newLineOpts: ShapeLineProps = {
 		type: options.line.type || 'solid',
 		color: options.line.color || DEF_SHAPE_LINE_COLOR,
+		gradient: options.line.gradient,
 		transparency: options.line.transparency || 0,
 		width: options.line.width || 1,
 		dashType: options.line.dashType || 'solid',
@@ -1092,6 +1093,7 @@ export function addTextDefinition(target: PresSlide | SlideLayout, text: TextPro
 				const newLineOpts: ShapeLineProps = {
 					type: itemOpts.line?.type || 'solid',
 					color: itemOpts.line?.color || DEF_SHAPE_LINE_COLOR,
+					gradient: itemOpts.line?.gradient,
 					transparency: itemOpts.line?.transparency || 0,
 					width: itemOpts.line?.width || 1,
 					dashType: itemOpts.line?.dashType || 'solid',
