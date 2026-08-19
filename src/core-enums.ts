@@ -10,6 +10,9 @@ export const EMU = 914400 // One (1) inch (OfficeXML measures in EMU (English Me
 export const ONEPT = 12700 // One (1) point (pt)
 export const CRLF = '\r\n' // AKA: Chr(13) & Chr(10)
 
+/** PowerPoint's default drawing-guide color */
+export const DEF_GUIDE_COLOR = 'A4A3A4'
+
 /**
  * Microsoft PowerPoint / Markup Compatibility namespaces
  * - extensions are always offered through `mc:AlternateContent` or an `extLst` wrapper
@@ -61,6 +64,8 @@ export const OOXML_EXT = {
 	sections: { uri: '{521415D9-36F7-43E2-AB2F-B90AF26B5E84}', ns: 'http://schemas.microsoft.com/office/powerpoint/2010/main' },
 	/** MS-PPTX 2.2.11 / 2.4.1.6 - `p15:sldGuideLst` in `p:presentation/p:extLst` */
 	slideGuides: { uri: '{EFAFB233-063F-42B5-8137-9DF3F51BA10A}', ns: 'http://schemas.microsoft.com/office/powerpoint/2012/main' },
+	/** MS-PPTX 2.2.11 / 2.4.1.3 - `p15:notesGuideLst` in `p:presentation/p:extLst` */
+	notesGuides: { uri: '{2D200454-40CA-4A62-9FC3-DE9A4176ACB9}', ns: 'http://schemas.microsoft.com/office/powerpoint/2012/main' },
 	/** MS-PPTX 2.2.9 / 2.3.1.4 - `p14:creationId` in `p:cSld/p:extLst` */
 	creationId: { uri: '{BB962C8B-B14F-4D97-AF65-F5344CB8AC3E}', ns: 'http://schemas.microsoft.com/office/powerpoint/2010/main' },
 	/** MS-PPTX 2.2.9 / 2.3.1.19 - `p14:modId` in `p:nvPr/p:extLst` */

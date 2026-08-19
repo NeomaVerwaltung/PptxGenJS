@@ -2,8 +2,8 @@
  * OOXML package-part rendering.
  */
 
-import { CRLF, LAYOUT_IDX_SERIES_BASE, OOXML_EXT, SLDNUMFLDID, SLIDE_OBJECT_TYPES } from '../core-enums'
-import { EmbeddedFont, IPresentationProps, PresSlide, SlideLayout, SlideShowProps } from '../core-interfaces'
+import { CRLF, DEF_GUIDE_COLOR, EMU, LAYOUT_IDX_SERIES_BASE, OOXML_EXT, SLDNUMFLDID, SLIDE_OBJECT_TYPES } from '../core-enums'
+import { EmbeddedFont, GuideProps, IPresentationProps, PresSlide, SlideLayout, SlideShowProps } from '../core-interfaces'
 import { createColorElement, encodeXmlEntities, getUuid } from '../gen-utils'
 import { makeXmlEmbeddedFontLst } from '../gen-fonts'
 import { slideObjectToXml } from './slide'
@@ -378,23 +378,64 @@ export function makeXmlPresentation (pres: IPresentationProps): string {
 	}
 	strXml += '</p:defaultTextStyle>'
 
-	// STEP 7: Add Sections (if any)
+	// STEP 6: Add Sections and guides (if any)
+	const sectionExts: string[] = []
 	if (pres.sections && pres.sections.length > 0) {
-		strXml += `<p:extLst><p:ext uri="${OOXML_EXT.sections.uri}">`
-		strXml += `<p14:sectionLst xmlns:p14="${OOXML_EXT.sections.ns}">`
+		let sectXml = `<p:ext uri="${OOXML_EXT.sections.uri}">`
+		sectXml += `<p14:sectionLst xmlns:p14="${OOXML_EXT.sections.ns}">`
 		pres.sections.forEach(sect => {
-			strXml += `<p14:section name="${encodeXmlEntities(sect.title)}" id="{${getUuid('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')}}"><p14:sldIdLst>`
-			sect._slides.forEach(slide => (strXml += `<p14:sldId id="${slide._slideId}"/>`))
-			strXml += '</p14:sldIdLst></p14:section>'
+			// The id must be stable across exports: anything referencing the section (ex: a section
+			// zoom) stores this GUID, so regenerating it on every write would break the reference
+			sect._id = sect._id ?? `{${getUuid('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')}}`
+			sectXml += `<p14:section name="${encodeXmlEntities(sect.title)}" id="${sect._id}"><p14:sldIdLst>`
+			sect._slides.forEach(slide => (sectXml += `<p14:sldId id="${slide._slideId}"/>`))
+			sectXml += '</p14:sldIdLst></p14:section>'
 		})
-		strXml += '</p14:sectionLst></p:ext>'
-		strXml += `<p:ext uri="${OOXML_EXT.slideGuides.uri}"><p15:sldGuideLst xmlns:p15="${OOXML_EXT.slideGuides.ns}"/></p:ext>`
-		strXml += '</p:extLst>'
+		sectXml += '</p14:sectionLst></p:ext>'
+		sectionExts.push(sectXml)
 	}
+	sectionExts.push(makeXmlGuideLst('sldGuideLst', OOXML_EXT.slideGuides, pres.guides))
+	sectionExts.push(makeXmlGuideLst('notesGuideLst', OOXML_EXT.notesGuides, pres.notesGuides))
+	const extLst = sectionExts.filter(ext => ext).join('')
+	if (extLst) strXml += `<p:extLst>${extLst}</p:extLst>`
 
 	// Done
 	strXml += '</p:presentation>'
 	return strXml
+}
+
+/**
+ * Create a `p15:sldGuideLst`/`p15:notesGuideLst` extension, or `''` when no guides are set
+ * - `CT_Guide@pos` is in EMU, and the `p15:clr` child is required (MS-PPTX 2.4.1.6 / 2.4.1.3)
+ * @param {string} element - guide list element name
+ * @param {object} ext - registry entry with the `p:ext@uri` and the `p15` namespace
+ * @param {GuideProps[]} guides - guides to write
+ * @returns {string} XML string
+ */
+function makeXmlGuideLst (element: string, ext: { uri: string, ns: string }, guides?: GuideProps[]): string {
+	if (!Array.isArray(guides) || guides.length === 0) return ''
+
+	const items = guides
+		.filter(guide => {
+			if (guide?.orientation !== 'horz' && guide?.orientation !== 'vert') {
+				console.warn(`[pptxgenjs] guide orientation must be 'horz' | 'vert' - "${String(guide?.orientation)}" ignored`)
+				return false
+			}
+			if (typeof guide.position !== 'number' || !isFinite(guide.position) || guide.position < 0) {
+				console.warn(`[pptxgenjs] guide position must be a number >= 0 (inches) - "${String(guide.position)}" ignored`)
+				return false
+			}
+			return true
+		})
+		// `orient` is omitted for horizontal guides, which is the schema default
+		.map(guide =>
+			`<p15:guide${guide.orientation === 'vert' ? ' orient="vert"' : ''} pos="${Math.round(guide.position * EMU)}">` +
+			`<p15:clr>${createColorElement(guide.color ?? DEF_GUIDE_COLOR)}</p15:clr>` +
+			'</p15:guide>'
+		)
+	if (items.length === 0) return ''
+
+	return `<p:ext uri="${ext.uri}"><p15:${element} xmlns:p15="${ext.ns}">${items.join('')}</p15:${element}></p:ext>`
 }
 
 /**

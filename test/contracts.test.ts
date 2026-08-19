@@ -653,3 +653,98 @@ test('contract: re-registering a font style replaces it rather than duplicating 
 	assert.equal(stored[37], 0x99, 'the latest registration must win')
 	await assertPptxPackageContracts(replaceZip)
 })
+test('contract: slide and notes guides are written with EMU positions and a required color', async () => {
+	const pptx = new pptxgen()
+	pptx.guides = [{ orientation: 'vert', position: 5 }, { orientation: 'horz', position: 3.75, color: 'FF0000' }]
+	pptx.notesGuides = [{ orientation: 'horz', position: 1 }]
+	pptx.addSection({ title: 'Intro' })
+	pptx.addSlide({ sectionTitle: 'Intro' })
+	const guideZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	await assertPptxPackageContracts(guideZip)
+	const xml = await readPart(guideZip, 'ppt/presentation.xml')
+
+	assert.doesNotMatch(xml, /NaN|undefined/, 'guides must not leak invalid attribute values')
+	// 5 inches = 4572000 EMU; `orient` is omitted for horizontal guides (the schema default)
+	const slideGuides = new RegExp(
+		'<p:ext uri="\\{EFAFB233-063F-42B5-8137-9DF3F51BA10A\\}"><p15:sldGuideLst xmlns:p15="http://schemas.microsoft.com/office/powerpoint/2012/main">' +
+		'<p15:guide orient="vert" pos="4572000"><p15:clr><a:srgbClr val="A4A3A4"/></p15:clr></p15:guide>' +
+		'<p15:guide pos="3429000"><p15:clr><a:srgbClr val="FF0000"/></p15:clr></p15:guide>' +
+		'</p15:sldGuideLst></p:ext>'
+	)
+	assert.match(xml, slideGuides, 'slide guide list missing or malformed')
+	assert.match(xml, /<p:ext uri="\{2D200454-40CA-4A62-9FC3-DE9A4176ACB9\}"><p15:notesGuideLst xmlns:p15="[^"]+"><p15:guide pos="914400">/, 'notes guide list missing')
+
+	// guides do not require sections, and sections do not force an empty guide list
+	const noSections = new pptxgen()
+	noSections.guides = [{ orientation: 'horz', position: 2 }]
+	noSections.addSlide()
+	const noSectionsXml = await readPart(await JSZip.loadAsync((await noSections.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/presentation.xml')
+	assert.match(noSectionsXml, /<p15:sldGuideLst/, 'guides must be written without sections')
+	assert.doesNotMatch(noSectionsXml, /sectionLst/, 'no sections were added')
+
+	const sectionsOnly = new pptxgen()
+	sectionsOnly.addSection({ title: 'Only' })
+	sectionsOnly.addSlide({ sectionTitle: 'Only' })
+	const sectionsOnlyXml = await readPart(await JSZip.loadAsync((await sectionsOnly.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/presentation.xml')
+	assert.match(sectionsOnlyXml, /sectionLst/, 'sections missing')
+	assert.doesNotMatch(sectionsOnlyXml, /GuideLst/, 'no guide list should be written when no guides are set')
+
+	// nothing set at all -> no extLst
+	const plain = new pptxgen()
+	plain.addSlide()
+	assert.doesNotMatch(await readPart(await JSZip.loadAsync((await plain.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/presentation.xml'), /p:extLst/, 'no extLst without sections or guides')
+})
+
+test('contract: section ids are stable across exports', async () => {
+	const pptx = new pptxgen()
+	pptx.addSection({ title: 'Intro' })
+	pptx.addSlide({ sectionTitle: 'Intro' })
+
+	const sectionId = async (): Promise<string | undefined> => {
+		const zipOut = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+		return /<p14:section name="Intro" id="(\{[^"]+\})"/.exec(await readPart(zipOut, 'ppt/presentation.xml'))?.[1]
+	}
+
+	const first = await sectionId()
+	assert.match(String(first), /^\{[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}$/, 'section id must be a braced GUID')
+	// anything that references a section (ex: a section zoom) stores this GUID, so it must not change
+	assert.equal(await sectionId(), first, 'section id changed between exports')
+})
+
+test('contract: invalid guides are dropped with a warning', async () => {
+	const warnings: string[] = []
+	const origWarn = console.warn
+	console.warn = (msg: string) => warnings.push(String(msg))
+	let xml = ''
+	try {
+		const pptx = new pptxgen()
+		pptx.guides = [
+			{ orientation: 'diagonal' as unknown as 'horz', position: 2 },
+			{ orientation: 'horz', position: NaN },
+			{ orientation: 'vert', position: -1 },
+			{ orientation: 'vert', position: 4 },
+		]
+		pptx.addSlide()
+		xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/presentation.xml')
+	} finally {
+		console.warn = origWarn
+	}
+
+	assert.equal(warnings.filter(w => w.includes('guide orientation must be')).length, 1, 'invalid orientation must warn')
+	assert.equal(warnings.filter(w => w.includes('guide position must be a number')).length, 2, 'invalid positions must warn')
+	assert.equal([...xml.matchAll(/<p15:guide[ >]/g)].length, 1, 'only the valid guide is written')
+	assert.doesNotMatch(xml, /NaN/, 'no NaN attributes')
+
+	// every guide invalid -> no guide list at all, rather than an empty one
+	const allBad = new pptxgen()
+	allBad.guides = [{ orientation: 'horz', position: NaN }]
+	allBad.addSlide()
+	const origWarn2 = console.warn
+	console.warn = () => {}
+	try {
+		const allBadXml = await readPart(await JSZip.loadAsync((await allBad.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/presentation.xml')
+		assert.doesNotMatch(allBadXml, /GuideLst/, 'no guide list when every guide was rejected')
+	} finally {
+		console.warn = origWarn2
+	}
+})

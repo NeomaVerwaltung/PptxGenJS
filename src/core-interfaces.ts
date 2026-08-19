@@ -2025,6 +2025,13 @@ export interface WriteFileProps extends WriteBaseProps {
 export interface SectionProps {
 	_type: 'user' | 'default'
 	_slides: PresSlide[]
+	/**
+	 * Stable section GUID, assigned when the section is created
+	 * - the same value must be written on every export so that anything referencing the section
+	 *   (ex: a section zoom) keeps pointing at it
+	 * @internal
+	 */
+	_id?: string
 
 	/**
 	 * Section title
@@ -2325,6 +2332,24 @@ export interface SlideShowProps {
 	 */
 	laserColor?: Color
 }
+export interface GuideProps {
+	/**
+	 * Guide orientation
+	 * - `horz` is a horizontal guide positioned by its distance from the top
+	 * - `vert` is a vertical guide positioned by its distance from the left
+	 */
+	orientation: 'horz' | 'vert'
+	/**
+	 * Distance from the top (`horz`) or left (`vert`), in inches
+	 */
+	position: number
+	/**
+	 * Guide color
+	 * - `HexColor` or `ThemeColor`
+	 * @default 'A4A3A4' (PowerPoint's guide gray)
+	 */
+	color?: Color
+}
 export interface PresentationProps {
 	author: string
 	company: string
@@ -2383,6 +2408,17 @@ export interface PresentationProps {
 	 * - opt-in: unset leaves the presentation properties part unchanged
 	 */
 	slideShow?: SlideShowProps
+	/**
+	 * Drawing guides shown in the slide editing view (MS-PPTX 2.2.11 `p15:sldGuideLst`)
+	 * - opt-in: unset writes no guide list
+	 * @example pptx.guides = [{ orientation: 'vert', position: 5 }, { orientation: 'horz', position: 3.75 }]
+	 */
+	guides?: GuideProps[]
+	/**
+	 * Drawing guides shown in the notes view (MS-PPTX 2.2.11 `p15:notesGuideLst`)
+	 * - opt-in: unset writes no guide list
+	 */
+	notesGuides?: GuideProps[]
 }
 // PRIVATE interface
 export interface IPresentationProps extends PresentationProps {

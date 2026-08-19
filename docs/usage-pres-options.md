@@ -185,3 +185,25 @@ written, because a `.fntdata` part holding raw TTF produces a deck PowerPoint ca
 **You are responsible for holding a licence that permits embedding the font.** Many commercial and
 some open fonts restrict or forbid embedding. PptxGenJS performs no licence checks and bundles no
 font files.
+## Drawing Guides
+
+Guides are the dashed alignment lines shown in PowerPoint's editing view. Positions are in inches from
+the top (`horz`) or the left (`vert`).
+
+```typescript
+pptx.guides = [
+    { orientation: 'vert', position: 5 },
+    { orientation: 'horz', position: 3.75, color: 'FF0000' },
+];
+pptx.notesGuides = [{ orientation: 'horz', position: 1 }];
+```
+
+| Option        | Type   | Default  | Description                                    |
+| :------------ | :----- | :------- | :--------------------------------------------- |
+| `orientation` | string |          | **required** - `horz` or `vert`                |
+| `position`    | number |          | **required** - inches from the top or the left |
+| `color`       | Color  | `A4A3A4` | guide color                                    |
+
+Both lists are opt-in: with none set, no guide list is written. A guide with an unknown orientation or a
+negative/non-numeric position is dropped with a warning, and if every guide is rejected no guide list is
+written at all.
