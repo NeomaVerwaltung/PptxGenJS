@@ -3,8 +3,8 @@
  */
 
 import { CRLF, LAYOUT_IDX_SERIES_BASE, MS_PPTX_EXT_URI, MS_PPTX_NS, SLDNUMFLDID, SLIDE_OBJECT_TYPES } from '../core-enums'
-import { IPresentationProps, PresSlide, SlideLayout } from '../core-interfaces'
-import { encodeXmlEntities, getUuid } from '../gen-utils'
+import { IPresentationProps, PresSlide, SlideLayout, SlideShowProps } from '../core-interfaces'
+import { createColorElement, encodeXmlEntities, getUuid } from '../gen-utils'
 import { slideObjectToXml } from './slide'
 
 export function makeXmlContTypes (slides: PresSlide[], slideLayouts: SlideLayout[], masterSlide?: PresSlide): string {
@@ -380,11 +380,74 @@ export function makeXmlPresentation (pres: IPresentationProps): string {
  */
 export function makeXmlPresProps (pres?: IPresentationProps): string {
 	const attrs = 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"'
-	// Opt-in only: without it the part stays the empty element every prior version wrote
-	if (!pres?.chartTrackingRefBased) return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${CRLF}<p:presentationPr ${attrs}/>`
+	// CT_PresentationProperties sequence: htmlPubPr, webPr, prnPr, showPr, clrMru, extLst
+	const body = makeXmlShowPr(pres?.slideShow) + makeXmlPresPropsExtLst(pres)
+	// Opt-in only: with nothing set the part stays the empty element every prior version wrote
+	if (!body) return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${CRLF}<p:presentationPr ${attrs}/>`
 
-	const ext = `<p:ext uri="${MS_PPTX_EXT_URI.chartTrackingRefBased}"><p15:chartTrackingRefBased xmlns:p15="${MS_PPTX_NS.p15}" val="1"/></p:ext>`
-	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${CRLF}<p:presentationPr ${attrs}><p:extLst>${ext}</p:extLst></p:presentationPr>`
+	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${CRLF}<p:presentationPr ${attrs}>${body}</p:presentationPr>`
+}
+
+/**
+ * Create `p:showPr` for the slide-show options, or `''` when none are set
+ * @param {SlideShowProps} show - slide show props
+ * @returns {string} XML string
+ */
+function makeXmlShowPr (show?: SlideShowProps): string {
+	if (!show || Object.keys(show).length === 0) return ''
+
+	const mode = show.mode ?? 'present'
+	if (!['present', 'browse', 'kiosk'].includes(mode)) {
+		console.warn(`[pptxgenjs] slideShow.mode must be 'present' | 'browse' | 'kiosk' - "${String(show.mode)}" ignored, 'present' used`)
+	}
+	// These four attributes default to true in the schema, so only write them when turned off
+	let attrs = ''
+	if (show.loop === true) attrs += ' loop="1"'
+	if (show.showNarration === false) attrs += ' showNarration="0"'
+	if (show.showAnimation === false) attrs += ' showAnimation="0"'
+	if (show.useTimings === false) attrs += ' useTimings="0"'
+
+	// `p:present`/`p:browse`/`p:kiosk` is a required choice; `p:browse` carries the show-scrollbar flag
+	const choice = mode === 'browse'
+		? `<p:browse${show.browseMode === true ? ' showScrollbar="1"' : ''}/>`
+		: mode === 'kiosk' ? '<p:kiosk/>' : '<p:present/>'
+
+	const exts: string[] = []
+	if (show.browseMode !== undefined) {
+		exts.push(`<p:ext uri="${MS_PPTX_EXT_URI.browseMode}"><p14:browseMode xmlns:p14="${MS_PPTX_NS.p14}" val="${show.browseMode ? '1' : '0'}"/></p:ext>`)
+	}
+	if (show.laserColor) {
+		exts.push(`<p:ext uri="${MS_PPTX_EXT_URI.laserColor}"><p14:laserClr xmlns:p14="${MS_PPTX_NS.p14}">${createColorElement(show.laserColor)}</p14:laserClr></p:ext>`)
+	}
+
+	return `<p:showPr${attrs}>${choice}${exts.length > 0 ? `<p:extLst>${exts.join('')}</p:extLst>` : ''}</p:showPr>`
+}
+
+/**
+ * Create the `p:extLst` of `p:presentationPr`, or `''` when no extension applies
+ * @param {IPresentationProps} pres - presentation
+ * @returns {string} XML string
+ */
+function makeXmlPresPropsExtLst (pres?: IPresentationProps): string {
+	const exts: string[] = []
+
+	if (pres?.discardImageEditData) {
+		exts.push(`<p:ext uri="${MS_PPTX_EXT_URI.discardImageEditData}"><p14:discardImageEditData xmlns:p14="${MS_PPTX_NS.p14}" val="1"/></p:ext>`)
+	}
+	// `0` is meaningful ("do not compress"), so only a non-numeric/negative value is dropped
+	if (typeof pres?.defaultImageDpi === 'number' && isFinite(pres.defaultImageDpi) && pres.defaultImageDpi >= 0) {
+		exts.push(`<p:ext uri="${MS_PPTX_EXT_URI.defaultImageDpi}"><p14:defaultImageDpi xmlns:p14="${MS_PPTX_NS.p14}" val="${Math.round(pres.defaultImageDpi)}"/></p:ext>`)
+	} else if (pres?.defaultImageDpi !== undefined) {
+		console.warn(`[pptxgenjs] defaultImageDpi must be a number >= 0 - "${String(pres.defaultImageDpi)}" ignored`)
+	}
+	if (pres?.chartTrackingRefBased) {
+		exts.push(`<p:ext uri="${MS_PPTX_EXT_URI.chartTrackingRefBased}"><p15:chartTrackingRefBased xmlns:p15="${MS_PPTX_NS.p15}" val="1"/></p:ext>`)
+	}
+	if (pres?.readonlyRecommended) {
+		exts.push(`<p:ext uri="${MS_PPTX_EXT_URI.readonlyRecommended}"><p1710:readonlyRecommended xmlns:p1710="${MS_PPTX_NS.p1710}" val="1"/></p:ext>`)
+	}
+
+	return exts.length > 0 ? `<p:extLst>${exts.join('')}</p:extLst>` : ''
 }
 
 /**

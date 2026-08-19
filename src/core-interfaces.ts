@@ -2090,6 +2090,47 @@ export interface AddSlideProps {
 	masterName?: string // TODO: 20200528: rename to "masterTitle" (createMaster uses `title` so lets be consistent)
 	sectionTitle?: string
 }
+export interface SlideShowProps {
+	/**
+	 * How the slide show runs (`p:showPr` choice, ECMA-376 19.2.1.30)
+	 * - `present`: full screen, presenter-driven
+	 * - `browse`: windowed, viewer-driven
+	 * - `kiosk`: full screen, self-running
+	 * @default 'present'
+	 */
+	mode?: 'present' | 'browse' | 'kiosk'
+	/**
+	 * Restart the show after the last slide
+	 * @default false
+	 */
+	loop?: boolean
+	/**
+	 * Play recorded narration
+	 * @default true
+	 */
+	showNarration?: boolean
+	/**
+	 * Play animations
+	 * @default true
+	 */
+	showAnimation?: boolean
+	/**
+	 * Use the slide timings recorded in the file
+	 * @default true
+	 */
+	useTimings?: boolean
+	/**
+	 * Show the browse-mode UI (MS-PPTX 2.2.6 `p14:browseMode`)
+	 * - only meaningful with `mode: 'browse'`
+	 */
+	browseMode?: boolean
+	/**
+	 * Laser-pointer color (MS-PPTX 2.2.6 `p14:laserClr`)
+	 * - `HexColor` or `ThemeColor`
+	 * @example 'FF0000'
+	 */
+	laserColor?: Color
+}
 export interface PresentationProps {
 	author: string
 	company: string
@@ -2124,6 +2165,30 @@ export interface PresentationProps {
 	subject: string
 	theme?: ThemeProps
 	title: string
+	/**
+	 * Image quality preference PowerPoint applies to inserted pictures
+	 * (MS-PPTX 2.2.7 `p14:defaultImageDpi`)
+	 * - `220` is PowerPoint's own default; `0` means "do not compress"
+	 * - opt-in: unset leaves the presentation properties part unchanged
+	 */
+	defaultImageDpi?: number
+	/**
+	 * Whether PowerPoint discards crop/edit data on save (MS-PPTX 2.2.7 `p14:discardImageEditData`)
+	 * - shrinks the file at the cost of no longer being able to undo picture edits
+	 * @default false
+	 */
+	discardImageEditData?: boolean
+	/**
+	 * Whether PowerPoint recommends opening the file read-only
+	 * (MS-PPTX 2.2.16 `p1710:readonlyRecommended`)
+	 * @default false
+	 */
+	readonlyRecommended?: boolean
+	/**
+	 * Slide-show options (`p:showPr`)
+	 * - opt-in: unset leaves the presentation properties part unchanged
+	 */
+	slideShow?: SlideShowProps
 }
 // PRIVATE interface
 export interface IPresentationProps extends PresentationProps {

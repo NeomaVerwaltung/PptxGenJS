@@ -15,14 +15,28 @@ export const CRLF = '\r\n' // AKA: Chr(13) & Chr(10)
  * - extensions are only ever emitted inside an `extLst` wrapper, as MS-PPTX 2.2 requires
  */
 export const MS_PPTX_NS = {
+	/** PowerPoint 2010 main - MS-PPTX Appendix A 5.1 */
+	p14: 'http://schemas.microsoft.com/office/powerpoint/2010/main',
 	/** PowerPoint 2012 main - MS-PPTX Appendix A 5.2 */
 	p15: 'http://schemas.microsoft.com/office/powerpoint/2012/main',
+	/** PowerPoint 2017/10 main - MS-PPTX Appendix A 5.11 */
+	p1710: 'http://schemas.microsoft.com/office/powerpoint/2017/10/main',
 } as const
 
 /** `p:ext@uri` values keyed by the extension element they carry (MS-PPTX v20240820) */
 export const MS_PPTX_EXT_URI = {
+	/** MS-PPTX 2.2.6 - `p14:browseMode` in `showPr/extLst` */
+	browseMode: '{F99C55AA-B7CB-42B0-86F8-08522FDF87E8}',
 	/** MS-PPTX 2.2.12 / 2.4.1.1 - `p15:chartTrackingRefBased` in `presentationPr/extLst` */
 	chartTrackingRefBased: '{FD5EFAAD-0ECE-453E-9831-46B23BE46B34}',
+	/** MS-PPTX 2.2.7 / 2.3.1.5 - `p14:defaultImageDpi` in `presentationPr/extLst` */
+	defaultImageDpi: '{D31A062A-798A-4329-ABDD-BBA856620510}',
+	/** MS-PPTX 2.2.7 / 2.3.1.6 - `p14:discardImageEditData` in `presentationPr/extLst` */
+	discardImageEditData: '{E76CE94A-603C-4142-B9EB-6D1370010A27}',
+	/** MS-PPTX 2.2.6 - `p14:laserClr` in `showPr/extLst` */
+	laserColor: '{EC167BDD-8182-4AB7-AECC-EB403E3ABB37}',
+	/** MS-PPTX 2.2.16 / 2.14.1.1 - `p1710:readonlyRecommended` in `presentationPr/extLst` */
+	readonlyRecommended: '{1BD7E111-0CB8-44D6-8891-C1BB2F81B7CC}',
 } as const
 export const LAYOUT_IDX_SERIES_BASE = 2147483649
 export const REGEX_HEX_COLOR = /^[0-9a-fA-F]{6}$/

@@ -22,6 +22,9 @@ test('office: LibreOffice opens and converts a generated presentation', async ()
 
 	try {
 		const pptx = new pptxgen()
+		pptx.slideShow = { mode: 'browse', loop: true, browseMode: true, laserColor: 'FF0000' }
+		pptx.defaultImageDpi = 220
+		pptx.readonlyRecommended = true
 		const slide = pptx.addSlide()
 		slide.addText('OOXML consumer smoke test', { x: 0.5, y: 0.5, w: 5, h: 0.5 })
 		slide.addTable([['Region', 'Sales'], ['West', '20']], { x: 0.5, y: 1.5, w: 5 })
