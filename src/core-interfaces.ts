@@ -1277,6 +1277,16 @@ export interface TextPropsOptions extends PositionProps, DataOrPathProps, TextBa
 	 * @default true
 	 */
 	wrap?: boolean
+	/**
+	 * Office Math (OMML) markup for this run
+	 * - the run is emitted as a math zone instead of a plain text run; `text` becomes the
+	 *   `mc:Fallback` shown by consumers that do not understand Office math
+	 * - the value must be **well-formed OMML** (`m:oMath`, `m:oMathPara`, or an inner fragment
+	 *   such as `<m:f>...</m:f>`); convert from LaTeX/MathML with a library of your choice
+	 * - PptxGenJS supplies the `m:oMath` root and namespace declarations when they are missing
+	 * @example { text: 'a/b', options: { omml: '<m:f><m:num><m:r><m:t>a</m:t></m:r></m:num><m:den><m:r><m:t>b</m:t></m:r></m:den></m:f>' } }
+	 */
+	omml?: string
 
 	/**
 	 * Whether "Fit to Shape?" is enabled
