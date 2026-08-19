@@ -2115,6 +2115,8 @@ export interface PresSlide extends SlideBaseProps {
 	 * @default '000000' (DEF_FONT_COLOR)
 	 */
 	color?: HexColor
+	/** Slide transition (`<p:transition>`) */
+	transition?: SlideTransitionProps
 	/**
 	 * Whether slide is hidden
 	 * @default false
@@ -2125,9 +2127,72 @@ export interface PresSlide extends SlideBaseProps {
 	 */
 	slideNumber?: SlideNumberProps
 }
+export type TransitionType =
+	// ECMA-376 19.3.1.50 base transitions
+	| 'blinds' | 'checker' | 'circle' | 'comb' | 'cover' | 'cut' | 'diamond' | 'dissolve' | 'fade'
+	| 'newsflash' | 'none' | 'plus' | 'pull' | 'push' | 'random' | 'randomBar' | 'split' | 'strips'
+	| 'wedge' | 'wheel' | 'wipe' | 'zoom'
+	// PowerPoint 2010+ transitions, emitted through `mc:AlternateContent` with a base fallback
+	| 'conveyor' | 'doors' | 'ferris' | 'flash' | 'flip' | 'flythrough' | 'gallery' | 'glitter'
+	| 'honeycomb' | 'morph' | 'pan' | 'prism' | 'reveal' | 'ripple' | 'shred' | 'switch' | 'vortex'
+	| 'warp' | 'wheelReverse' | 'window'
+export interface SlideTransitionProps {
+	/**
+	 * Transition effect
+	 * - PowerPoint 2010+ effects are written with a base-transition fallback, so other consumers
+	 *   still show a sensible transition instead of failing to open the file
+	 */
+	type: TransitionType
+	/**
+	 * Transition direction - OOXML tokens or friendly aliases (`left`, `up`, `horizontal`, ...)
+	 * - `push`/`wipe`/`pan`/`reveal`/`vortex`: `l` | `r` | `u` | `d`
+	 * - `blinds`/`checker`/`comb`/`randomBar`/`doors`/`window`: `horz` | `vert`
+	 * - `cover`/`pull`/`conveyor`/`ferris`/`flip`/`gallery`/`glitter`/`prism`/`switch`: adds `lu` | `ru` | `ld` | `rd`
+	 * - `strips`: `lu` | `ru` | `ld` | `rd`
+	 * - `zoom`/`split`/`flythrough`/`warp`: `in` | `out`
+	 * - a direction the effect does not accept is ignored with a warning
+	 */
+	direction?: string
+	/**
+	 * `split` only: which axis splits (`CT_SplitTransition@orient`)
+	 * @default 'horz'
+	 */
+	orient?: 'horz' | 'vert' | 'horizontal' | 'vertical'
+	/**
+	 * Transition speed
+	 * - ignored when `duration` is set
+	 */
+	speed?: 'slow' | 'med' | 'fast'
+	/**
+	 * Transition duration (milliseconds)
+	 * - PowerPoint 2010+ (`p14:dur`); takes precedence over `speed`
+	 */
+	duration?: number
+	/**
+	 * Advance the slide on mouse click
+	 * @default true
+	 */
+	advClick?: boolean
+	/**
+	 * Advance the slide automatically after this many milliseconds
+	 */
+	advTm?: number
+	/**
+	 * `wheel` only: number of spokes
+	 * @default 4
+	 */
+	spokes?: 1 | 2 | 3 | 4 | 8
+	/**
+	 * `fade` and `cut` only: transition through black
+	 * @default false
+	 */
+	thruBlk?: boolean
+}
 export interface AddSlideProps {
 	masterName?: string // TODO: 20200528: rename to "masterTitle" (createMaster uses `title` so lets be consistent)
 	sectionTitle?: string
+	/** Slide transition applied at creation - same as setting `slide.transition` */
+	transition?: SlideTransitionProps
 }
 export interface SlideShowProps {
 	/**

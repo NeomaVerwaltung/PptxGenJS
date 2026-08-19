@@ -363,3 +363,87 @@ test('contract: invalid presentation-property input is dropped with a warning', 
 	assert.doesNotMatch(xml, /readonlyRecommended/, 'a non-boolean must not enable the extension')
 	assert.doesNotMatch(xml, /NaN/, 'no NaN attributes')
 })
+test('contract: base slide transitions land after clrMapOvr with their directional attribute', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide({ transition: { type: 'wipe', direction: 'left', speed: 'slow' } })
+	pptx.addSlide({ transition: { type: 'split', orient: 'vertical', direction: 'in' } })
+	pptx.addSlide({ transition: { type: 'wheel', spokes: 8 } })
+	pptx.addSlide({ transition: { type: 'fade', thruBlk: true, advClick: false, advTm: 5000 } })
+	pptx.addSlide({ transition: { type: 'strips', direction: 'bottomRight' } })
+	const transZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	await assertPptxPackageContracts(transZip)
+	const [wipe, split, wheel, fade, strips] = await Promise.all(
+		[1, 2, 3, 4, 5].map(async num => await readPart(transZip, `ppt/slides/slide${num}.xml`))
+	)
+
+	// CT_Slide sequence: cSld, clrMapOvr, transition, timing
+	assert.match(wipe, /<\/p:clrMapOvr><p:transition spd="slow"><p:wipe dir="l"\/><\/p:transition><\/p:sld>$/, 'wipe transition missing or misplaced')
+	assert.match(split, /<p:transition><p:split orient="vert" dir="in"\/><\/p:transition>/, 'split needs both orient and dir')
+	assert.match(wheel, /<p:transition><p:wheel spokes="8"\/><\/p:transition>/, 'wheel spokes missing')
+	assert.match(fade, /<p:transition advClick="0" advTm="5000"><p:fade thruBlk="1"\/><\/p:transition>/, 'fade attributes missing')
+	assert.match(strips, /<p:transition><p:strips dir="rd"\/><\/p:transition>/, 'friendly corner direction not translated')
+	// no transition set -> nothing emitted
+	const plain = new pptxgen()
+	plain.addSlide()
+	const plainXml = await readPart(await JSZip.loadAsync((await plain.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+	assert.doesNotMatch(plainXml, /p:transition|mc:AlternateContent/, 'a slide without a transition must be unchanged')
+})
+
+test('contract: modern transitions and millisecond durations carry a base fallback', async () => {
+	const pptx = new pptxgen()
+	const morph = pptx.addSlide()
+	morph.transition = { type: 'morph', duration: 1200, advClick: false }
+	pptx.addSlide({ transition: { type: 'conveyor', direction: 'rightup', duration: 900 } })
+	// a base transition with a millisecond duration also needs the p14 extension, so it is wrapped too
+	pptx.addSlide({ transition: { type: 'push', direction: 'up', duration: 700, speed: 'fast' } })
+	const modernZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	await assertPptxPackageContracts(modernZip)
+	const [morphXml, conveyorXml, pushXml] = await Promise.all(
+		[1, 2, 3].map(async num => await readPart(modernZip, `ppt/slides/slide${num}.xml`))
+	)
+
+	// morph lives in p16 and falls back to fade
+	assert.match(morphXml, /<mc:Choice Requires="p16"><p:transition p14:dur="1200" advClick="0"><p16:morph\/><\/p:transition><\/mc:Choice>/, 'morph choice missing')
+	assert.match(morphXml, /<mc:Fallback><p:transition advClick="0"><p:fade\/><\/p:transition><\/mc:Fallback>/, 'morph fallback missing')
+	assert.match(morphXml, /xmlns:p16="http:\/\/schemas\.microsoft\.com\/office\/powerpoint\/2016\/main"/, 'p16 namespace missing')
+	assert.match(morphXml, /xmlns:p14="http:\/\/schemas\.microsoft\.com\/office\/powerpoint\/2010\/main"/, 'p14 namespace missing for p14:dur')
+
+	// conveyor lives in p14 and falls back to push
+	assert.match(conveyorXml, /<mc:Choice Requires="p14"><p:transition p14:dur="900"><p14:conveyor dir="ru"\/><\/p:transition><\/mc:Choice><mc:Fallback><p:transition><p:push\/><\/p:transition><\/mc:Fallback>/, 'conveyor choice/fallback missing')
+
+	// `p14:dur` never appears in a fallback (its namespace is exactly what the fallback consumer lacks),
+	// and `spd` is what the fallback keeps instead
+	assert.match(pushXml, /<mc:Choice Requires="p14"><p:transition p14:dur="700"><p:push dir="u"\/><\/p:transition><\/mc:Choice>/, 'duration must be offered via a Choice')
+	assert.match(pushXml, /<mc:Fallback><p:transition spd="fast"><p:push dir="u"\/><\/p:transition><\/mc:Fallback>/, 'fallback must use spd, not p14:dur')
+	const fallbacks = [morphXml, conveyorXml, pushXml].map(xml => /<mc:Fallback>[\s\S]*?<\/mc:Fallback>/.exec(xml)?.[0] ?? '')
+	fallbacks.forEach(fb => { assert.doesNotMatch(fb, /p14:|p16:/, 'a fallback must not use extension markup') })
+})
+
+test('contract: invalid transition input is dropped with a warning', async () => {
+	const warnings: string[] = []
+	const origWarn = console.warn
+	console.warn = (msg: string) => warnings.push(String(msg))
+	let xmls: string[] = []
+	try {
+		const pptx = new pptxgen()
+		pptx.addSlide({ transition: { type: 'nonsense' as unknown as 'fade' } })
+		pptx.addSlide({ transition: { type: 'wipe', direction: 'in' } }) // wipe takes l/r/u/d only
+		pptx.addSlide({ transition: { type: 'wheel', spokes: 5 as unknown as 4 } })
+		pptx.addSlide({ transition: { type: 'push', speed: 'turbo' as unknown as 'fast', duration: NaN, advTm: NaN } })
+		const zipInvalid = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+		xmls = await Promise.all([1, 2, 3, 4].map(async num => await readPart(zipInvalid, `ppt/slides/slide${num}.xml`)))
+	} finally {
+		console.warn = origWarn
+	}
+
+	assert.ok(warnings.some(w => w.includes('unknown slide transition "nonsense"')), 'unknown type must warn')
+	assert.ok(warnings.some(w => w.includes('does not accept direction "in"')), 'invalid direction must warn')
+	assert.ok(warnings.some(w => w.includes('spokes must be one of')), 'invalid spokes must warn')
+	assert.ok(warnings.some(w => w.includes('speed must be \'slow\' | \'med\' | \'fast\'')), 'invalid speed must warn')
+
+	assert.doesNotMatch(xmls[0], /p:transition/, 'unknown type must emit no transition')
+	assert.match(xmls[1], /<p:transition><p:wipe\/><\/p:transition>/, 'invalid direction is dropped, transition kept')
+	assert.match(xmls[2], /<p:transition><p:wheel\/><\/p:transition>/, 'invalid spokes are dropped, transition kept')
+	assert.match(xmls[3], /<p:transition><p:push\/><\/p:transition>/, 'invalid speed/duration/advTm are dropped')
+	xmls.forEach(xml => { assert.doesNotMatch(xml, /NaN/, 'no NaN attributes') })
+})
