@@ -248,6 +248,27 @@ export default class PptxGenJS implements IPresentationProps {
 		return this._compression
 	}
 
+	/**
+	 * Whether charts track data references rather than positions (MS-PPTX 2.2.12 `p15:chartTrackingRefBased`)
+	 * - PowerPoint sets this on the presentations it creates, so it is on by default here too
+	 * - has no effect on rendering: it only decides whether editing the chart's data follows cell
+	 *   references or cell positions
+	 * @default true
+	 */
+	private _chartTrackingRefBased: boolean
+	public set chartTrackingRefBased(value: boolean) {
+		// Guard plain-JS callers: silently coercing a truthy string either way would surprise
+		if (typeof value !== 'boolean') {
+			console.warn(`[pptxgenjs] chartTrackingRefBased must be a boolean - "${String(value)}" ignored`)
+			return
+		}
+		this._chartTrackingRefBased = value
+	}
+
+	public get chartTrackingRefBased(): boolean {
+		return this._chartTrackingRefBased
+	}
+
 	/** master slide layout object */
 	private readonly _masterSlide: PresSlide
 	public get masterSlide(): PresSlide {
@@ -364,6 +385,7 @@ export default class PptxGenJS implements IPresentationProps {
 		}
 		this._rtlMode = false
 		this._compression = 'none'
+		this._chartTrackingRefBased = true
 		//
 		this._slideLayouts = [
 			{
@@ -554,7 +576,7 @@ export default class PptxGenJS implements IPresentationProps {
 			zip.file('ppt/_rels/presentation.xml.rels', genXml.makeXmlPresentationRels(this.slides))
 			zip.file('ppt/theme/theme1.xml', genXml.makeXmlTheme(this))
 			zip.file('ppt/presentation.xml', genXml.makeXmlPresentation(this))
-			zip.file('ppt/presProps.xml', genXml.makeXmlPresProps())
+			zip.file('ppt/presProps.xml', genXml.makeXmlPresProps(this))
 			zip.file('ppt/tableStyles.xml', genXml.makeXmlTableStyles())
 			zip.file('ppt/viewProps.xml', genXml.makeXmlViewProps())
 

@@ -108,3 +108,16 @@ Use the `headFontFace` and `bodyFontFace` properties to set the default font use
 pptx.theme = { headFontFace: "Arial Light" };
 pptx.theme = { bodyFontFace: "Arial" };
 ```
+
+## Chart Tracking
+
+PowerPoint marks the presentations it creates so charts track their data *references* rather than cell
+positions (MS-PPTX §2.2.12 `p15:chartTrackingRefBased`). PptxGenJS does the same, so generated decks
+match PowerPoint-authored ones.
+
+The flag affects no rendering — it only decides whether editing a chart's data follows cell references
+or cell positions. Turn it off to write `ppt/presProps.xml` exactly as versions before v4.2.0 did:
+
+```typescript
+pptx.chartTrackingRefBased = false;
+```
