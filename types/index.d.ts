@@ -155,6 +155,16 @@ declare class PptxGenJS {
 	 * @param {AddSlideProps} props slide options
 	 * @returns {Slide} the new Slide
 	 */
+	/**
+	 * Embed a font in the presentation
+	 * - opt-in: without any `addFont()` call the package has no font parts and is unchanged
+	 * - PowerPoint stores embedded fonts as Embedded OpenType (EOT); convert TTF/OTF/WOFF first
+	 * - you must hold a licence that permits embedding the font
+	 * @param options - font props
+	 * @example pptx.addFont({ fontFace: 'Custom Sans', data: eotBase64 })
+	 */
+	addFont(options: PptxGenJS.AddFontProps): void;
+
 	addSlide(props?: PptxGenJS.AddSlideProps): PptxGenJS.Slide
 	/**
 	 * Add a new Slide to Presentation
@@ -2923,6 +2933,28 @@ declare namespace PptxGenJS {
 		 * @default false
 		 */
 		thruBlk?: boolean
+	}
+	export type FontEmbedStyle = 'regular' | 'bold' | 'italic' | 'boldItalic'
+	export interface AddFontProps {
+		/**
+		 * Typeface name, exactly as used in `fontFace` on text options
+		 * @example 'Custom Sans'
+		 */
+		fontFace: string
+		/**
+		 * Font data as **Embedded OpenType (EOT)**
+		 * - base64 (with or without a data-URI header), `ArrayBuffer`, or `Uint8Array`
+		 * - PowerPoint stores embedded fonts as EOT; convert TTF/OTF/WOFF before calling
+		 *   (ex: `ttf2eot`, `fonteditor-core`) - PptxGenJS does not convert font files
+		 * - you must hold a licence that permits embedding the font
+		 */
+		data: string | ArrayBuffer | Uint8Array
+		/**
+		 * Which style of the typeface this file is
+		 * - register several styles of one typeface with repeated `addFont()` calls
+		 * @default 'regular'
+		 */
+		style?: FontEmbedStyle
 	}
 	export interface AddSlideProps {
 		masterName?: string // TODO: 20200528: rename to "masterTitle" (createMaster uses `title` so lets be consistent)

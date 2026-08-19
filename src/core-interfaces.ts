@@ -2250,6 +2250,34 @@ export interface SlideTransitionProps {
 	 */
 	thruBlk?: boolean
 }
+export type FontEmbedStyle = 'regular' | 'bold' | 'italic' | 'boldItalic'
+export interface AddFontProps {
+	/**
+	 * Typeface name, exactly as used in `fontFace` on text options
+	 * @example 'Custom Sans'
+	 */
+	fontFace: string
+	/**
+	 * Font data as **Embedded OpenType (EOT)**
+	 * - base64 (with or without a data-URI header), `ArrayBuffer`, or `Uint8Array`
+	 * - PowerPoint stores embedded fonts as EOT; convert TTF/OTF/WOFF before calling
+	 *   (ex: `ttf2eot`, `fonteditor-core`) - PptxGenJS does not convert font files
+	 * - you must hold a licence that permits embedding the font
+	 */
+	data: string | ArrayBuffer | Uint8Array
+	/**
+	 * Which style of the typeface this file is
+	 * - register several styles of one typeface with repeated `addFont()` calls
+	 * @default 'regular'
+	 */
+	style?: FontEmbedStyle
+}
+/** A registered embedded font @internal */
+export interface EmbeddedFont {
+	fontFace: string
+	style: FontEmbedStyle
+	data: Uint8Array
+}
 export interface AddSlideProps {
 	masterName?: string // TODO: 20200528: rename to "masterTitle" (createMaster uses `title` so lets be consistent)
 	sectionTitle?: string
@@ -2358,6 +2386,8 @@ export interface PresentationProps {
 }
 // PRIVATE interface
 export interface IPresentationProps extends PresentationProps {
+	/** fonts registered with `addFont()` @internal */
+	embeddedFonts?: EmbeddedFont[]
 	sections: SectionProps[]
 	slideLayouts: SlideLayout[]
 	slides: PresSlide[]
