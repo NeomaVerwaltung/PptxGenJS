@@ -1,0 +1,50 @@
+# PptxGenJS (NEOMA fork)
+
+> JavaScript/TypeScript library that generates PowerPoint `.pptx` files programmatically in Node.js, browsers, and bundlers. No PowerPoint install required. Output is ECMA-376 OOXML, readable by PowerPoint, Keynote, LibreOffice Impress, and Google Slides.
+
+Install: `npm install @neo-ma/pptxgenjs` (Node.js 20+). Ships ESM + CJS builds and TypeScript types.
+
+```typescript
+import pptxgen from "@neo-ma/pptxgenjs"
+const pres = new pptxgen()
+const slide = pres.addSlide()
+slide.addText("Hello", { x: 1, y: 1, fontSize: 24 })
+await pres.writeFile({ fileName: "out.pptx" })
+```
+
+## Get started
+
+- [Introduction](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/introduction.md): what the library does and its object model
+- [Quick Start](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/quick-start.md): minimal working example
+- [Installation](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/installation.md): package formats, bundlers, browser vs Node
+- [Migrating from pptxgenjs](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/migration.md): differences from the upstream package
+- [Compatibility](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/compatibility.md): supported renderers and known limits
+- [Integration](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/integration.md): React, Angular, Vite, Webpack, Electron
+
+## Usage
+
+- [Creating a Presentation](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/usage-pres-create.md)
+- [Presentation Options](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/usage-pres-options.md): layout, author, RTL
+- [Adding a Slide](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/usage-add-slide.md)
+- [Slide Options](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/usage-slide-options.md): background, color, hidden
+- [Saving](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/usage-saving.md): file, base64, Blob, Buffer, stream
+- [Slide Masters](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/masters.md): defineSlideMaster, placeholders
+- [Sections](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/sections.md)
+- [Speaker Notes](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/speaker-notes.md)
+
+## API reference
+
+- [Text](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/api-text.md): addText, text options, hyperlinks
+- [Shapes](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/api-shapes.md): addShape, shape types, lines
+- [Images](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/api-images.md): addImage, sizing, paths and base64
+- [Tables](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/api-tables.md): addTable, auto-paging, cell options
+- [Charts](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/api-charts.md): addChart, chart types, axes, series
+- [Media](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/api-media.md): addMedia, audio, video, YouTube
+- [Shapes and Color Schemes](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/shapes-and-schemes.md): enum values
+- [HTML to PowerPoint](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/html-to-powerpoint.md): tableToSlides
+
+## Optional
+
+- [Deprecated APIs](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/deprecated.md)
+- [Repair errors](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/needs-repair-errors.md): diagnosing "PowerPoint found a problem"
+- [Contributor and agent guidance](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/AGENTS.md)

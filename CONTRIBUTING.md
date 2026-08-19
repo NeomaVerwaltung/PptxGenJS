@@ -42,3 +42,5 @@ non-null assertions (`!`) except where a value is genuinely invariant.
 
 Match the surrounding code. ESLint and the stylistic plugin enforce
 formatting — run `npm run lint` and fix reported issues before pushing.
+
+Automated coding agents should read [AGENTS.md](AGENTS.md) first: it lists the verification gate, repo conventions, and a source map.
