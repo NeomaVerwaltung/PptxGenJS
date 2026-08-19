@@ -1,18 +1,6 @@
 /** Chart XML rendering. */
 
-import {
-	AXIS_ID_CATEGORY_PRIMARY,
-	AXIS_ID_CATEGORY_SECONDARY,
-	AXIS_ID_SERIES_PRIMARY,
-	AXIS_ID_VALUE_PRIMARY,
-	AXIS_ID_VALUE_SECONDARY,
-	BARCHART_COLORS,
-	CHART_NAME,
-	CHART_TYPE,
-	DEF_FONT_COLOR,
-	DEF_FONT_SIZE,
-	DEF_FONT_TITLE_SIZE,
-} from '../core-enums'
+import { AXIS_ID_CATEGORY_PRIMARY, AXIS_ID_CATEGORY_SECONDARY, AXIS_ID_SERIES_PRIMARY, AXIS_ID_VALUE_PRIMARY, AXIS_ID_VALUE_SECONDARY, BARCHART_COLORS, CHART_NAME, CHART_TYPE, DEF_FONT_COLOR, DEF_FONT_SIZE, DEF_FONT_TITLE_SIZE, OOXML_EXT } from '../core-enums'
 import { IChartOptsLib, ISlideRelChart, IOptsChartData } from '../core-interfaces'
 import { createColorElement, genXmlColorSelection, encodeXmlEntities, getUuid, valToPts } from '../gen-utils'
 import { makeCatAxis, makeSerAxis, makeValAxis } from './axes'
@@ -725,8 +713,8 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 								strXml += '    <c:showBubbleSize val="0"/>'
 								strXml += '       <c:showLeaderLines val="1"/>'
 								strXml += '    <c:extLst>'
-								strXml += '      <c:ext uri="{CE6537A1-D6FC-4f65-9D91-7224C49458BB}" xmlns:c15="http://schemas.microsoft.com/office/drawing/2012/chart"/>'
-								strXml += '      <c:ext uri="{C3380CC4-5D6E-409C-BE32-E72D297353CC}" xmlns:c16="http://schemas.microsoft.com/office/drawing/2014/chart">'
+								strXml += `      <c:ext uri="${OOXML_EXT.chart2012.uri}" xmlns:c15="${OOXML_EXT.chart2012.ns}"/>`
+								strXml += `      <c:ext uri="${OOXML_EXT.chartSeriesId.uri}" xmlns:c16="${OOXML_EXT.chartSeriesId.ns}">`
 								strXml += `            <c16:uniqueId val="{${'00000000'.substring(0, 8 - (idx + 1).toString().length).toString()}${idx + 1}${chartUuid}}"/>`
 								strXml += '      </c:ext>'
 								strXml += '        </c:extLst>'
@@ -764,7 +752,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 						strXml += '    <c:showPercent val="0"/>'
 						strXml += '    <c:showBubbleSize val="0"/>'
 						strXml += '    <c:extLst>'
-						strXml += '        <c:ext uri="{CE6537A1-D6FC-4f65-9D91-7224C49458BB}" xmlns:c15="http://schemas.microsoft.com/office/drawing/2012/chart">'
+						strXml += `        <c:ext uri="${OOXML_EXT.chart2012.uri}" xmlns:c15="${OOXML_EXT.chart2012.ns}">`
 						strXml += '            <c15:showLeaderLines val="1"/>'
 						strXml += '        </c:ext>'
 						strXml += '    </c:extLst>'
@@ -1002,7 +990,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 				strXml += `<c:showVal val="${opts.showValue ? '1' : '0'}"/>`
 				strXml += `<c:showCatName val="0"/><c:showSerName val="${opts.showSerName ? '1' : '0'}"/><c:showPercent val="0"/><c:showBubbleSize val="0"/>`
 				strXml += '<c:extLst>'
-				strXml += '  <c:ext uri="{CE6537A1-D6FC-4f65-9D91-7224C49458BB}" xmlns:c15="http://schemas.microsoft.com/office/drawing/2012/chart">'
+				strXml += `  <c:ext uri="${OOXML_EXT.chart2012.uri}" xmlns:c15="${OOXML_EXT.chart2012.ns}">`
 				strXml += '    <c15:showLeaderLines val="' + (opts.showLeaderLines ? '1' : '0') + '"/>'
 				strXml += '  </c:ext>'
 				strXml += '</c:extLst>'

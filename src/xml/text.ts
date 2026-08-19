@@ -2,7 +2,7 @@
  * OOXML text and placeholder rendering.
  */
 
-import { BULLET_TYPES, CRLF, DEF_BULLET_MARGIN, PLACEHOLDER_TYPES, SLIDE_OBJECT_TYPES } from '../core-enums'
+import { BULLET_TYPES, CRLF, DEF_BULLET_MARGIN, OOXML_EXT, PLACEHOLDER_TYPES, SLIDE_OBJECT_TYPES } from '../core-enums'
 import { ISlideObject, ObjectOptions, TableCell, TextProps, TextPropsOptions } from '../core-interfaces'
 import { createColorElement, createGlowElement, encodeXmlEntities, genXmlColorSelection, inch2Emu, resolveGlowOptions, valToPts, warnDeprecatedOnce } from '../gen-utils'
 
@@ -192,8 +192,8 @@ function genXmlTextRunProperties (opts: ObjectOptions | TextPropsOptions, isDefa
 		}
 		if (opts.color) {
 			runProps += ' <a:extLst>'
-			runProps += '  <a:ext uri="{A12FA001-AC4F-418D-AE19-62706E023703}">'
-			runProps += '   <ahyp:hlinkClr xmlns:ahyp="http://schemas.microsoft.com/office/drawing/2018/hyperlinkcolor" val="tx"/>'
+			runProps += `  <a:ext uri="${OOXML_EXT.hyperlinkColor.uri}">`
+			runProps += `   <ahyp:hlinkClr xmlns:ahyp="${OOXML_EXT.hyperlinkColor.ns}" val="tx"/>`
 			runProps += '  </a:ext>'
 			runProps += ' </a:extLst>'
 			runProps += '</a:hlinkClick>'

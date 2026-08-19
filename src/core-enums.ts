@@ -9,6 +9,42 @@ import { BorderProps, OptsChartGridLine, ShadowProps, TextGlowProps } from './co
 export const EMU = 914400 // One (1) inch (OfficeXML measures in EMU (English Metric Units))
 export const ONEPT = 12700 // One (1) point (pt)
 export const CRLF = '\r\n' // AKA: Chr(13) & Chr(10)
+
+/**
+ * Every OOXML extension URI this library emits, with the namespace it carries.
+ *
+ * This is the registry behind the MS-PPTX conformance profile in `docs/ms-pptx-profile.md`: an
+ * extension may only be written through an entry here, never as an inline GUID literal, and a test
+ * enforces that. Each entry records where the extension is hosted and which specification defines
+ * it, so a reviewer can check an emitted extension against its schema without hunting for the URI.
+ *
+ * MS-PPTX 2.2 requires an extension to appear inside `extLst`, `mc:AlternateContent`, or
+ * `mc:Ignorable`; every entry below is emitted inside an `extLst`.
+ */
+export const OOXML_EXT = {
+	/** ECMA-376 - `thm15:themeFamily` in `a:theme/a:extLst` (theme identity) */
+	themeFamily: { uri: '{05A4C25C-085E-4340-85A3-A5531E510DB2}', ns: 'http://schemas.microsoft.com/office/thememl/2012/main' },
+	/** MS-ODRAWXML - `ma14:wrappingTextBoxFlag` in `p:cNvSpPr/a:extLst` (Office for Mac text box) */
+	macWrappingTextBox: { uri: '{C572A759-6A51-4108-AA02-DFA0A04FC94B}', ns: 'http://schemas.microsoft.com/office/mac/drawingml/2011/main' },
+	/** MS-ODRAWXML - `asvg:svgBlip` in `a:blip/a:extLst` (SVG image with raster fallback) */
+	svgBlip: { uri: '{96DAC541-7B7A-43D3-8B79-37D633B846F1}', ns: 'http://schemas.microsoft.com/office/drawing/2016/SVG/main' },
+	/** MS-ODRAWXML - `ahyp:hlinkClr` in `a:hlinkClick/a:extLst` (hyperlink follows text color) */
+	hyperlinkColor: { uri: '{A12FA001-AC4F-418D-AE19-62706E023703}', ns: 'http://schemas.microsoft.com/office/drawing/2018/hyperlinkcolor' },
+	/** MS-PPTX 2.2.5 / 2.3.1.25 - `p14:sectionLst` in `p:presentation/p:extLst` */
+	sections: { uri: '{521415D9-36F7-43E2-AB2F-B90AF26B5E84}', ns: 'http://schemas.microsoft.com/office/powerpoint/2010/main' },
+	/** MS-PPTX 2.2.11 / 2.4.1.6 - `p15:sldGuideLst` in `p:presentation/p:extLst` */
+	slideGuides: { uri: '{EFAFB233-063F-42B5-8137-9DF3F51BA10A}', ns: 'http://schemas.microsoft.com/office/powerpoint/2012/main' },
+	/** MS-PPTX 2.2.9 / 2.3.1.4 - `p14:creationId` in `p:cSld/p:extLst` */
+	creationId: { uri: '{BB962C8B-B14F-4D97-AF65-F5344CB8AC3E}', ns: 'http://schemas.microsoft.com/office/powerpoint/2010/main' },
+	/** MS-PPTX 2.2.9 / 2.3.1.19 - `p14:modId` in `p:nvPr/p:extLst` */
+	modId: { uri: '{D42A27DB-BD31-4B8C-83A1-F6EECF244321}', ns: 'http://schemas.microsoft.com/office/powerpoint/2010/main' },
+	/** MS-PPTX 2.3.3.14 - `p14:media` in `p:nvPr/p:extLst` (embedded media reference) */
+	media: { uri: '{DAA4B4D4-6D71-4841-9C94-3DE7FCFB9230}', ns: 'http://schemas.microsoft.com/office/powerpoint/2010/main' },
+	/** MS-ODRAWXML - `c15:*` in `c:extLst` (chart 2012 extensions: leader lines, data labels) */
+	chart2012: { uri: '{CE6537A1-D6FC-4f65-9D91-7224C49458BB}', ns: 'http://schemas.microsoft.com/office/drawing/2012/chart' },
+	/** MS-ODRAWXML - `c16:uniqueId` in `c:extLst` (chart series identity) */
+	chartSeriesId: { uri: '{C3380CC4-5D6E-409C-BE32-E72D297353CC}', ns: 'http://schemas.microsoft.com/office/drawing/2014/chart' },
+} as const
 export const LAYOUT_IDX_SERIES_BASE = 2147483649
 export const REGEX_HEX_COLOR = /^[0-9a-fA-F]{6}$/
 export const LINEH_MODIFIER = 1.67 // AKA: Golden Ratio Typography
