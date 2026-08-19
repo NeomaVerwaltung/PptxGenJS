@@ -602,6 +602,22 @@ export function addMediaDefinition(target: PresSlide, opt: MediaProps): void {
 	slideData.options.h = intSizeY
 	slideData.options.objectName = objectName
 
+	// Playback behaviour drives the slide timing tree (ECMA-376 19.5 `CT_TLMediaNode`)
+	// Invalid combinations are dropped here so they can never reach the XML:
+	// - `fullScreen` is a `p:video` attribute, so it makes no sense for audio
+	// - online (linked) videos are played by the embed, not the timing tree
+	if (strType === 'online' && (opt.autoplay || opt.loop || opt.fullScreen || opt.mute)) {
+		console.warn('[pptxgenjs] addMedia: playback options (`autoplay`/`loop`/`fullScreen`/`mute`) are not supported for `type:"online"` - values ignored')
+	} else {
+		if (opt.fullScreen && strType !== 'video') {
+			console.warn('[pptxgenjs] addMedia: `fullScreen` applies to `type:"video"` only - value ignored')
+		}
+		slideData.options.autoplay = opt.autoplay === true
+		slideData.options.loop = opt.loop === true
+		slideData.options.fullScreen = opt.fullScreen === true && strType === 'video'
+		slideData.options.mute = opt.mute === true
+	}
+
 	// STEP 4: Add this media to this Slide Rels (rId/rels count spans all slides! Count all media to get next rId)
 	/**
 	 * NOTE:

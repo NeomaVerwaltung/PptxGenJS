@@ -5,7 +5,7 @@
 import { CRLF, LAYOUT_IDX_SERIES_BASE, OOXML_EXT, SLDNUMFLDID, SLIDE_OBJECT_TYPES } from '../core-enums'
 import { IPresentationProps, PresSlide, SlideLayout } from '../core-interfaces'
 import { encodeXmlEntities, getUuid } from '../gen-utils'
-import { slideObjectToXml } from './slide'
+import { genXmlMediaTiming, slideObjectToXml } from './slide'
 
 export function makeXmlContTypes (slides: PresSlide[], slideLayouts: SlideLayout[], masterSlide?: PresSlide): string {
 	let strXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + CRLF
@@ -196,7 +196,8 @@ export function makeXmlSlide (slide: PresSlide): string {
 		'xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"' +
 		`${slide?.hidden ? ' show="0"' : ''}>` +
 		`${slideObjectToXml(slide)}` +
-		'<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>'
+		// CT_Slide sequence: cSld, clrMapOvr, transition, timing, extLst - `p:timing` must follow `p:clrMapOvr`
+		`<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>${genXmlMediaTiming(slide)}</p:sld>`
 	)
 }
 

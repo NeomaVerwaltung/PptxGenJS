@@ -30,6 +30,9 @@ test('office: LibreOffice opens and converts a generated presentation', async ()
 		], { x: 0.5, y: 1, w: 5, h: 0.5 })
 		slide.addTable([['Region', 'Sales'], ['West', '20']], { x: 0.5, y: 1.5, w: 5 })
 		slide.addChart(pptx.ChartType.bar, [{ name: 'Sales', labels: ['Q1', 'Q2'], values: [10, 20] }], { x: 0.5, y: 3, w: 6, h: 3 })
+		const mediaSlide = pptx.addSlide()
+		mediaSlide.addMedia({ type: 'video', data: 'video/mp4;base64,QQ==', x: 0.5, y: 0.5, w: 4, h: 2.5, autoplay: true, loop: true, mute: true })
+		mediaSlide.addMedia({ type: 'audio', data: 'audio/mp3;base64,QQ==', x: 5, y: 0.5, w: 2, h: 2, autoplay: true })
 		const gradientSlide = pptx.addSlide()
 		gradientSlide.background = { type: 'gradient', gradient: { angle: 45, stops: [{ color: 'FFFFFF', position: 0 }, { color: 'E7E6E6', position: 100 }] } }
 		gradientSlide.addShape(pptx.ShapeType.rect, {

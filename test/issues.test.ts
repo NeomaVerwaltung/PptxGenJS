@@ -451,7 +451,7 @@ test('#32: masters accept any shape type, tables and media', async () => {
 	const layout = await readPart(zip, `ppt/slideLayouts/slideLayout${idx}.xml`)
 	assert.ok(layout.includes('prst="triangle"'), 'shape not rendered on the master layout')
 	assert.ok(layout.includes('<a:tbl>'), 'table not rendered on the master layout')
-	assert.ok(layout.includes('<a:videoFile'), 'media not rendered on the master layout')
+	assert.ok(layout.includes('<a:audioFile') || layout.includes('<a:videoFile'), 'media not rendered on the master layout')
 	assert.match(await readPart(zip, `ppt/slideLayouts/_rels/slideLayout${idx}.xml.rels`), /media\/media/, 'media rel missing from the layout')
 })
 

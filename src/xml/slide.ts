@@ -768,7 +768,8 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout): string {
 					}"><a:hlinkClick r:id="" action="ppaction://media"/></p:cNvPr>`
 					strSlideXml += ' <p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr>'
 					strSlideXml += ' <p:nvPr>'
-					strSlideXml += `  <a:videoFile r:link="rId${slideItemObj.mediaRid}"/>`
+					// ECMA-376: audio references `a:audioFile`, video `a:videoFile` - the rel type already distinguishes them
+					strSlideXml += `  <${slideItemObj.mtype === 'audio' ? 'a:audioFile' : 'a:videoFile'} r:link="rId${slideItemObj.mediaRid}"/>`
 					strSlideXml += '  <p:extLst>'
 					strSlideXml += `   <p:ext uri="${OOXML_EXT.media.uri}">`
 					strSlideXml += `    <p14:media xmlns:p14="${OOXML_EXT.media.ns}" r:embed="rId${(slideItemObj.mediaRid ?? 0) + 1}"/>`
@@ -903,3 +904,41 @@ export function slideObjectToXml (slide: PresSlide | SlideLayout): string {
  * @param {boolean} isDefault - array of default relations
  * @return {string} XML
  */
+
+/**
+ * Create the slide timing tree that carries media playback behaviour (`<p:timing>`)
+ * - media nodes are children of the `tmRoot` common time node, per ECMA-376 19.5.93 `CT_TLMediaNodeVideo`
+ * - returns `''` when no media on the slide asks for playback behaviour, so slides without it are unchanged
+ * @param {PresSlide} slide - slide object
+ * @returns {string} XML
+ */
+export function genXmlMediaTiming (slide: PresSlide): string {
+	const nodes = (slide._slideObjects ?? [])
+		.filter(obj => obj._type === SLIDE_OBJECT_TYPES.media && obj.mtype !== 'online')
+		.filter(obj => obj.options?.autoplay || obj.options?.loop || obj.options?.fullScreen || obj.options?.mute)
+		// `p:spTgt@spid` targets the media shape's `p:cNvPr@id`, which the media emitter derives from `mediaRid`
+		.map((obj, idx) => {
+			const opts = obj.options ?? {}
+			const tag = obj.mtype === 'audio' ? 'p:audio' : 'p:video'
+			const fullScrn = tag === 'p:video' && opts.fullScreen ? ' fullScrn="1"' : ''
+			return (
+				`<${tag}${fullScrn}>` +
+				`<p:cMediaNode${opts.mute ? ' mute="1"' : ''}>` +
+				`<p:cTn id="${idx + 2}" fill="hold" display="0"${opts.loop ? ' repeatCount="indefinite"' : ''}>` +
+				`<p:stCondLst><p:cond delay="${opts.autoplay ? '0' : 'indefinite'}"/></p:stCondLst>` +
+				'</p:cTn>' +
+				`<p:tgtEl><p:spTgt spid="${(obj.mediaRid ?? 0) + 2}"/></p:tgtEl>` +
+				'</p:cMediaNode>' +
+				`</${tag}>`
+			)
+		})
+	if (nodes.length === 0) return ''
+
+	return (
+		'<p:timing><p:tnLst><p:par>' +
+		'<p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot"><p:childTnLst>' +
+		nodes.join('') +
+		'</p:childTnLst></p:cTn>' +
+		'</p:par></p:tnLst></p:timing>'
+	)
+}

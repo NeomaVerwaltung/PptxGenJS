@@ -216,3 +216,67 @@ test('contract: chartTrackingRefBased is on by default and can be turned off', a
 	}
 	assert.ok(warnings.some(warning => warning.includes('chartTrackingRefBased must be a boolean')), 'a non-boolean must warn')
 })
+
+test('contract: media playback options drive the slide timing tree', async () => {
+	const MP3 = 'audio/mp3;base64,QQ=='
+	const MP4 = 'video/mp4;base64,QQ=='
+
+	// A: no playback options -> no `p:timing` at all, so existing decks are unchanged
+	const plain = new pptxgen()
+	const plainSlide = plain.addSlide()
+	plainSlide.addMedia({ type: 'video', data: MP4, x: 1, y: 1, w: 3, h: 2 })
+	const plainXml = await readPart(await JSZip.loadAsync((await plain.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+	assert.doesNotMatch(plainXml, /<p:timing>/, 'media without playback options must not add a timing tree')
+
+	// B: playback options -> one media node per media shape
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addMedia({ type: 'video', data: MP4, x: 1, y: 1, w: 3, h: 2, autoplay: true, loop: true, fullScreen: true, mute: true })
+	slide.addMedia({ type: 'audio', data: MP3, x: 5, y: 1, w: 2, h: 2 })
+	const zipWithTiming = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	await assertPptxPackageContracts(zipWithTiming)
+	const xml = await readPart(zipWithTiming, 'ppt/slides/slide1.xml')
+
+	assert.doesNotMatch(xml, /NaN|undefined/, 'playback options must not leak invalid attribute values')
+	// CT_Slide sequence requires `p:timing` after `p:clrMapOvr`
+	assert.match(xml, /<\/p:clrMapOvr><p:timing>/, 'timing tree is in the wrong position')
+	assert.match(xml, /<p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot"><p:childTnLst>/, 'tmRoot node missing')
+	assert.match(
+		xml,
+		/<p:video fullScrn="1"><p:cMediaNode mute="1"><p:cTn id="2" fill="hold" display="0" repeatCount="indefinite"><p:stCondLst><p:cond delay="0"\/><\/p:stCondLst><\/p:cTn><p:tgtEl><p:spTgt spid="\d+"\/><\/p:tgtEl><\/p:cMediaNode><\/p:video>/,
+		'video playback node missing or malformed'
+	)
+	// audio has no playback options of its own, so it gets no node
+	assert.equal([...xml.matchAll(/<p:(video|audio)[ >]/g)].length, 1, 'only media with playback options gets a node')
+	// `spTgt@spid` must match the media shape's `p:cNvPr@id`
+	const spid = /<p:spTgt spid="(\d+)"\/>/.exec(xml)?.[1]
+	assert.ok(spid, 'no media target')
+	assert.match(xml, new RegExp(`<p:cNvPr id="${spid}" name="Media 0"`), 'timing target does not match the media shape id')
+	// audio references a:audioFile, video a:videoFile
+	assert.match(xml, /<a:audioFile r:link="rId\d+"\/>/, 'audio must reference a:audioFile')
+	assert.match(xml, /<a:videoFile r:link="rId\d+"\/>/, 'video must reference a:videoFile')
+})
+
+test('contract: invalid media playback combinations are dropped before XML', async () => {
+	const warnings: string[] = []
+	const origWarn = console.warn
+	console.warn = (msg: string) => warnings.push(String(msg))
+	let xml = ''
+	try {
+		const pptx = new pptxgen()
+		const slide = pptx.addSlide()
+		// fullScreen is a `p:video` attribute - meaningless for audio
+		slide.addMedia({ type: 'audio', data: 'audio/mp3;base64,QQ==', x: 1, y: 1, w: 2, h: 2, autoplay: true, fullScreen: true })
+		// online videos are played by the embed, not the timing tree
+		slide.addMedia({ type: 'online', link: 'https://www.youtube.com/embed/Dph6ynRVyUc', x: 4, y: 1, w: 3, h: 2, autoplay: true, loop: true })
+		xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+	} finally {
+		console.warn = origWarn
+	}
+
+	assert.equal(warnings.filter(w => w.includes('`fullScreen` applies to `type:"video"` only')).length, 1, 'audio fullScreen must warn')
+	assert.equal(warnings.filter(w => w.includes('not supported for `type:"online"`')).length, 1, 'online playback options must warn')
+	assert.doesNotMatch(xml, /fullScrn/, 'fullScreen must not be emitted for audio')
+	assert.equal([...xml.matchAll(/<p:audio[ >]/g)].length, 1, 'the audio node is still emitted for autoplay')
+	assert.equal([...xml.matchAll(/<p:video[ >]/g)].length, 0, 'online video must not get a timing node')
+})
