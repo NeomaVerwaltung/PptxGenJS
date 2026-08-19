@@ -9,6 +9,21 @@ import { BorderProps, OptsChartGridLine, ShadowProps, TextGlowProps } from './co
 export const EMU = 914400 // One (1) inch (OfficeXML measures in EMU (English Metric Units))
 export const ONEPT = 12700 // One (1) point (pt)
 export const CRLF = '\r\n' // AKA: Chr(13) & Chr(10)
+
+/**
+ * Microsoft PowerPoint extension namespaces (MS-PPTX v20240820, Appendix A)
+ * - extensions are only ever emitted inside an `extLst` wrapper, as MS-PPTX 2.2 requires
+ */
+export const MS_PPTX_NS = {
+	/** PowerPoint 2012 main - MS-PPTX Appendix A 5.2 */
+	p15: 'http://schemas.microsoft.com/office/powerpoint/2012/main',
+} as const
+
+/** `p:ext@uri` values keyed by the extension element they carry (MS-PPTX v20240820) */
+export const MS_PPTX_EXT_URI = {
+	/** MS-PPTX 2.2.12 / 2.4.1.1 - `p15:chartTrackingRefBased` in `presentationPr/extLst` */
+	chartTrackingRefBased: '{FD5EFAAD-0ECE-453E-9831-46B23BE46B34}',
+} as const
 export const LAYOUT_IDX_SERIES_BASE = 2147483649
 export const REGEX_HEX_COLOR = /^[0-9a-fA-F]{6}$/
 export const LINEH_MODIFIER = 1.67 // AKA: Golden Ratio Typography

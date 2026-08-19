@@ -2099,6 +2099,15 @@ export interface PresentationProps {
 	 * @since v4.1.0
 	 */
 	compression: CompressionLevel
+	/**
+	 * Whether charts track data references rather than positions (MS-PPTX §2.2.12 `p15:chartTrackingRefBased`)
+	 * - PowerPoint sets this on the presentations it creates, so it is on by default here too
+	 * - affects no rendering: it only decides whether editing the chart's data follows cell
+	 *   references or cell positions
+	 * - set `false` to leave the presentation properties part empty
+	 * @default true
+	 */
+	chartTrackingRefBased: boolean
 	layout: string
 	masterSlide: PresSlide
 	/**

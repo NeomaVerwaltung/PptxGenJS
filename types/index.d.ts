@@ -59,6 +59,14 @@ declare class PptxGenJS {
 	 */
 	compression: PptxGenJS.CompressionLevel
 
+	/**
+	 * Whether charts track data references rather than positions (MS-PPTX 2.2.12 `p15:chartTrackingRefBased`)
+	 * - PowerPoint sets this on the presentations it creates, so it is on by default here too
+	 * - affects no rendering; set `false` to leave the presentation properties part empty
+	 * @default true
+	 */
+	chartTrackingRefBased: boolean
+
 	// Presentation Metadata
 	/**
 	 * Author name
