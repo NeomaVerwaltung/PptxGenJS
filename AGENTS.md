@@ -19,41 +19,49 @@ For PowerPoint compatibility, also consult Microsoft's [MS-OI29500 Office implem
 
 ## Verification
 
-`npm run check` (lint + typecheck + all tests) is the gate; it must pass before any PR. `npm run build` produces `dist/`.
+`npm run check` (lint + typecheck + all tests) is the gate; it must pass before any PR. Root scripts fan out over the workspaces, so run them from the repo root. `npm run build` produces each package's `dist/`.
 
 | Command | Purpose |
 | --- | --- |
 | `npm run check` | lint + typecheck + tests — run this before reporting done |
-| `npm run lint` | ESLint over `src` and `test` |
-| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | ESLint over every package's `src` and `test` |
+| `npm run typecheck` | `tsc --noEmit` per package |
 | `npm test` | Node test runner over the test files listed in `package.json` |
-| `npm run build` | Rollup ESM + CJS bundles into `dist/` |
+| `npm run build` | Rollup ESM + CJS bundles into each package's `dist/` |
 | `npm run test:office` | Opens a generated `.pptx` in LibreOffice; needs `PPTXGENJS_OFFICE_BIN` and a local LibreOffice install. CI runs it — skip locally unless installed. |
 
-**The `test` script hardcodes its file list.** A new `test/*.test.ts` will not run until it is added to both the `test` and `test:coverage` scripts in `package.json`. Prefer adding cases to an existing file.
+**The `test` script hardcodes its file list.** A new `test/*.test.ts` will not run until it is added to both the `test` and `test:coverage` scripts in that package's `package.json`. Prefer adding cases to an existing file.
 
 ## Conventions
 
 - The source compiles under `strictNullChecks`. Do not introduce non-null assertions (`!`) or unchecked `as` casts — use explicit types, guard clauses, and validated defaults instead.
 - The public API stays compatible with upstream PptxGenJS. Additive changes only; deprecations go through `DEPRECATION-PLAN.md`.
 - Keep package-contract tests semantic (assert on parsed structure), not snapshots of generated XML.
-- Hand-written public types live in `types/index.d.ts` and must be updated alongside API changes.
+- Hand-written public types live in `packages/core/types/index.d.ts` and must be updated alongside API changes.
+- Anything that only produces or consumes plain option objects belongs in `packages/std/`, not the core; the core is for code that needs the internal slide object model. Std helpers type slides structurally (an object with the `addX` method they call) rather than importing the `Slide` class.
+- A new std helper is a file plus one line in its category's `index.ts`. A new std category also needs an entry in `packages/std/rollup.config.mjs` and in `exports` in `packages/std/package.json`; `src/index.ts` is a barrel and defines nothing.
+- The two packages version and release independently: core tags are `vX.Y.Z`, std tags are `std-vX.Y.Z`. One `Release` workflow serves both.
 
 ## Source map
 
 | Path | Contents |
 | --- | --- |
-| `src/pptxgen.ts` | Entry point; the `PptxGenJS` presentation class and save/write pipeline |
-| `src/slide.ts` | `Slide` class — per-slide state and the `addX` surface |
-| `src/gen-objects.ts` | Builds slide object models (text, shapes, images, charts, tables) |
-| `src/gen-tables.ts` | Table layout, row splitting, and auto-paging |
-| `src/gen-media.ts` | Image/media fetching and encoding |
-| `src/gen-utils.ts` | Units, colors, escaping, and other shared helpers |
-| `src/core-enums.ts` | Frozen constant objects (shape types, chart types, schemes) |
-| `src/core-interfaces.ts` | Internal + public TypeScript interfaces |
-| `src/xml/` | OOXML emitters: `package.ts` (package parts), `slide.ts`, `text.ts`, `relationships.ts` |
-| `src/charts/` | Chart XML: `xml.ts`, `axes.ts`, `title.ts`, `workbook.ts`, `utils.ts` |
-| `test/pptx-contracts.ts` | Shared helpers that parse a generated `.pptx` and assert package semantics |
-| `docs/` | VitePress site (`npm run docs:dev`) |
+| `packages/core/src/pptxgen.ts` | Entry point; the `PptxGenJS` presentation class and save/write pipeline |
+| `packages/core/src/slide.ts` | `Slide` class — per-slide state and the `addX` surface |
+| `packages/core/src/gen-objects.ts` | Builds slide object models (text, shapes, images, charts, tables) |
+| `packages/core/src/gen-tables.ts` | Table layout, row splitting, and auto-paging |
+| `packages/core/src/gen-media.ts` | Image/media fetching and encoding |
+| `packages/core/src/gen-utils.ts` | Units, colors, escaping, and other shared helpers |
+| `packages/core/src/core-enums.ts` | Frozen constant objects (shape types, chart types, schemes) |
+| `packages/core/src/core-interfaces.ts` | Internal + public TypeScript interfaces |
+| `packages/core/src/xml/` | OOXML emitters: `package.ts` (package parts), `slide.ts`, `text.ts`, `relationships.ts` |
+| `packages/core/src/charts/` | Chart XML: `xml.ts`, `axes.ts`, `title.ts`, `workbook.ts`, `utils.ts` |
+| `packages/core/test/pptx-contracts.ts` | Shared helpers that parse a generated `.pptx` and assert package semantics; typechecked via `packages/std`, not by core's own `tsc` |
+| `packages/std/test/` | One file per category (`layout`, `charts`) plus `exports.test.ts`, which fails when a category is added without wiring its subpath |
+| `docs/` | VitePress site (`npm run docs:dev`), shared by both packages |
+| `tsconfig.base.json` | Shared compiler options; each package's `tsconfig.json` extends it |
+| `scripts/` | Repo-level tooling, not shipped in any package (`sync-version.mjs`, run by a package's `version` hook) |
+| `packages/std/` | `@neo-ma/pptxgenjs-std` — helpers composing the public API; published separately, no runtime dep on the core |
+| `packages/std/src/<category>/` | One directory per category (`layout`, `charts`), each with an `index.ts` that is its whole public surface and a matching subpath export |
 
 Deeper testing guidance is in `TESTING.md`; release mechanics are in `RELEASING.md`.

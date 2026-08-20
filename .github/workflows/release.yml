@@ -5,6 +5,11 @@ on:
     types: [published]
   workflow_dispatch:
     inputs:
+      package:
+        description: Package to release
+        type: choice
+        default: core
+        options: [core, std]
       level:
         description: Version increment
         type: choice
@@ -29,6 +34,25 @@ jobs:
           node-version: 22.x
           cache: npm
           registry-url: https://registry.npmjs.org
+      # One workflow serves both packages. The release path carries the package in the tag
+      # prefix (`v*` core, `std-v*` std); the dispatch path carries it in the input.
+      - name: Resolve target package
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          INPUT_PACKAGE: ${{ inputs.package }}
+        run: |
+          case "${TAG:-$INPUT_PACKAGE}" in
+            std-v*|std)
+              echo 'PKG_NAME=@neo-ma/pptxgenjs-std' >> "$GITHUB_ENV"
+              echo 'PKG_DIR=packages/std' >> "$GITHUB_ENV"
+              echo 'TAG_PREFIX=std-v' >> "$GITHUB_ENV"
+              ;;
+            *)
+              echo 'PKG_NAME=@neo-ma/pptxgenjs' >> "$GITHUB_ENV"
+              echo 'PKG_DIR=packages/core' >> "$GITHUB_ENV"
+              echo 'TAG_PREFIX=v' >> "$GITHUB_ENV"
+              ;;
+          esac
       # Dispatch path: bump + tag here. A tag pushed with GITHUB_TOKEN cannot trigger
       # another workflow, so the whole release runs in this one job.
       - name: Bump version and push tag
@@ -36,37 +60,54 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          npm version "${{ inputs.level }}" --message "chore: release v%s"
+          npm version "${{ inputs.level }}" --no-git-tag-version -w "$PKG_NAME"
+          # Run the version sync explicitly rather than relying on the `version` lifecycle
+          # hook firing for a workspace - core keeps the number in its source and types too.
+          npm run version -w "$PKG_NAME" --if-present
+          # `npm version -w` skips the commit and tag, so both are made here with the
+          # package-specific prefix that the release path reads back.
+          VERSION="$(node -p "require('./$PKG_DIR/package.json').version")"
+          # Write the changelog entry from the commits that touched this package, so the record
+          # cannot be forgotten before a release the way a manual step can.
+          node scripts/changelog.mjs --dir "$PKG_DIR" --tag "$TAG_PREFIX$VERSION"
+          git commit --all --message "chore: release $TAG_PREFIX$VERSION"
+          git tag "$TAG_PREFIX$VERSION"
           git push --follow-tags
       - name: Resolve release tag
-        run: echo "RELEASE_TAG=${RELEASE_TAG:-v$(node -p "require('./package.json').version")}" >> "$GITHUB_ENV"
+        run: echo "RELEASE_TAG=${RELEASE_TAG:-$TAG_PREFIX$(node -p "require('./$PKG_DIR/package.json').version")}" >> "$GITHUB_ENV"
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
       - run: npm ci
-      # dist/ is not committed (issue #16) - `npm ci` builds it via `prepare`.
-      # Require every public browser bundle before publishing or attaching assets.
+      # dist/ is not committed (issue #16) - `npm ci` builds it via each workspace's `prepare`.
+      # Require every published artifact before publishing or attaching assets.
       - name: Verify release bundles
         run: |
-          for file in pptxgen.bundle.js pptxgen.cjs.js pptxgen.es.js pptxgen.min.js; do
-            test -s "dist/$file"
+          case "$PKG_DIR" in
+            packages/core) FILES="pptxgen.bundle.js pptxgen.cjs.js pptxgen.es.js pptxgen.min.js" ;;
+            packages/std) FILES="index.cjs index.mjs index.d.ts layout/index.cjs layout/index.mjs layout/index.d.ts charts/index.cjs charts/index.mjs charts/index.d.ts" ;;
+          esac
+          for file in $FILES; do
+            test -s "$PKG_DIR/dist/$file"
           done
       - name: Verify tag matches package.json version
-        run: test "v$(node -p "require('./package.json').version")" = "$RELEASE_TAG"
+        run: test "$TAG_PREFIX$(node -p "require('./$PKG_DIR/package.json').version")" = "$RELEASE_TAG"
       - run: npm install -g npm@latest # trusted publishing needs npm >= 11.5
-      - run: npm publish --provenance --access public --tag "$NPM_TAG"
+      - run: npm publish -w "$PKG_NAME" --provenance --access public --tag "$NPM_TAG"
         env:
           NPM_TAG: ${{ github.event.release.prerelease && 'beta' || 'latest' }}
       - name: Create the GitHub release
         if: github.event_name == 'workflow_dispatch'
-        run: gh release create "$RELEASE_TAG" --generate-notes
+        run: gh release create "$RELEASE_TAG" --generate-notes --title "$RELEASE_TAG"
         env:
           GITHUB_TOKEN: ${{ github.token }}
+      # Only the core package ships browser bundles worth attaching to a release.
       - name: Upload built bundles to the release
+        if: env.PKG_DIR == 'packages/core'
         run: >
           gh release upload "$RELEASE_TAG"
-          dist/pptxgen.bundle.js
-          dist/pptxgen.cjs.js
-          dist/pptxgen.es.js
-          dist/pptxgen.min.js
+          packages/core/dist/pptxgen.bundle.js
+          packages/core/dist/pptxgen.cjs.js
+          packages/core/dist/pptxgen.es.js
+          packages/core/dist/pptxgen.min.js
         env:
           GITHUB_TOKEN: ${{ github.token }}

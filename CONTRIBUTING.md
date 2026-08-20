@@ -20,7 +20,8 @@ npm run check # lint + typecheck + strict typecheck + tests — run before every
 - `npm test` — unit, e2e, and OOXML package-contract tests
 
 Build the distributables locally with `npm run build` (or `npm run dist` for
-the full minified/bundled `dist/` artifacts).
+the full minified/bundled `dist/` artifacts). Every root script fans out over
+the workspaces in `packages/`; add `-w @neo-ma/pptxgenjs` to target one.
 
 For a release candidate, also run `npm run test:office` on a machine with
 LibreOffice installed and `PPTXGENJS_OFFICE_BIN` set to its executable.
@@ -28,7 +29,7 @@ The CI workflow performs this check on every pull request.
 
 ## Tests
 
-Tests live in `test/`. When you change XML generation, add or update the
+Tests live in each package's `test/` directory. When you change XML generation, add or update the
 semantic contract that describes the intended OOXML behavior; no generated XML
 fixtures need to be regenerated. Coverage can be inspected with `npm run test:coverage`.
 

@@ -15,6 +15,7 @@ export default defineConfig({
 			{ text: 'Docs', link: '/introduction' },
 			{ text: 'Quick Start', link: '/quick-start' },
 			{ text: 'API', link: '/api-text' },
+			{ text: 'Std', link: '/std' },
 			{ text: 'Migrate', link: '/migration' },
 		],
 		sidebar: [
@@ -62,6 +63,13 @@ export default defineConfig({
 					{ text: 'Shapes', link: '/api-shapes' },
 					{ text: 'Tables', link: '/api-tables' },
 					{ text: 'Text', link: '/api-text' },
+				],
+			},
+			{
+				text: 'Std Library',
+				collapsed: false,
+				items: [
+					{ text: 'Layout & Diagram Helpers', link: '/std' },
 				],
 			},
 			{

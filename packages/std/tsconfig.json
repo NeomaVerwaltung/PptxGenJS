@@ -1,0 +1,12 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"noEmit": true,
+		// Tests import the core by relative path, so the program spans both packages
+		"rootDir": "../.."
+	},
+	"include": [
+		"src/**/*",
+		"test/**/*"
+	]
+}
