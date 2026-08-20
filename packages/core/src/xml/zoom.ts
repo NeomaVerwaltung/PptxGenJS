@@ -7,7 +7,8 @@
  * `mc:Fallback` - a picture for slide/section zooms, a group shape for a summary zoom.
  */
 
-import { ZOOM_NS } from '../core-enums'
+import { MS_PPTX_NS, ZOOM_NS } from '../core-enums'
+import { alternateContent } from './markup-compat'
 import { ISlideObject, PresSlide, SlideLayout } from '../core-interfaces'
 import { encodeXmlEntities, getUuid } from '../gen-utils'
 
@@ -113,10 +114,6 @@ export function genXmlZoom (
 	}
 
 	const opts = obj.options ?? {}
-	const nsDecls =
-		`xmlns:p16="${ZOOM_NS[kind]}" xmlns:p166="${ZOOM_NS.zmPr}" ` +
-		'xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main"'
-
 	let choice = ''
 	if (kind === 'slide') {
 		choice = `<p16:sldZm><p16:sldZmObj sldId="${targets[0]}">${zoomProperties(obj, geom)}</p16:sldZmObj></p16:sldZm>`
@@ -140,10 +137,15 @@ export function genXmlZoom (
 			coverFill(obj) +
 			`<p:spPr>${geometryXml(geom)}</p:spPr></p:pic>`
 
-	return (
-		'<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">' +
-		`<mc:Choice Requires="p16" ${nsDecls}>${choice}</mc:Choice>` +
-		`<mc:Fallback>${fallback}</mc:Fallback>` +
-		'</mc:AlternateContent>'
-	)
+	return alternateContent({
+		namespaces: {
+			p16: ZOOM_NS[kind],
+			p166: ZOOM_NS.zmPr,
+			p14: MS_PPTX_NS.p14,
+		},
+		// the zoom element itself is p16; p166/p14 only carry its properties
+		requires: ['p16'],
+		choice,
+		fallback,
+	})
 }

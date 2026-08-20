@@ -8,6 +8,7 @@
  */
 
 import { MS_PPTX_NS } from '../core-enums'
+import { alternateContent } from './markup-compat'
 import { PresSlide, SlideTransitionProps } from '../core-interfaces'
 
 /** Which directional attribute an inner transition element accepts (ECMA-376 19.3.1.50) */
@@ -191,13 +192,15 @@ export function genXmlTransition (slide: PresSlide): string {
 
 	// Anything that needs `p14`/`p16` is offered with a fallback, per ECMA-376 Part 3 / MS-PPTX 2.2.1
 	const prefix = modern ? modern[0] : 'p14'
-	const nsDecls = [`xmlns:mc="${MS_PPTX_NS.mc}"`, `xmlns:${prefix}="${MS_PPTX_NS[prefix]}"`]
-	if (choiceAttrs.includes('p14:dur') && prefix !== 'p14') nsDecls.push(`xmlns:p14="${MS_PPTX_NS.p14}"`)
+	const namespaces: Record<string, string> = { [prefix]: MS_PPTX_NS[prefix] }
+	// `p14:dur` needs its namespace in scope even when the effect itself is p16
+	if (choiceAttrs.includes('p14:dur')) namespaces.p14 = MS_PPTX_NS.p14
 
-	return (
-		`<mc:AlternateContent ${nsDecls.join(' ')}>` +
-		`<mc:Choice Requires="${prefix}"><p:transition${choiceAttrs}>${inner}</p:transition></mc:Choice>` +
-		`<mc:Fallback><p:transition${fallbackAttrs}>${fallback}</p:transition></mc:Fallback>` +
-		'</mc:AlternateContent>'
-	)
+	return alternateContent({
+		namespaces,
+		// only the effect's own prefix decides whether a consumer can render the choice
+		requires: [prefix],
+		choice: `<p:transition${choiceAttrs}>${inner}</p:transition>`,
+		fallback: `<p:transition${fallbackAttrs}>${fallback}</p:transition>`,
+	})
 }
