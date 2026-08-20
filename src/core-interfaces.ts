@@ -2131,6 +2131,12 @@ export interface ObjectOptions extends ImageProps, PositionProps, ShapeProps, Ta
 }
 export interface SlideBaseProps {
 	_bkgdImgRid?: number
+	/**
+	 * Stable identity for this slide across saves (MS-PPTX 2.2.9 `p14:creationId`)
+	 * - set `true` to have PptxGenJS assign one, or pass your own unsigned 32-bit value
+	 * - opt-in: unset writes no extension
+	 */
+	creationId?: boolean | number
 	_margin?: Margin
 	_name?: string
 	_presLayout: PresLayout

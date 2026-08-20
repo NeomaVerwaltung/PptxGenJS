@@ -107,3 +107,17 @@ with (or after) the preceding `onClick` effect.
 Motion-path and emphasis effects are not supported yet. An unknown preset or trigger is skipped with a
 warning; an unsupported `direction`, a negative `delay`, and a non-numeric `duration` fall back to
 their defaults.
+## Slide Creation Id
+
+PowerPoint tags each slide with a stable id so it can recognise the same slide across saves
+(MS-PPTX §2.2.9 `p14:creationId`). It is opt-in per slide:
+
+```typescript
+const slide = pptx.addSlide();
+slide.creationId = true;   // PptxGenJS assigns one
+slide.creationId = 918273; // or supply your own unsigned 32-bit value
+```
+
+Values must be integers in the range 0–4294967295; anything else is ignored with a warning. Generated
+ids are derived from the slide number, so repeated exports of the same presentation produce the same
+value.

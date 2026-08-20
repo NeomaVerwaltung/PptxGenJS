@@ -748,3 +748,88 @@ test('contract: invalid guides are dropped with a warning', async () => {
 		console.warn = origWarn2
 	}
 })
+test('contract: table modIds are unique per slide and stable across exports', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addTable([['a']], { x: 1, y: 1, w: 3 })
+	slide.addTable([['b']], { x: 1, y: 3, w: 3 })
+	pptx.addSlide().addTable([['c']], { x: 1, y: 1, w: 3 })
+
+	const modIds = async (): Promise<string[][]> => {
+		const zipOut = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+		return await Promise.all([1, 2].map(async num => {
+			const xml = await readPart(zipOut, `ppt/slides/slide${num}.xml`)
+			return [...xml.matchAll(/<p14:modId xmlns:p14="http:\/\/schemas\.microsoft\.com\/office\/powerpoint\/2010\/main" val="(\d+)"\/>/g)].map(match => match[1])
+		}))
+	}
+
+	const [slide1, slide2] = await modIds()
+	// MS-PPTX 2.3.1.19: each modId must be unique on the slide - a constant would break tracking
+	assert.equal(slide1.length, 2, 'expected one modId per table')
+	assert.equal(new Set(slide1).size, 2, `modIds must differ within a slide: ${slide1.join(',')}`)
+	// derived from a base plus a per-slide index, so values are unique but reproducible
+	// base + the shape's own index on the slide
+	assert.deepEqual(slide1, ['1579011935', '1579011936'], 'unexpected modId sequence')
+	assert.deepEqual(slide2, ['1579011935'], 'each slide numbers from its own shape indexes')
+	slide1.concat(slide2).forEach(id => {
+		assert.ok(Number(id) >= 1 && Number(id) <= 0xffffffff, `modId ${id} outside ST_UnsignedInt`)
+	})
+
+	// repeated exports must not renumber existing shapes
+	assert.deepEqual(await modIds(), [slide1, slide2], 'modIds changed between exports')
+})
+
+test('contract: slide creationId is opt-in, accepts a caller value, and is stable', async () => {
+	const pptx = new pptxgen()
+	const auto = pptx.addSlide()
+	auto.creationId = true
+	const explicit = pptx.addSlide()
+	explicit.creationId = 4242
+	pptx.addSlide() // no creationId
+
+	const zipOut = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	await assertPptxPackageContracts(zipOut)
+	const [xml1, xml2, xml3] = await Promise.all([1, 2, 3].map(async num => await readPart(zipOut, `ppt/slides/slide${num}.xml`)))
+
+	// the extension belongs to `p:cSld`, immediately after the shape tree
+	assert.match(
+		xml1,
+		/<\/p:spTree><p:extLst><p:ext uri="\{BB962C8B-B14F-4D97-AF65-F5344CB8AC3E\}"><p14:creationId xmlns:p14="http:\/\/schemas\.microsoft\.com\/office\/powerpoint\/2010\/main" val="\d+"\/><\/p:ext><\/p:extLst><\/p:cSld>/,
+		'creationId extension missing or misplaced'
+	)
+	const generated = /<p14:creationId[^>]*val="(\d+)"/.exec(xml1)?.[1]
+	assert.ok(Number(generated) >= 1 && Number(generated) <= 0xffffffff, 'generated creationId outside ST_UnsignedInt')
+	// derived from the slide number, so it is unique per slide and reproducible
+	assert.equal(generated, '2147483649', 'unexpected generated creationId')
+	assert.match(xml2, /<p14:creationId xmlns:p14="[^"]+" val="4242"\/>/, 'caller-supplied creationId not used')
+	assert.doesNotMatch(xml3, /creationId/, 'creationId must be opt-in per slide')
+
+	// stable across exports
+	const again = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	assert.equal(/<p14:creationId[^>]*val="(\d+)"/.exec(await readPart(again, 'ppt/slides/slide1.xml'))?.[1], generated, 'creationId changed between exports')
+})
+
+test('contract: invalid creationId values are dropped with a warning', async () => {
+	const warnings: string[] = []
+	const origWarn = console.warn
+	console.warn = (msg: string) => warnings.push(String(msg))
+	let xmls: string[] = []
+	try {
+		const pptx = new pptxgen()
+		pptx.addSlide().creationId = 1.5
+		pptx.addSlide().creationId = 0x100000000
+		pptx.addSlide().creationId = -1
+		pptx.addSlide().creationId = 'yes' as unknown as number
+		const zipInvalid = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+		xmls = await Promise.all([1, 2, 3, 4].map(async num => await readPart(zipInvalid, `ppt/slides/slide${num}.xml`)))
+	} finally {
+		console.warn = origWarn
+	}
+
+	assert.equal(warnings.filter(w => w.includes('creationId must be an integer between')).length, 3, 'out-of-range values must warn')
+	assert.equal(warnings.filter(w => w.includes('creationId must be `true` or an unsigned')).length, 1, 'a non-number must warn')
+	xmls.forEach((xml, idx) => {
+		assert.doesNotMatch(xml, /creationId/, `slide ${idx + 1} must not carry an invalid creationId`)
+		assert.doesNotMatch(xml, /NaN/, 'no NaN attributes')
+	})
+})
