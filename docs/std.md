@@ -15,8 +15,9 @@ upstream API compatibility, while these helpers are free to change.
 npm install @neo-ma/pptxgenjs @neo-ma/pptxgenjs-std
 ```
 
-`@neo-ma/pptxgenjs` is a peer dependency used for types only - the helpers never import it at
-runtime. The package ships `.mjs` and `.cjs` builds, so plain Node resolves both without a bundler.
+`@neo-ma/pptxgenjs` is a **peer** dependency rather than a regular one: the helpers act on the slide
+objects your own presentation created, so a second copy of the core resolved at a different version
+would be exactly wrong. It is used for types only - nothing is imported from it at runtime. The package ships `.mjs` and `.cjs` builds, so plain Node resolves both without a bundler.
 It versions independently from the core.
 
 Helpers are grouped into categories, each reachable as its own subpath. Import from the root barrel

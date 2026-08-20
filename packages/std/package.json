@@ -28,6 +28,7 @@
 	"main": "dist/index.cjs",
 	"module": "dist/index.mjs",
 	"types": "dist/index.d.ts",
+	"sideEffects": false,
 	"files": [
 		"dist"
 	],
@@ -60,5 +61,8 @@
 	},
 	"peerDependencies": {
 		"@neo-ma/pptxgenjs": "^4"
+	},
+	"devDependencies": {
+		"@neo-ma/pptxgenjs": "^4.2.0"
 	}
 }

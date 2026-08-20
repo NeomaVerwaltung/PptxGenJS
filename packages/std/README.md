@@ -12,7 +12,9 @@ compatibility, while these are opinions about layout and diagram shapes that sho
 npm install @neo-ma/pptxgenjs-std
 ```
 
-`@neo-ma/pptxgenjs` is a peer dependency, used for types only - nothing here imports it at runtime.
+`@neo-ma/pptxgenjs` is a **peer** dependency, not a regular one: these helpers act on the slide
+objects your own presentation created, so a second copy of the core at another version would be
+exactly wrong. It is used for types only - nothing here imports it at runtime.
 The package ships `dist/index.mjs` and `dist/index.cjs`, so plain Node resolves both without a
 bundler. It versions independently from the core; its release tags are `std-vX.Y.Z`.
 
