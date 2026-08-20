@@ -75,7 +75,10 @@ export default defineConfig({
 			{
 				text: 'Maintainers',
 				collapsed: true,
-				items: [{ text: 'Rendering Architecture', link: '/maintainer-rendering' }],
+				items: [
+					{ text: 'Rendering Architecture', link: '/maintainer-rendering' },
+					{ text: 'MS-PPTX Conformance Profile', link: '/ms-pptx-profile' },
+				],
 			},
 		],
 		socialLinks: [{ icon: 'github', link: 'https://github.com/NeomaVerwaltung/PptxGenJS' }],

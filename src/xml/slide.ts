@@ -7,6 +7,7 @@ import {
 	DEF_PRES_LAYOUT_NAME,
 	DEF_TEXT_SHADOW,
 	EMU,
+	OOXML_EXT,
 	SLDNUMFLDID,
 	SHAPE_TYPE,
 	SLIDE_OBJECT_TYPES,
@@ -310,7 +311,7 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout): string {
 				strXml = `<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="${intTableNum * (slide._slideNum ?? 0) + 1}" name="${slideItemObj.options.objectName}"/>`
 				strXml +=
 					'<p:cNvGraphicFramePr><a:graphicFrameLocks noGrp="1"/></p:cNvGraphicFramePr>' +
-					'  <p:nvPr><p:extLst><p:ext uri="{D42A27DB-BD31-4B8C-83A1-F6EECF244321}"><p14:modId xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main" val="1579011935"/></p:ext></p:extLst></p:nvPr>' +
+					`  <p:nvPr><p:extLst><p:ext uri="${OOXML_EXT.modId.uri}"><p14:modId xmlns:p14="${OOXML_EXT.modId.ns}" val="1579011935"/></p:ext></p:extLst></p:nvPr>` +
 					'</p:nvGraphicFramePr>'
 				strXml += `<p:xfrm><a:off x="${x || (x === 0 ? 0 : EMU)}" y="${y || (y === 0 ? 0 : EMU)}"/><a:ext cx="${cx || (cx === 0 ? 0 : EMU)}" cy="${cy || EMU
 				}"/></p:xfrm>`
@@ -656,7 +657,7 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout): string {
 					// Commented out b/c i'm not even sure this works - current code produces text that wraps in shapes and textboxes, so...
 					if ( slideItemObj.options.textWrap ) {
 						strSlideXml += '<a:extLst>'
-									+ '<a:ext uri="{C572A759-6A51-4108-AA02-DFA0A04FC94B}">'
+									+ `<a:ext uri="${OOXML_EXT.macWrappingTextBox.uri}">`
 									+ '<ma14:wrappingTextBoxFlag xmlns:ma14="http://schemas.microsoft.com/office/mac/drawingml/2011/main" val="1"/>'
 									+ '</a:ext>'
 									+ '</a:extLst>';
@@ -700,8 +701,8 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout): string {
 					strSlideXml += `<a:blip r:embed="rId${(slideItemObj.imageRid ?? 0) - 1}">`
 					strSlideXml += slideItemObj.options.transparency ? ` <a:alphaModFix amt="${Math.round((100 - slideItemObj.options.transparency) * 1000)}"/>` : ''
 					strSlideXml += ' <a:extLst>'
-					strSlideXml += '  <a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}">'
-					strSlideXml += `   <asvg:svgBlip xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main" r:embed="rId${slideItemObj.imageRid}"/>`
+					strSlideXml += `  <a:ext uri="${OOXML_EXT.svgBlip.uri}">`
+					strSlideXml += `   <asvg:svgBlip xmlns:asvg="${OOXML_EXT.svgBlip.ns}" r:embed="rId${slideItemObj.imageRid}"/>`
 					strSlideXml += '  </a:ext>'
 					strSlideXml += ' </a:extLst>'
 					strSlideXml += '</a:blip>'
@@ -769,8 +770,8 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout): string {
 					strSlideXml += ' <p:nvPr>'
 					strSlideXml += `  <a:videoFile r:link="rId${slideItemObj.mediaRid}"/>`
 					strSlideXml += '  <p:extLst>'
-					strSlideXml += '   <p:ext uri="{DAA4B4D4-6D71-4841-9C94-3DE7FCFB9230}">'
-					strSlideXml += `    <p14:media xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main" r:embed="rId${(slideItemObj.mediaRid ?? 0) + 1}"/>`
+					strSlideXml += `   <p:ext uri="${OOXML_EXT.media.uri}">`
+					strSlideXml += `    <p14:media xmlns:p14="${OOXML_EXT.media.ns}" r:embed="rId${(slideItemObj.mediaRid ?? 0) + 1}"/>`
 					strSlideXml += '   </p:ext>'
 					strSlideXml += '  </p:extLst>'
 					strSlideXml += ' </p:nvPr>'
@@ -831,7 +832,7 @@ function genXmlSlideNumber (slide: PresSlide | SlideLayout): string {
 			`<a:ext cx="${slide._slideNumberProps.w ? getSmartParseNumber(slide._slideNumberProps.w, 'X', slide._presLayout) : '800000'}" cy="${slide._slideNumberProps.h ? getSmartParseNumber(slide._slideNumberProps.h, 'Y', slide._presLayout) : '300000'}"/>` +
 			'</a:xfrm>' +
 			' <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>' +
-			' <a:extLst><a:ext uri="{C572A759-6A51-4108-AA02-DFA0A04FC94B}"><ma14:wrappingTextBoxFlag val="0" xmlns:ma14="http://schemas.microsoft.com/office/mac/drawingml/2011/main"/></a:ext></a:extLst>' +
+			` <a:extLst><a:ext uri="${OOXML_EXT.macWrappingTextBox.uri}"><ma14:wrappingTextBoxFlag val="0" xmlns:ma14="${OOXML_EXT.macWrappingTextBox.ns}"/></a:ext></a:extLst>` +
 			'</p:spPr>'
 		strSlideXml += '<p:txBody>'
 		strSlideXml += '<a:bodyPr'
