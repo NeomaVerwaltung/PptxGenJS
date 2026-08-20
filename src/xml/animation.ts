@@ -20,26 +20,39 @@ const DEF_DURATION = 500
  * and `filter` is the `p:animEffect@filter` that produces it. `appear`/`disappear` are instant, so
  * they have no filter at all.
  */
-const PRESETS: Record<string, { id: number, class: 'entr' | 'exit', filter?: string, directions?: Record<string, [number, string]> }> = {
+interface Preset {
+	/** `p:cTn@presetID` PowerPoint writes for this effect */
+	id: number
+	/** `p:cTn@presetClass` */
+	class: 'entr' | 'exit'
+	/** `p:animEffect@filter`; absent for the instant `appear`/`disappear` effects */
+	filter?: string
+	/** direction name -> [`presetSubtype`, `filter`]; both encode the direction, so they stay together */
+	directions?: Record<string, [number, string]>
+	/** which `directions` key applies when the caller gives none */
+	defaultDirection?: string
+}
+
+const WIPE_DIRECTIONS: Record<string, [number, string]> = {
+	up: [1, 'wipe(up)'],
+	right: [2, 'wipe(right)'],
+	down: [4, 'wipe(down)'],
+	left: [8, 'wipe(left)'],
+}
+const ZOOM_DIRECTIONS: Record<string, [number, string]> = {
+	in: [16, 'zoom(in)'],
+	out: [32, 'zoom(out)'],
+}
+
+const PRESETS: Record<string, Preset> = {
 	appear: { id: 1, class: 'entr' },
 	disappear: { id: 1, class: 'exit' },
 	fadeIn: { id: 10, class: 'entr', filter: 'fade' },
 	fadeOut: { id: 10, class: 'exit', filter: 'fade' },
-	// `presetSubtype` and the filter argument both encode the direction, so they are kept together
-	wipeIn: {
-		id: 22,
-		class: 'entr',
-		filter: 'wipe(up)',
-		directions: { up: [1, 'wipe(up)'], right: [2, 'wipe(right)'], down: [4, 'wipe(down)'], left: [8, 'wipe(left)'] },
-	},
-	wipeOut: {
-		id: 22,
-		class: 'exit',
-		filter: 'wipe(up)',
-		directions: { up: [1, 'wipe(up)'], right: [2, 'wipe(right)'], down: [4, 'wipe(down)'], left: [8, 'wipe(left)'] },
-	},
-	zoomIn: { id: 53, class: 'entr', filter: 'zoom(in)', directions: { in: [16, 'zoom(in)'], out: [32, 'zoom(out)'] } },
-	zoomOut: { id: 53, class: 'exit', filter: 'zoom(out)', directions: { in: [16, 'zoom(in)'], out: [32, 'zoom(out)'] } },
+	wipeIn: { id: 22, class: 'entr', directions: WIPE_DIRECTIONS, defaultDirection: 'up' },
+	wipeOut: { id: 22, class: 'exit', directions: WIPE_DIRECTIONS, defaultDirection: 'up' },
+	zoomIn: { id: 53, class: 'entr', directions: ZOOM_DIRECTIONS, defaultDirection: 'in' },
+	zoomOut: { id: 53, class: 'exit', directions: ZOOM_DIRECTIONS, defaultDirection: 'out' },
 }
 
 /** `p:cTn@nodeType` for each trigger */
@@ -53,7 +66,7 @@ const NODE_TYPES: Record<string, string> = {
 interface ResolvedAnimation {
 	/** `p:spTgt@spid` - the target's `p:cNvPr@id` */
 	spid: number
-	preset: typeof PRESETS[string]
+	preset: Preset
 	presetSubtype: number
 	filter?: string
 	nodeType: string
@@ -99,9 +112,9 @@ function resolveAnimations (slide: PresSlide): ResolvedAnimation[] {
 			if (anim.direction && !dir) {
 				console.warn(`[pptxgenjs] animation "${anim.type}" does not accept direction "${String(anim.direction)}" - valid values are ${Object.keys(preset.directions).join(', ')}; value ignored`)
 			}
-			const entry = preset.directions[dir ?? Object.keys(preset.directions)[preset.filter === 'zoom(out)' ? 1 : 0]]
-			presetSubtype = entry[0]
-			filter = entry[1]
+			const [subtype, directionFilter] = preset.directions[dir ?? String(preset.defaultDirection)]
+			presetSubtype = subtype
+			filter = directionFilter
 		}
 
 		resolved.push({
