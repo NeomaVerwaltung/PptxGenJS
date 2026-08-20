@@ -241,3 +241,31 @@ slide.addText(arrTextObjs2, { x: 0.5, y: 4, w: 8, h: 2, fill: { color: "232323" 
 ### Tab Stops
 
 ![tab stops](./assets/ex-text-tabstops.png)
+
+## Math (OMML)
+
+Set `omml` on a text run to emit an Office Math zone instead of a plain run. The equation stays
+editable in PowerPoint — it is not an image. The run's `text` becomes the fallback shown by
+consumers that do not understand Office math.
+
+| Option | Type   | Description                                                                       |
+| :----- | :----- | :-------------------------------------------------------------------------------- |
+| `omml` | string | well-formed OMML: `m:oMath`, `m:oMathPara`, or an inner fragment (ex: `<m:f>...`) |
+
+PptxGenJS adds the `m:oMath` root and namespace declarations when they are missing, then wraps the
+zone in `mc:AlternateContent` as required for markup-compatibility extensions. It does **not** parse
+or convert the fragment: converting LaTeX/MathML to OMML is the caller's job (`mathml2omml` and
+similar libraries do this).
+
+```typescript
+const frac = '<m:f><m:num><m:r><m:t>a</m:t></m:r></m:num><m:den><m:r><m:t>b</m:t></m:r></m:den></m:f>';
+
+// math between plain runs; "a/b" is the fallback text
+slide.addText([
+    { text: 'The ratio is ' },
+    { text: 'a/b', options: { omml: frac } },
+    { text: ' per unit.' },
+], { x: 1, y: 1, w: 8, h: 0.6 });
+```
+
+`omml` is a per-run payload: on a multi-run `addText()` call it is not inherited by sibling runs.

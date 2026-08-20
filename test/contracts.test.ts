@@ -99,3 +99,68 @@ test('contract: solid, none, and string fills are unchanged by gradient support'
 	assert.match(xml, /<a:ln w="12700"><a:solidFill><a:srgbClr val="00FF00"\/><\/a:solidFill><a:prstDash val="solid"\/><\/a:ln>/, 'solid line changed')
 	assert.match(xml, /<a:solidFill><a:srgbClr val="112233"\/><\/a:solidFill>/, 'solid table cell fill changed')
 })
+
+test('contract: OMML math runs are emitted as an a14 math zone with a plain-text fallback', async () => {
+	const FRAC = '<m:f><m:num><m:r><m:t>a</m:t></m:r></m:num><m:den><m:r><m:t>b</m:t></m:r></m:den></m:f>'
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addText([{ text: 'before ' }, { text: 'a/b', options: { omml: FRAC } }, { text: ' after' }], { x: 1, y: 1, w: 6, h: 1 })
+	slide.addText([{ text: '', options: { omml: FRAC } }], { x: 1, y: 3, w: 6, h: 1 })
+	const mathZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	await assertPptxPackageContracts(mathZip)
+	const xml = await readPart(mathZip, 'ppt/slides/slide1.xml')
+
+	// ECMA-376 Part 3: an extension to the text-body content model is offered via mc:AlternateContent
+	assert.match(
+		xml,
+		/<mc:AlternateContent xmlns:mc="http:\/\/schemas\.openxmlformats\.org\/markup-compatibility\/2006"><mc:Choice xmlns:a14="http:\/\/schemas\.microsoft\.com\/office\/drawing\/2010\/main" Requires="a14"><a14:m>/,
+		'math zone is not offered through mc:AlternateContent'
+	)
+	// the OMML payload is raw XML, never entity-encoded
+	assert.match(xml, /<m:oMath xmlns:m="http:\/\/schemas\.openxmlformats\.org\/officeDocument\/2006\/math" xmlns:w="[^"]+"><m:f>/, 'OMML root/namespaces missing')
+	assert.doesNotMatch(xml, /&lt;m:/, 'OMML must not be entity-encoded')
+	// `text` becomes the fallback for consumers that do not understand a14
+	assert.match(xml, /<mc:Fallback><a:r>.*?<a:t>a\/b<\/a:t><\/a:r><\/mc:Fallback>/, 'plain-text fallback missing')
+	// math-only run: empty text yields an empty fallback, and the run still survives
+	assert.match(xml, /<mc:Fallback\/><\/mc:AlternateContent>/, 'math-only run should emit an empty fallback')
+	assert.equal([...xml.matchAll(/<a14:m>/g)].length, 2, 'expected one math zone per math run')
+
+	// a paragraph permits exactly one pPr, and it must precede the runs
+	const para = /<a:p>(?:(?!<\/a:p>)[\s\S])*a14:m[\s\S]*?<\/a:p>/.exec(xml)?.[0] ?? ''
+	assert.equal([...para.matchAll(/<a:pPr[ >]/g)].length, 1, 'a paragraph with math must still emit exactly one pPr')
+	assert.match(para, /^<a:p><a:pPr/, 'pPr must be the first child of the paragraph')
+	assert.match(para, /<a:t>before <\/a:t>[\s\S]*<a14:m>[\s\S]*<a:t> after<\/a:t>/, 'math must stay between its sibling plain runs')
+})
+
+test('contract: OMML input is normalized without touching plain text output', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	// caller-supplied root + namespace must not be duplicated
+	slide.addText([{ text: '', options: { omml: '<m:oMath xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"><m:r><m:t>x</m:t></m:r></m:oMath>' } }], { x: 1, y: 1, w: 4, h: 1 })
+	// an already-wrapped math zone passes through
+	slide.addText([{ text: '', options: { omml: '<a14:m xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main"><m:oMath xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"><m:r><m:t>y</m:t></m:r></m:oMath></a14:m>' } }], { x: 1, y: 2, w: 4, h: 1 })
+	// blank/whitespace omml falls back to a normal text run
+	slide.addText([{ text: 'plain', options: { omml: '   ' } }], { x: 1, y: 3, w: 4, h: 1 })
+	const xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+
+	assert.equal([...xml.matchAll(/xmlns:m="http:\/\/schemas\.openxmlformats\.org\/officeDocument\/2006\/math"/g)].length, 2, 'namespace declared once per math zone')
+	assert.equal([...xml.matchAll(/<a14:m[ >]/g)].length, 2, 'expected exactly two math zones')
+	assert.match(xml, /<a:r><a:rPr[^>]*>(?:(?!<\/a:r>)[\s\S])*<a:t>plain<\/a:t><\/a:r>/, 'blank omml must fall back to a plain run')
+
+	// shape-level `omml` applies to a single-run `addText(string)`, but must never be cloned into
+	// every run of a multi-run call - math is a per-run payload
+	const shapeLevel = new pptxgen()
+	const shapeSlide = shapeLevel.addSlide()
+	shapeSlide.addText('a/b', { x: 1, y: 1, w: 4, h: 1, omml: '<m:r><m:t>x</m:t></m:r>' })
+	shapeSlide.addText([{ text: 'one' }, { text: 'two' }], { x: 1, y: 3, w: 4, h: 1, omml: '<m:r><m:t>x</m:t></m:r>' })
+	const shapeXml = await readPart(await JSZip.loadAsync((await shapeLevel.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+	assert.equal([...shapeXml.matchAll(/<a14:m[ >]/g)].length, 1, 'shape-level omml must not be cloned across runs')
+	assert.match(shapeXml, /<a:t>one<\/a:t>/, 'sibling runs keep their plain text')
+	assert.match(shapeXml, /<a:t>two<\/a:t>/, 'sibling runs keep their plain text')
+
+	// text-only presentations must be untouched by math support
+	const plain = new pptxgen()
+	plain.addSlide().addText('no math here', { x: 1, y: 1, w: 4, h: 1 })
+	const plainXml = await readPart(await JSZip.loadAsync((await plain.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+	assert.doesNotMatch(plainXml, /mc:AlternateContent|a14:m|m:oMath/, 'text-only output must not gain math markup')
+})

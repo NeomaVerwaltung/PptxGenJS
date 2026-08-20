@@ -211,6 +211,42 @@ function genXmlTextRunProperties (opts: ObjectOptions | TextPropsOptions, isDefa
  * @param {TextProps} textObj - Text object
  * @return {string} XML string
  */
+/**
+ * Namespaces for Office Math runs
+ * - `a14` is the DrawingML 2010 extension that carries a math zone inside a text body
+ * - `w` is declared defensively: LaTeX/MathML converters commonly emit `w:`-prefixed nodes
+ *   inside OMML, and an undeclared prefix makes the whole part unparseable
+ */
+const OMML_NS = {
+	a14: 'http://schemas.microsoft.com/office/drawing/2010/main',
+	m: 'http://schemas.openxmlformats.org/officeDocument/2006/math',
+	mc: 'http://schemas.openxmlformats.org/markup-compatibility/2006',
+	w: 'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
+} as const
+
+/**
+ * Normalize caller-supplied OMML into a DrawingML math zone (`a14:m`)
+ * - an inner fragment (ex: `<m:f>...</m:f>`) is given an `m:oMath` root
+ * - namespace declarations are added when the caller omitted them
+ * - an already-wrapped `a14:m` value is passed through untouched
+ * @note the caller owns well-formedness: PptxGenJS does not parse the fragment
+ * @param {string} omml - caller-supplied OMML
+ * @returns {string} XML string
+ */
+function normalizeOmml (omml: string): string {
+	let math = omml.trim()
+	if (!math) return ''
+	if (/^<a14:m[\s/>]/i.test(math)) return math
+
+	if (!/^<m:oMath(Para)?[\s/>]/i.test(math)) {
+		math = `<m:oMath xmlns:m="${OMML_NS.m}" xmlns:w="${OMML_NS.w}">${math}</m:oMath>`
+	} else if (!/xmlns:m=/i.test(math)) {
+		math = math.replace(/^<m:oMath(Para)?/i, match => `${match} xmlns:m="${OMML_NS.m}" xmlns:w="${OMML_NS.w}"`)
+	}
+
+	return `<a14:m>${math}</a14:m>`
+}
+
 function genXmlTextRun (textObj: TextProps): string {
 	// NOTE: Dont create full rPr runProps for empty [lineBreak] runs
 	// Why? The size of the lineBreak wont match (eg: below it will be 18px instead of the correct 36px)
@@ -241,7 +277,23 @@ function genXmlTextRun (textObj: TextProps): string {
 	*/
 
 	// Return paragraph with text run
-	return textObj.text ? `<a:r>${genXmlTextRunProperties(textObj.options ?? {}, false)}<a:t>${encodeXmlEntities(textObj.text)}</a:t></a:r>` : ''
+	const plainRun = textObj.text ? `<a:r>${genXmlTextRunProperties(textObj.options ?? {}, false)}<a:t>${encodeXmlEntities(textObj.text)}</a:t></a:r>` : ''
+
+	/* Office Math run: PowerPoint stores math in a DrawingML 2010 `a14:m` zone, which is an extension
+	 * to the text-body content model. ECMA-376 Part 3 (Markup Compatibility) requires an extension to
+	 * be offered through `mc:AlternateContent`, so consumers that do not understand `a14` render the
+	 * `mc:Fallback` plain run instead of silently dropping the math. */
+	const math = normalizeOmml(typeof textObj.options?.omml === 'string' ? textObj.options.omml : '')
+	if (math) {
+		return (
+			`<mc:AlternateContent xmlns:mc="${OMML_NS.mc}">` +
+			`<mc:Choice xmlns:a14="${OMML_NS.a14}" Requires="a14">${math}</mc:Choice>` +
+			(plainRun ? `<mc:Fallback>${plainRun}</mc:Fallback>` : '<mc:Fallback/>') +
+			'</mc:AlternateContent>'
+		)
+	}
+
+	return plainRun
 }
 
 /**
@@ -474,7 +526,8 @@ export function genXmlTextBody (slideObj: ISlideObject | TableCell): string {
 			Object.entries(opts).filter(([key]) => !(textOpts.hyperlink && key === 'color')).forEach(([key, val]) => {
 				// if (textOpts.hyperlink && key === 'color') null
 				// NOTE: This loop will pick up unecessary keys (`x`, etc.), but it doesnt hurt anything
-				if (key !== 'bullet' && !textOpts[key]) textOpts[key] = val
+				// `omml` is a per-run math payload - inheriting it would turn every sibling run into the same equation
+				if (key !== 'bullet' && key !== 'omml' && !textOpts[key]) textOpts[key] = val
 			})
 
 			// D: Add formatted textrun
