@@ -1,6 +1,6 @@
 /** OOXML relationship-part generation. */
 
-import { CRLF } from '../core-enums'
+import { COMMENT, CRLF } from '../core-enums'
 import { ISlideRel, ISlideRelChart, ISlideRelMedia, PresSlide, SlideLayout } from '../core-interfaces'
 
 type DefaultRelationship = { target: string, type: string }
@@ -46,15 +46,32 @@ function slideObjectRelationsToXml (slide: PresSlide | SlideLayout, defaultRels:
 	return strXml + '</Relationships>'
 }
 
+/**
+ * Relationship id the slide's comment part gets in `slideN.xml.rels`
+ * - `p188:commentRel` must point at the same id, so both are derived here
+ * @param {PresSlide} slide - slide object
+ * @returns {number} rId of the comment relationship
+ */
+export function slideCommentRelId (slide: PresSlide): number {
+	const rIds = [...slide._rels, ...slide._relsChart, ...slide._relsMedia].map(rel => rel.rId)
+	// the comment part is the third default relationship, after slideLayout and notesSlide
+	return Math.max(0, ...rIds) + 3
+}
+
 export function makeXmlSlideLayoutRel (layoutNumber: number, slideLayouts: SlideLayout[]): string {
 	return slideObjectRelationsToXml(slideLayouts[layoutNumber - 1], [{ target: '../slideMasters/slideMaster1.xml', type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster' }])
 }
 
 export function makeXmlSlideRel (slides: PresSlide[], slideLayouts: SlideLayout[], slideNumber: number): string {
-	return slideObjectRelationsToXml(slides[slideNumber - 1], [
+	const defaultRels = [
 		{ target: `../slideLayouts/slideLayout${getLayoutIdxForSlide(slides, slideLayouts, slideNumber)}.xml`, type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout' },
 		{ target: `../notesSlides/notesSlide${slideNumber}.xml`, type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide' },
-	])
+	]
+	// A slide's comments live in their own part, reached only from that slide (MS-PPTX 2.1.5)
+	if ((slides[slideNumber - 1]?.comments ?? []).length > 0) {
+		defaultRels.push({ target: `../comments/commentSlide${slideNumber}.xml`, type: COMMENT.commentsRelType })
+	}
+	return slideObjectRelationsToXml(slides[slideNumber - 1], defaultRels)
 }
 
 export function makeXmlNotesSlideRel (slideNumber: number): string {

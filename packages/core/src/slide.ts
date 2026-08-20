@@ -15,6 +15,7 @@ import {
 	ISlideRelChart,
 	ISlideRelMedia,
 	ImageProps,
+	CommentProps,
 	MediaProps,
 	PresLayout,
 	PresSlide,
@@ -152,6 +153,15 @@ export default class Slide {
 	}
 
 	/**
+	 * Comments on this slide
+	 * @type {CommentProps[]}
+	 */
+	private _comments?: CommentProps[]
+	public get comments(): CommentProps[] | undefined {
+		return this._comments
+	}
+
+	/**
 	 * Slide transition
 	 * @type {SlideTransitionProps}
 	 */
@@ -224,6 +234,29 @@ export default class Slide {
 	 */
 	addMedia(options: MediaProps): Slide {
 		genObj.addMediaDefinition(this, cloneOpts(options))
+		return this
+	}
+
+	/**
+	 * Add a threaded comment to this Slide (MS-PPTX 2.16)
+	 * - an author not listed in `pptx.commentAuthors` is added to the author table automatically
+	 * - pass `created` (ISO 8601) to keep generated packages byte-reproducible
+	 * @param {CommentProps} options - comment props
+	 * @return {Slide} this Slide
+	 * @example slide.addComment({ text: 'Check this figure', author: 'Ada Lovelace', x: 4, y: 2 })
+	 */
+	addComment(options: CommentProps): Slide {
+		const comment = cloneOpts(options)
+		if (typeof comment?.text !== 'string' || !comment.text.trim()) {
+			console.warn('[pptxgenjs] addComment: `text` is required - comment ignored')
+			return this
+		}
+		if (typeof comment.author !== 'string' || !comment.author.trim()) {
+			console.warn('[pptxgenjs] addComment: `author` is required - comment ignored')
+			return this
+		}
+		this._comments = this._comments ?? []
+		this._comments.push(comment)
 		return this
 	}
 

@@ -2142,6 +2142,8 @@ export interface ObjectOptions extends ImageProps, PositionProps, ShapeProps, Ta
 }
 export interface SlideBaseProps {
 	_bkgdImgRid?: number
+	/** comments added to this slide (MS-PPTX 2.16) @internal */
+	comments?: CommentProps[]
 	/**
 	 * Stable identity for this slide across saves (MS-PPTX 2.2.9 `p14:creationId`)
 	 * - set `true` to have PptxGenJS assign one, or pass your own unsigned 32-bit value
@@ -2354,6 +2356,84 @@ export interface SummaryZoomProps extends ZoomBaseProps {
 	 */
 	sectionTitles: string[]
 }
+export interface CommentAuthorProps {
+	/**
+	 * Author name shown on the comment
+	 */
+	name: string
+	/**
+	 * Initials shown in the comment avatar
+	 */
+	initials?: string
+	/**
+	 * Author id (GUID)
+	 * - derived from the author's position when omitted, so output stays reproducible
+	 */
+	id?: string
+	/**
+	 * Identity-provider user id
+	 * @default '' (an anonymous author)
+	 */
+	userId?: string
+	/**
+	 * Identity provider
+	 * @default 'None'
+	 */
+	providerId?: string
+}
+export interface CommentReplyProps {
+	/**
+	 * Reply text
+	 */
+	text: string
+	/**
+	 * Author name; an author not passed to `pptx.commentAuthors` is added automatically
+	 */
+	author: string
+	/**
+	 * When the reply was written, ISO 8601
+	 * - defaults to the time of export; pass it to keep generated packages reproducible
+	 */
+	created?: string
+	/**
+	 * Reply id (GUID) - derived from its position when omitted
+	 */
+	id?: string
+}
+export interface CommentProps {
+	/**
+	 * Comment text
+	 */
+	text: string
+	/**
+	 * Author name; an author not passed to `pptx.commentAuthors` is added automatically
+	 */
+	author: string
+	/**
+	 * Anchor position on the slide (inches)
+	 * - both are needed for an anchored comment; omit both for a slide-level comment
+	 */
+	x?: number
+	y?: number
+	/**
+	 * When the comment was written, ISO 8601
+	 * - defaults to the time of export; pass it to keep generated packages reproducible
+	 */
+	created?: string
+	/**
+	 * Comment id (GUID) - derived from its position when omitted
+	 */
+	id?: string
+	/**
+	 * Whether the comment thread is resolved
+	 * @default false
+	 */
+	resolved?: boolean
+	/**
+	 * Replies in the comment thread
+	 */
+	replies?: CommentReplyProps[]
+}
 export interface AddSlideProps {
 	masterName?: string // TODO: 20200528: rename to "masterTitle" (createMaster uses `title` so lets be consistent)
 	sectionTitle?: string
@@ -2437,6 +2517,11 @@ export interface PresentationProps {
 	 * @default true
 	 */
 	chartTrackingRefBased: boolean
+	/**
+	 * Comment authors, with the identity metadata PowerPoint shows
+	 * - authors named by `addComment()` that are not listed here are added automatically
+	 */
+	commentAuthors?: CommentAuthorProps[]
 	layout: string
 	masterSlide: PresSlide
 	/**
