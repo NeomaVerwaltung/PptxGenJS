@@ -20,7 +20,10 @@ import {
 	PresSlide,
 	ShapeProps,
 	SlideLayout,
+	SectionZoomProps,
 	SlideNumberProps,
+	SlideZoomProps,
+	SummaryZoomProps,
 	SlideTransitionProps,
 	TableProps,
 	TableRow,
@@ -221,6 +224,40 @@ export default class Slide {
 	 */
 	addMedia(options: MediaProps): Slide {
 		genObj.addMediaDefinition(this, cloneOpts(options))
+		return this
+	}
+
+	/**
+	 * Add a zoom to another slide (MS-PPTX 2.2.15)
+	 * - the target may be added after this call; it is resolved during export
+	 * @param {SlideZoomProps} options - zoom props
+	 * @return {Slide} this Slide
+	 * @example slide.addZoom({ slideNumber: 4, x: 1, y: 1, w: 3, h: 2 })
+	 */
+	addZoom(options: SlideZoomProps): Slide {
+		genObj.addZoomDefinition(this, 'slide', cloneOpts(options))
+		return this
+	}
+
+	/**
+	 * Add a zoom to a section (MS-PPTX 2.2.15)
+	 * @param {SectionZoomProps} options - zoom props
+	 * @return {Slide} this Slide
+	 * @example slide.addSectionZoom({ sectionTitle: 'Results', x: 1, y: 1, w: 3, h: 2 })
+	 */
+	addSectionZoom(options: SectionZoomProps): Slide {
+		genObj.addZoomDefinition(this, 'section', cloneOpts(options))
+		return this
+	}
+
+	/**
+	 * Add a summary zoom linking several sections (MS-PPTX 2.2.15)
+	 * @param {SummaryZoomProps} options - zoom props
+	 * @return {Slide} this Slide
+	 * @example slide.addSummaryZoom({ sectionTitles: ['Intro', 'Results'], x: 1, y: 1, w: 8, h: 4 })
+	 */
+	addSummaryZoom(options: SummaryZoomProps): Slide {
+		genObj.addZoomDefinition(this, 'summary', cloneOpts(options))
 		return this
 	}
 

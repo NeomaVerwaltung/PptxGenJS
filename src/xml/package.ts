@@ -3,7 +3,7 @@
  */
 
 import { CRLF, DEF_GUIDE_COLOR, EMU, LAYOUT_IDX_SERIES_BASE, OOXML_EXT, SLDNUMFLDID, SLIDE_OBJECT_TYPES } from '../core-enums'
-import { EmbeddedFont, GuideProps, IPresentationProps, PresSlide, SlideLayout, SlideShowProps } from '../core-interfaces'
+import { EmbeddedFont, GuideProps, IPresentationProps, PresSlide, SectionProps, SlideLayout, SlideShowProps } from '../core-interfaces'
 import { createColorElement, encodeXmlEntities, getUuid } from '../gen-utils'
 import { makeXmlEmbeddedFontLst } from '../gen-fonts'
 import { slideObjectToXml } from './slide'
@@ -208,13 +208,13 @@ export function makeXmlPresentationRels (slides: PresSlide[], embeddedFonts: Emb
  * @param {PresSlide} slide - the slide object to transform into XML
  * @return {string} XML
  */
-export function makeXmlSlide (slide: PresSlide): string {
+export function makeXmlSlide (slide: PresSlide, sections: SectionProps[] = []): string {
 	return (
 		`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${CRLF}` +
 		'<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ' +
 		'xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"' +
 		`${slide?.hidden ? ' show="0"' : ''}>` +
-		`${slideObjectToXml(slide)}` +
+		`${slideObjectToXml(slide, sections)}` +
 		// CT_Slide sequence: cSld, clrMapOvr, transition, timing, extLst - order matters
 		`<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>${genXmlTransition(slide)}${genXmlTiming(slide)}</p:sld>`
 	)

@@ -14,6 +14,7 @@ import {
 	DEF_SHAPE_LINE_COLOR,
 	DEF_SLIDE_MARGIN_IN,
 	EMU,
+	IMG_BLANK,
 	IMG_PLAYBTN,
 	MASTER_OBJECTS,
 	PIECHART_COLORS,
@@ -34,6 +35,9 @@ import {
 	ISlideObject,
 	ImageProps,
 	MediaProps,
+	SectionZoomProps,
+	SlideZoomProps,
+	SummaryZoomProps,
 	ObjectOptions,
 	OptsChartGridLine,
 	PresLayout,
@@ -559,6 +563,80 @@ export function addImageDefinition(target: PresSlide | SlideLayout, opt: ImagePr
  * @param {PresSlide} `target` - slide object that the media will be added to
  * @param {MediaProps} `opt` - media options
  */
+/**
+ * Add a zoom object to a slide (MS-PPTX 2.2.15)
+ * @param {PresSlide} target - slide to add the zoom to
+ * @param {'slide'|'section'|'summary'} kind - which zoom to create
+ * @param {SlideZoomProps | SectionZoomProps | SummaryZoomProps} opt - zoom props
+ */
+export function addZoomDefinition (target: PresSlide, kind: 'slide' | 'section' | 'summary', opt: SlideZoomProps | SectionZoomProps | SummaryZoomProps): void {
+	// Collect the requested targets; they are resolved to ids at export, so a zoom may point at a
+	// slide or section that does not exist yet
+	const targets: Array<{ slideNumber?: number, sectionTitle?: string }> = []
+	if (kind === 'slide') {
+		const slideNumber = (opt as SlideZoomProps).slideNumber
+		if (typeof slideNumber !== 'number' || !isFinite(slideNumber) || slideNumber < 1 || Math.floor(slideNumber) !== slideNumber) {
+			console.warn(`[pptxgenjs] addZoom: \`slideNumber\` must be a whole number >= 1 - "${String(slideNumber)}" ignored, no zoom added`)
+			return
+		}
+		targets.push({ slideNumber })
+	} else if (kind === 'section') {
+		const sectionTitle = (opt as SectionZoomProps).sectionTitle
+		if (typeof sectionTitle !== 'string' || !sectionTitle.trim()) {
+			console.warn('[pptxgenjs] addSectionZoom: `sectionTitle` is required - no zoom added')
+			return
+		}
+		targets.push({ sectionTitle })
+	} else {
+		const titles = (opt as SummaryZoomProps).sectionTitles
+		if (!Array.isArray(titles) || titles.filter(title => typeof title === 'string' && title.trim()).length === 0) {
+			console.warn('[pptxgenjs] addSummaryZoom: `sectionTitles` must list at least one section - no zoom added')
+			return
+		}
+		titles.filter(title => typeof title === 'string' && title.trim()).forEach(sectionTitle => targets.push({ sectionTitle }))
+	}
+
+	const cover = opt.cover ?? IMG_BLANK
+	if (typeof cover !== 'string' || !cover.toLowerCase().includes('base64,')) {
+		console.warn('[pptxgenjs] addZoom: `cover` must be base64 image data (ex: \'image/png;base64,iV[...]\') - no zoom added')
+		return
+	}
+	const coverExtn = /image\/(\w+);/.exec(cover)?.[1] ?? 'png'
+
+	const objectName = opt.objectName
+		? encodeXmlEntities(opt.objectName)
+		: `${kind === 'slide' ? 'Slide' : kind === 'section' ? 'Section' : 'Summary'} Zoom ${target._slideObjects.filter(obj => obj._type === SLIDE_OBJECT_TYPES.zoom).length + 1}`
+
+	// The cover is a normal image relationship: the `p:blipFill` of both the zoom and its fallback
+	const coverRid = getNewRelId(target)
+	target._relsMedia.push({
+		path: `preencoded.${coverExtn}`,
+		type: `image/${coverExtn}`,
+		extn: coverExtn,
+		data: cover,
+		rId: coverRid,
+		Target: `../media/image-${target._slideNum}-${target._relsMedia.length + 1}.${coverExtn}`,
+	})
+
+	target._slideObjects.push({
+		_type: SLIDE_OBJECT_TYPES.zoom,
+		zoomKind: kind,
+		zoomTargets: targets,
+		zoomRid: coverRid,
+		options: {
+			x: opt.x ?? 1,
+			y: opt.y ?? 1,
+			w: opt.w ?? 3,
+			h: opt.h ?? 2,
+			objectName,
+			altText: opt.altText ?? '',
+			returnToParent: opt.returnToParent,
+			showBg: opt.showBg,
+			transitionDur: opt.transitionDur,
+		},
+	})
+}
+
 export function addMediaDefinition(target: PresSlide, opt: MediaProps): void {
 	const intPosX = opt.x || 0
 	const intPosY = opt.y || 0

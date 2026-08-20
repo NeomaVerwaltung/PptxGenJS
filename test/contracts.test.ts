@@ -833,3 +833,106 @@ test('contract: invalid creationId values are dropped with a warning', async () 
 		assert.doesNotMatch(xml, /NaN/, 'no NaN attributes')
 	})
 })
+
+test('contract: zoom objects target slides and sections through mc:AlternateContent', async () => {
+	const pptx = new pptxgen()
+	pptx.addSection({ title: 'Intro' })
+	pptx.addSection({ title: 'Results' })
+	const hub = pptx.addSlide({ sectionTitle: 'Intro' })
+	hub.addZoom({ slideNumber: 3, x: 1, y: 1, w: 3, h: 2, transitionDur: 900 })
+	hub.addSectionZoom({ sectionTitle: 'Results', x: 5, y: 1, w: 3, h: 2, returnToParent: false, showBg: false })
+	hub.addSummaryZoom({ sectionTitles: ['Intro', 'Results'], x: 1, y: 4, w: 8, h: 3 })
+	pptx.addSlide({ sectionTitle: 'Results' })
+	pptx.addSlide({ sectionTitle: 'Results' })
+
+	const zoomZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	await assertPptxPackageContracts(zoomZip)
+	const xml = await readPart(zoomZip, 'ppt/slides/slide1.xml')
+	const presentation = await readPart(zoomZip, 'ppt/presentation.xml')
+
+	assert.doesNotMatch(xml, /NaN|undefined/, 'zoom options must not leak invalid attribute values')
+	assert.equal([...xml.matchAll(/<mc:AlternateContent/g)].length, 3, 'expected one AlternateContent per zoom')
+
+	// each kind lives in its own namespace, bound to `p16` inside the Choice
+	assert.match(xml, /<mc:Choice Requires="p16" xmlns:p16="http:\/\/schemas\.microsoft\.com\/office\/powerpoint\/2016\/slidezoom"[^>]*><p16:sldZm>/, 'slide zoom namespace/element wrong')
+	assert.match(xml, /<mc:Choice Requires="p16" xmlns:p16="http:\/\/schemas\.microsoft\.com\/office\/powerpoint\/2016\/sectionzoom"[^>]*><p16:sectionZm>/, 'section zoom namespace/element wrong')
+	assert.match(xml, /<mc:Choice Requires="p16" xmlns:p16="http:\/\/schemas\.microsoft\.com\/office\/powerpoint\/2016\/summaryzoom"[^>]*><p16:summaryZm>/, 'summary zoom namespace/element wrong')
+
+	// a slide zoom targets the target slide's own `p:sldId`, not its ordinal
+	const targetSldId = /<p:sldId id="(\d+)" r:id="rId4"\/>/.exec(presentation)?.[1]
+	assert.ok(targetSldId, 'third slide id not found')
+	assert.match(xml, new RegExp(`<p16:sldZmObj sldId="${targetSldId}">`), 'slide zoom must reference the target slide id')
+
+	// section zooms must reuse the exact GUIDs written into p14:sectionLst
+	const sectionIds = Object.fromEntries([...presentation.matchAll(/<p14:section name="([^"]+)" id="(\{[^"]+\})"/g)].map(match => [match[1], match[2]]))
+	assert.ok(sectionIds.Intro && sectionIds.Results, 'section ids missing from presentation.xml')
+	assert.match(xml, new RegExp(`<p16:sectionZmObj sectionId="${sectionIds.Results.replace(/[{}]/g, char => `\\${char}`)}">`), 'section zoom GUID does not match sectionLst')
+	// a summary zoom carries one object per section, in order, plus the required layout choice
+	const summary = /<p16:summaryZm>[\s\S]*?<\/p16:summaryZm>/.exec(xml)?.[0] ?? ''
+	assert.deepEqual(
+		[...summary.matchAll(/<p16:summaryZmObj sectionId="(\{[^"]+\})"/g)].map(match => match[1]),
+		[sectionIds.Intro, sectionIds.Results],
+		'summary zoom sections wrong or out of order'
+	)
+	assert.match(summary, /<p16:gridLayout\/><\/p16:summaryZm>/, 'CT_SummaryZoom requires a layout choice after its objects')
+
+	// zoom behaviour flags and duration
+	assert.match(xml, /returnToParent="1" showBg="1" imageType="preview" p14:transitionDur="900"/, 'slide zoom properties wrong')
+	assert.match(xml, /returnToParent="0" showBg="0" imageType="preview"/, 'section zoom flags not honoured')
+	// every zoom object needs its own id
+	const zoomIds = [...xml.matchAll(/<p166:zmPr id="(\{[^"]+\})"/g)].map(match => match[1])
+	assert.equal(zoomIds.length, 4, 'expected four zoom objects (1 slide, 1 section, 2 summary sections)')
+	assert.equal(new Set(zoomIds).size, 4, 'zoom object ids must be unique')
+
+	// fallbacks: a picture for slide/section, a group shape for summary (MS-PPTX 2.2.15)
+	assert.equal([...xml.matchAll(/<mc:Fallback><p:pic>/g)].length, 2, 'slide and section zooms need a picture fallback')
+	assert.equal([...xml.matchAll(/<mc:Fallback><p:grpSp>/g)].length, 1, 'a summary zoom needs a group-shape fallback')
+
+	// each zoom's cover image is a real relationship used by both the Choice and the Fallback
+	const rels = await readPart(zoomZip, 'ppt/slides/_rels/slide1.xml.rels')
+	const coverRids = [...xml.matchAll(/<a:blip r:embed="(rId\d+)"\/>/g)].map(match => match[1])
+	assert.ok(coverRids.length >= 4, 'cover fills missing')
+	new Set(coverRids).forEach(rid => {
+		assert.match(rels, new RegExp(`<Relationship Id="${rid}" Type="[^"]*\\/image"`), `${rid} has no image relationship`)
+	})
+})
+
+test('contract: zoom targets that cannot be resolved are dropped with a warning', async () => {
+	const warnings: string[] = []
+	const origWarn = console.warn
+	console.warn = (msg: string) => warnings.push(String(msg))
+	let xml = ''
+	try {
+		const pptx = new pptxgen()
+		pptx.addSection({ title: 'Real' })
+		const slide = pptx.addSlide({ sectionTitle: 'Real' })
+		slide.addZoom({ slideNumber: 99, x: 1, y: 1, w: 2, h: 1 })
+		slide.addSectionZoom({ sectionTitle: 'Nope', x: 1, y: 2, w: 2, h: 1 })
+		slide.addZoom({ slideNumber: 0, x: 1, y: 3, w: 2, h: 1 })
+		slide.addSummaryZoom({ sectionTitles: [], x: 1, y: 4, w: 2, h: 1 })
+		// this one resolves, so the slide is not empty
+		slide.addSectionZoom({ sectionTitle: 'Real', x: 4, y: 1, w: 2, h: 1 })
+		xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+	} finally {
+		console.warn = origWarn
+	}
+
+	assert.ok(warnings.some(w => w.includes('zoom target slide 99 does not exist')), 'missing slide must warn')
+	assert.ok(warnings.some(w => w.includes('zoom target section "Nope" does not exist')), 'missing section must warn')
+	assert.ok(warnings.some(w => w.includes('`slideNumber` must be a whole number >= 1')), 'invalid slide number must warn')
+	assert.ok(warnings.some(w => w.includes('`sectionTitles` must list at least one section')), 'empty summary must warn')
+
+	// only the resolvable zoom survives, and nothing half-written is emitted
+	assert.equal([...xml.matchAll(/<mc:AlternateContent/g)].length, 1, 'only the resolvable zoom may be emitted')
+	assert.match(xml, /<p16:sectionZmObj sectionId="\{[0-9a-f-]{36}\}">/, 'the resolvable section zoom is missing')
+	assert.doesNotMatch(xml, /sldZm|summaryZm/, 'unresolved zooms must not be emitted')
+})
+
+test('contract: presentations without zooms are unchanged', async () => {
+	const plain = new pptxgen()
+	plain.addSlide().addText('no zooms', { x: 1, y: 1, w: 3, h: 1 })
+	const plainZip = await JSZip.loadAsync((await plain.write({ outputType: 'nodebuffer' })) as Buffer)
+	const xml = await readPart(plainZip, 'ppt/slides/slide1.xml')
+	assert.doesNotMatch(xml, /mc:AlternateContent|p16:|p166:/, 'a slide without zooms must not gain zoom markup')
+	assert.equal(Object.keys(plainZip.files).filter(file => /^ppt\/media\/.+/.test(file)).length, 0, 'no cover images may be created')
+})
