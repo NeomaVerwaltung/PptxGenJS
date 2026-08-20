@@ -90,6 +90,12 @@ declare class PptxGenJS {
 	 */
 	slideShow?: PptxGenJS.SlideShowProps
 
+	/** Drawing guides shown in the slide editing view */
+	guides?: PptxGenJS.GuideProps[]
+
+	/** Drawing guides shown in the notes view */
+	notesGuides?: PptxGenJS.GuideProps[]
+
 	// Presentation Metadata
 	/**
 	 * Author name
@@ -163,7 +169,7 @@ declare class PptxGenJS {
 	 * @param options - font props
 	 * @example pptx.addFont({ fontFace: 'Custom Sans', data: eotBase64 })
 	 */
-	addFont(options: PptxGenJS.AddFontProps): void;
+	addFont(options: PptxGenJS.AddFontProps): void
 
 	addSlide(props?: PptxGenJS.AddSlideProps): PptxGenJS.Slide
 	/**
@@ -3003,6 +3009,24 @@ declare namespace PptxGenJS {
 		 */
 		laserColor?: Color
 	}
+	export interface GuideProps {
+		/**
+		 * Guide orientation
+		 * - `horz` is a horizontal guide positioned by its distance from the top
+		 * - `vert` is a vertical guide positioned by its distance from the left
+		 */
+		orientation: 'horz' | 'vert'
+		/**
+		 * Distance from the top (`horz`) or left (`vert`), in inches
+		 */
+		position: number
+		/**
+		 * Guide color
+		 * - `HexColor` or `ThemeColor`
+		 * @default 'A4A3A4' (PowerPoint's guide gray)
+		 */
+		color?: Color
+	}
 	export interface PresentationProps {
 		author: string
 		company: string
@@ -3046,6 +3070,17 @@ declare namespace PptxGenJS {
 		 * - opt-in: unset leaves the presentation properties part unchanged
 		 */
 		slideShow?: SlideShowProps
+		/**
+		 * Drawing guides shown in the slide editing view (MS-PPTX 2.2.11 `p15:sldGuideLst`)
+		 * - opt-in: unset writes no guide list
+		 * @example pptx.guides = [{ orientation: 'vert', position: 5 }, { orientation: 'horz', position: 3.75 }]
+		 */
+		guides?: GuideProps[]
+		/**
+		 * Drawing guides shown in the notes view (MS-PPTX 2.2.11 `p15:notesGuideLst`)
+		 * - opt-in: unset writes no guide list
+		 */
+		notesGuides?: GuideProps[]
 	}
 
 	// LAST: Slide

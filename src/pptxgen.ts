@@ -83,6 +83,7 @@ import {
 	AddSlideProps,
 	CompressionLevel,
 	EmbeddedFont,
+	GuideProps,
 	DefineLayoutProps,
 	IPresentationProps,
 	PresLayout,
@@ -329,6 +330,29 @@ export default class PptxGenJS implements IPresentationProps {
 	private readonly _embeddedFonts: EmbeddedFont[]
 	public get embeddedFonts(): EmbeddedFont[] {
 		return this._embeddedFonts
+	}
+
+	/**
+	 * Drawing guides shown in the slide editing view
+	 * - opt-in: unset writes no guide list
+	 */
+	private _guides?: GuideProps[]
+	public set guides(value: GuideProps[] | undefined) {
+		this._guides = value
+	}
+
+	public get guides(): GuideProps[] | undefined {
+		return this._guides
+	}
+
+	/** Drawing guides shown in the notes view */
+	private _notesGuides?: GuideProps[]
+	public set notesGuides(value: GuideProps[] | undefined) {
+		this._notesGuides = value
+	}
+
+	public get notesGuides(): GuideProps[] | undefined {
+		return this._notesGuides
 	}
 
 	/** master slide layout object */
