@@ -280,3 +280,86 @@ test('contract: invalid media playback combinations are dropped before XML', asy
 	assert.equal([...xml.matchAll(/<p:audio[ >]/g)].length, 1, 'the audio node is still emitted for autoplay')
 	assert.equal([...xml.matchAll(/<p:video[ >]/g)].length, 0, 'online video must not get a timing node')
 })
+test('contract: slide-show and image/view-mode extensions land in presProps.xml', async () => {
+	const pptx = new pptxgen()
+	pptx.slideShow = { mode: 'browse', loop: true, showNarration: false, useTimings: false, browseMode: true, laserColor: 'FF0000' }
+	pptx.defaultImageDpi = 220
+	pptx.discardImageEditData = true
+	pptx.readonlyRecommended = true
+	pptx.addSlide().addText('show options', { x: 1, y: 1, w: 4, h: 1 })
+	const showZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	await assertPptxPackageContracts(showZip)
+	const xml = await readPart(showZip, 'ppt/presProps.xml')
+
+	assert.doesNotMatch(xml, /NaN|undefined/, 'presentation properties must not leak invalid values')
+	// CT_PresentationProperties sequence: showPr precedes extLst
+	assert.match(xml, /<p:showPr loop="1" showNarration="0" useTimings="0"><p:browse showScrollbar="1"\/>/, 'showPr attributes/choice missing')
+	assert.match(xml, /<\/p:showPr><p:extLst>/, 'showPr must precede the presentationPr extLst')
+
+	// showPr extensions (MS-PPTX 2.2.6)
+	assert.match(xml, /<p:ext uri="\{F99C55AA-B7CB-42B0-86F8-08522FDF87E8\}"><p14:browseMode xmlns:p14="http:\/\/schemas\.microsoft\.com\/office\/powerpoint\/2010\/main" val="1"\/><\/p:ext>/, 'browseMode ext missing')
+	assert.match(xml, /<p:ext uri="\{EC167BDD-8182-4AB7-AECC-EB403E3ABB37\}"><p14:laserClr xmlns:p14="[^"]+"><a:srgbClr val="FF0000"\/><\/p14:laserClr><\/p:ext>/, 'laserClr ext missing')
+
+	// presentationPr extensions (MS-PPTX 2.2.7 and 2.2.16)
+	assert.match(xml, /<p:ext uri="\{E76CE94A-603C-4142-B9EB-6D1370010A27\}"><p14:discardImageEditData xmlns:p14="[^"]+" val="1"\/><\/p:ext>/, 'discardImageEditData ext missing')
+	assert.match(xml, /<p:ext uri="\{D31A062A-798A-4329-ABDD-BBA856620510\}"><p14:defaultImageDpi xmlns:p14="[^"]+" val="220"\/><\/p:ext>/, 'defaultImageDpi ext missing')
+	assert.match(xml, /<p:ext uri="\{1BD7E111-0CB8-44D6-8891-C1BB2F81B7CC\}"><p1710:readonlyRecommended xmlns:p1710="http:\/\/schemas\.microsoft\.com\/office\/powerpoint\/2017\/10\/main" val="1"\/><\/p:ext>/, 'readonlyRecommended ext missing')
+})
+
+test('contract: each presentation property emits only its own extension', async () => {
+	// `chartTrackingRefBased` is on by default, so it is the whole baseline of this part
+	const plain = new pptxgen()
+	plain.addSlide()
+	const plainXml = await readPart(await JSZip.loadAsync((await plain.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/presProps.xml')
+	assert.doesNotMatch(plainXml, /showPr|defaultImageDpi|discardImageEditData|readonlyRecommended/, 'no unrequested extension may appear')
+	assert.equal([...plainXml.matchAll(/<p:ext /g)].length, 1, 'only the default chart-tracking extension is expected')
+
+	// turning everything off leaves the empty element written before these properties existed
+	const off = new pptxgen()
+	off.chartTrackingRefBased = false
+	off.addSlide()
+	const offXml = await readPart(await JSZip.loadAsync((await off.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/presProps.xml')
+	assert.match(offXml, /<p:presentationPr [^>]*\/>$/, 'presProps.xml must be the empty element when nothing is set')
+
+	// a single property adds a single extension
+	const dpiOnly = new pptxgen()
+	dpiOnly.chartTrackingRefBased = false
+	dpiOnly.defaultImageDpi = 0 // 0 is meaningful: "do not compress"
+	dpiOnly.addSlide()
+	const dpiXml = await readPart(await JSZip.loadAsync((await dpiOnly.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/presProps.xml')
+	assert.match(dpiXml, /<p14:defaultImageDpi xmlns:p14="[^"]+" val="0"\/>/, 'a DPI of 0 must still be written')
+	assert.doesNotMatch(dpiXml, /showPr|discardImageEditData|readonlyRecommended|chartTracking/, 'unrelated extensions must not appear')
+
+	// default mode with no extensions still writes a valid showPr choice, and no empty extLst
+	const presentOnly = new pptxgen()
+	presentOnly.chartTrackingRefBased = false
+	presentOnly.slideShow = { loop: true }
+	presentOnly.addSlide()
+	const presentXml = await readPart(await JSZip.loadAsync((await presentOnly.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/presProps.xml')
+	assert.match(presentXml, /<p:showPr loop="1"><p:present\/><\/p:showPr>/, 'default show mode must be present')
+	assert.doesNotMatch(presentXml, /<p:extLst>/, 'no extLst when nothing needs one')
+})
+
+test('contract: invalid presentation-property input is dropped with a warning', async () => {
+	const warnings: string[] = []
+	const origWarn = console.warn
+	console.warn = (msg: string) => warnings.push(String(msg))
+	let xml = ''
+	try {
+		const pptx = new pptxgen()
+		pptx.slideShow = { mode: 'cinema' as unknown as 'kiosk' }
+		pptx.defaultImageDpi = -1
+		;(pptx as unknown as { readonlyRecommended: unknown }).readonlyRecommended = 'yes'
+		pptx.addSlide()
+		xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/presProps.xml')
+	} finally {
+		console.warn = origWarn
+	}
+
+	assert.ok(warnings.some(w => w.includes('slideShow.mode must be')), 'invalid mode must warn')
+	assert.ok(warnings.some(w => w.includes('defaultImageDpi must be a number >= 0')), 'negative dpi must warn')
+	assert.match(xml, /<p:showPr><p:present\/><\/p:showPr>/, 'invalid mode falls back to present')
+	assert.doesNotMatch(xml, /defaultImageDpi/, 'negative dpi must not be emitted')
+	assert.doesNotMatch(xml, /readonlyRecommended/, 'a non-boolean must not enable the extension')
+	assert.doesNotMatch(xml, /NaN/, 'no NaN attributes')
+})

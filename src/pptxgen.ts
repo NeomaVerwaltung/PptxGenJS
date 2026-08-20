@@ -89,6 +89,7 @@ import {
 	SlideLayout,
 	SlideMasterProps,
 	SlideNumberProps,
+	SlideShowProps,
 	TableToSlidesProps,
 	ThemeProps,
 	WriteBaseProps,
@@ -269,6 +270,58 @@ export default class PptxGenJS implements IPresentationProps {
 		return this._chartTrackingRefBased
 	}
 
+	/**
+	 * Image quality preference PowerPoint applies to inserted pictures (MS-PPTX 2.2.7)
+	 * - opt-in: while unset `ppt/presProps.xml` is unchanged
+	 */
+	private _defaultImageDpi?: number
+	public set defaultImageDpi(value: number | undefined) {
+		this._defaultImageDpi = value
+	}
+
+	public get defaultImageDpi(): number | undefined {
+		return this._defaultImageDpi
+	}
+
+	/**
+	 * Whether PowerPoint discards picture crop/edit data on save (MS-PPTX 2.2.7)
+	 * @default false
+	 */
+	private _discardImageEditData: boolean
+	public set discardImageEditData(value: boolean) {
+		this._discardImageEditData = value === true
+	}
+
+	public get discardImageEditData(): boolean {
+		return this._discardImageEditData
+	}
+
+	/**
+	 * Whether PowerPoint recommends opening the file read-only (MS-PPTX 2.2.16)
+	 * @default false
+	 */
+	private _readonlyRecommended: boolean
+	public set readonlyRecommended(value: boolean) {
+		this._readonlyRecommended = value === true
+	}
+
+	public get readonlyRecommended(): boolean {
+		return this._readonlyRecommended
+	}
+
+	/**
+	 * Slide-show options (`p:showPr`)
+	 * - opt-in: while unset `ppt/presProps.xml` is unchanged
+	 */
+	private _slideShow?: SlideShowProps
+	public set slideShow(value: SlideShowProps | undefined) {
+		this._slideShow = value
+	}
+
+	public get slideShow(): SlideShowProps | undefined {
+		return this._slideShow
+	}
+
 	/** master slide layout object */
 	private readonly _masterSlide: PresSlide
 	public get masterSlide(): PresSlide {
@@ -386,6 +439,8 @@ export default class PptxGenJS implements IPresentationProps {
 		this._rtlMode = false
 		this._compression = 'none'
 		this._chartTrackingRefBased = true
+		this._discardImageEditData = false
+		this._readonlyRecommended = false
 		//
 		this._slideLayouts = [
 			{

@@ -32,6 +32,16 @@ export const OOXML_EXT = {
 	hyperlinkColor: { uri: '{A12FA001-AC4F-418D-AE19-62706E023703}', ns: 'http://schemas.microsoft.com/office/drawing/2018/hyperlinkcolor' },
 	/** MS-PPTX 2.2.12 / 2.4.1.1 - `p15:chartTrackingRefBased` in `p:presentationPr/p:extLst` */
 	chartTrackingRefBased: { uri: '{FD5EFAAD-0ECE-453E-9831-46B23BE46B34}', ns: 'http://schemas.microsoft.com/office/powerpoint/2012/main' },
+	/** MS-PPTX 2.2.6 - `p14:browseMode` in `p:showPr/p:extLst` */
+	browseMode: { uri: '{F99C55AA-B7CB-42B0-86F8-08522FDF87E8}', ns: 'http://schemas.microsoft.com/office/powerpoint/2010/main' },
+	/** MS-PPTX 2.2.7 / 2.3.1.5 - `p14:defaultImageDpi` in `p:presentationPr/p:extLst` */
+	defaultImageDpi: { uri: '{D31A062A-798A-4329-ABDD-BBA856620510}', ns: 'http://schemas.microsoft.com/office/powerpoint/2010/main' },
+	/** MS-PPTX 2.2.7 / 2.3.1.6 - `p14:discardImageEditData` in `p:presentationPr/p:extLst` */
+	discardImageEditData: { uri: '{E76CE94A-603C-4142-B9EB-6D1370010A27}', ns: 'http://schemas.microsoft.com/office/powerpoint/2010/main' },
+	/** MS-PPTX 2.2.6 - `p14:laserClr` in `p:showPr/p:extLst` */
+	laserColor: { uri: '{EC167BDD-8182-4AB7-AECC-EB403E3ABB37}', ns: 'http://schemas.microsoft.com/office/powerpoint/2010/main' },
+	/** MS-PPTX 2.2.16 / 2.14.1.1 - `p1710:readonlyRecommended` in `p:presentationPr/p:extLst` */
+	readonlyRecommended: { uri: '{1BD7E111-0CB8-44D6-8891-C1BB2F81B7CC}', ns: 'http://schemas.microsoft.com/office/powerpoint/2017/10/main' },
 	/** MS-PPTX 2.2.5 / 2.3.1.25 - `p14:sectionLst` in `p:presentation/p:extLst` */
 	sections: { uri: '{521415D9-36F7-43E2-AB2F-B90AF26B5E84}', ns: 'http://schemas.microsoft.com/office/powerpoint/2010/main' },
 	/** MS-PPTX 2.2.11 / 2.4.1.6 - `p15:sldGuideLst` in `p:presentation/p:extLst` */
