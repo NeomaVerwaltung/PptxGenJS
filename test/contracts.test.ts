@@ -447,3 +447,90 @@ test('contract: invalid transition input is dropped with a warning', async () =>
 	assert.match(xmls[3], /<p:transition><p:push\/><\/p:transition>/, 'invalid speed/duration/advTm are dropped')
 	xmls.forEach(xml => { assert.doesNotMatch(xml, /NaN/, 'no NaN attributes') })
 })
+test('contract: animation presets build a mainSeq with click groups and a build list', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addText('one', { x: 1, y: 1, w: 3, h: 1, animation: { type: 'fadeIn' } })
+	slide.addText('two', { x: 1, y: 2, w: 3, h: 1, animation: { type: 'wipeIn', direction: 'left', trigger: 'withPrevious', duration: 800 } })
+	slide.addShape(pptx.ShapeType.rect, { x: 1, y: 3, w: 3, h: 1, animation: { type: 'zoomOut', trigger: 'afterPrevious', delay: 250 } })
+	const animZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	await assertPptxPackageContracts(animZip)
+	const xml = await readPart(animZip, 'ppt/slides/slide1.xml')
+	const timing = /<p:timing>[\s\S]*<\/p:timing>/.exec(xml)?.[0] ?? ''
+
+	assert.doesNotMatch(timing, /NaN|undefined/, 'animation options must not leak invalid attribute values')
+	assert.match(timing, /<p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot"><p:childTnLst><p:seq concurrent="1" nextAc="seek"><p:cTn id="2" dur="indefinite" nodeType="mainSeq">/, 'mainSeq missing')
+
+	// preset id/class/subtype per effect, and the trigger drives nodeType
+	assert.match(timing, /presetID="10" presetClass="entr" presetSubtype="0"[^>]*nodeType="clickEffect"/, 'fadeIn effect missing')
+	assert.match(timing, /presetID="22" presetClass="entr" presetSubtype="8"[^>]*nodeType="withEffect"/, 'wipeIn left effect missing')
+	assert.match(timing, /presetID="53" presetClass="exit" presetSubtype="32"[^>]*nodeType="afterEffect"/, 'zoomOut effect missing')
+	assert.match(timing, /<p:animEffect transition="in" filter="fade">/, 'fade filter missing')
+	assert.match(timing, /<p:animEffect transition="in" filter="wipe\(left\)">/, 'wipe filter missing')
+	assert.match(timing, /<p:animEffect transition="out" filter="zoom\(out\)">/, 'exit effect must animate out')
+	assert.match(timing, /<p:cTn id="\d+" dur="800"\/>/, 'custom duration missing')
+	assert.match(timing, /<p:stCondLst><p:cond delay="250"\/><\/p:stCondLst>/, 'delay missing')
+
+	// an exit effect hides its target when it ends; an entrance shows it as it starts
+	assert.match(timing, /<p:to><p:strVal val="hidden"\/><\/p:to>/, 'exit effect must set visibility hidden')
+	assert.match(timing, /<p:to><p:strVal val="visible"\/><\/p:to>/, 'entrance effect must set visibility visible')
+
+	// `withPrevious`/`afterPrevious` join the click group before them, so there is one click group here
+	assert.equal([...timing.matchAll(/<p:cond delay="indefinite"\/><p:cond evt="onBegin"/g)].length, 1, 'expected a single click group')
+	// every animated shape is listed in the build list
+	assert.match(timing, /<p:bldLst><p:bldP spid="2" grpId="0"\/><p:bldP spid="3" grpId="0"\/><p:bldP spid="4" grpId="0"\/><\/p:bldLst>/, 'build list missing')
+	// node ids must be unique across the whole tree
+	const ids = [...timing.matchAll(/<p:cTn id="(\d+)"/g)].map(match => match[1])
+	assert.equal(new Set(ids).size, ids.length, `duplicate timing node ids: ${ids.join(',')}`)
+
+	// no animation -> no timing tree
+	const plain = new pptxgen()
+	plain.addSlide().addText('static', { x: 1, y: 1, w: 3, h: 1 })
+	const plainXml = await readPart(await JSZip.loadAsync((await plain.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+	assert.doesNotMatch(plainXml, /p:timing/, 'a slide without animations or media playback must be unchanged')
+})
+
+test('contract: animations and media playback share one timing tree', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addText('fades', { x: 1, y: 1, w: 3, h: 1, animation: { type: 'fadeIn' } })
+	slide.addMedia({ type: 'video', data: 'video/mp4;base64,QQ==', x: 5, y: 1, w: 2, h: 2, autoplay: true, loop: true })
+	const xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+	const timing = /<p:timing>[\s\S]*<\/p:timing>/.exec(xml)?.[0] ?? ''
+
+	assert.equal([...xml.matchAll(/<p:timing>/g)].length, 1, 'a slide must have exactly one timing tree')
+	// the media node is a sibling of mainSeq under tmRoot
+	assert.match(timing, /<\/p:seq><p:video><p:cMediaNode>/, 'media node must follow mainSeq inside tmRoot')
+	assert.match(timing, /repeatCount="indefinite"/, 'media loop lost')
+	const ids = [...timing.matchAll(/<p:cTn id="(\d+)"/g)].map(match => match[1])
+	assert.equal(new Set(ids).size, ids.length, 'animation and media nodes must not reuse node ids')
+})
+
+test('contract: invalid animation input is dropped with a warning', async () => {
+	const warnings: string[] = []
+	const origWarn = console.warn
+	console.warn = (msg: string) => warnings.push(String(msg))
+	let xml = ''
+	try {
+		const pptx = new pptxgen()
+		const slide = pptx.addSlide()
+		slide.addText('bad preset', { x: 1, y: 1, w: 3, h: 1, animation: { type: 'explode' as unknown as 'fadeIn' } })
+		slide.addText('bad trigger', { x: 1, y: 2, w: 3, h: 1, animation: { type: 'fadeIn', trigger: 'whenever' as unknown as 'onClick' } })
+		slide.addText('bad direction', { x: 1, y: 3, w: 3, h: 1, animation: { type: 'wipeIn', direction: 'sideways' } })
+		slide.addText('bad timings', { x: 1, y: 4, w: 3, h: 1, animation: { type: 'fadeIn', delay: -5, duration: NaN } })
+		xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+	} finally {
+		console.warn = origWarn
+	}
+
+	assert.ok(warnings.some(w => w.includes('unknown animation "explode"')), 'unknown preset must warn')
+	assert.ok(warnings.some(w => w.includes('animation trigger must be')), 'unknown trigger must warn')
+	assert.ok(warnings.some(w => w.includes('does not accept direction "sideways"')), 'invalid direction must warn')
+
+	// the two bad-preset/bad-trigger shapes are skipped; the other two still animate
+	assert.equal([...xml.matchAll(/presetID=/g)].length, 2, 'only valid animations are emitted')
+	assert.match(xml, /presetSubtype="1"/, 'invalid direction falls back to the preset default')
+	assert.match(xml, /<p:stCondLst><p:cond delay="0"\/><\/p:stCondLst>/, 'negative delay falls back to 0')
+	assert.match(xml, /dur="500"/, 'non-finite duration falls back to the default')
+	assert.doesNotMatch(xml, /NaN/, 'no NaN attributes')
+})

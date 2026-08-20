@@ -231,6 +231,43 @@ export interface ShapeGradientProps {
 	stops: ShapeGradientStopProps[]
 }
 // used by: shape, table, text
+export type AnimationPreset =
+	// entrance
+	| 'appear' | 'fadeIn' | 'wipeIn' | 'zoomIn'
+	// exit
+	| 'disappear' | 'fadeOut' | 'wipeOut' | 'zoomOut'
+export interface AnimationProps {
+	/**
+	 * Animation preset
+	 * - entrance: `appear`, `fadeIn`, `wipeIn`, `zoomIn`
+	 * - exit: `disappear`, `fadeOut`, `wipeOut`, `zoomOut`
+	 * - motion-path and emphasis effects are not supported yet
+	 */
+	type: AnimationPreset
+	/**
+	 * What starts the effect
+	 * - `withPrevious` and `afterPrevious` join the click group before them
+	 * @default 'onClick'
+	 */
+	trigger?: 'onClick' | 'withPrevious' | 'afterPrevious'
+	/**
+	 * Effect direction
+	 * - `wipeIn`/`wipeOut`: `up` | `right` | `down` | `left` (default `up`)
+	 * - `zoomIn`/`zoomOut`: `in` | `out` (default matches the preset)
+	 * - ignored with a warning for presets that take no direction
+	 */
+	direction?: string
+	/**
+	 * Delay before the effect starts (milliseconds)
+	 * @default 0
+	 */
+	delay?: number
+	/**
+	 * Effect length (milliseconds)
+	 * @default 500
+	 */
+	duration?: number
+}
 export interface ShapeFillProps {
 	/**
 	 * Fill color
@@ -698,6 +735,11 @@ export interface ImageProps extends PositionProps, DataOrPathProps, ObjectNamePr
 	 * @example 25 // 25% transparent
 	 */
 	transparency?: number
+	/**
+	 * Animation applied to this object
+	 * @example { animation: { type: 'fadeIn', trigger: 'afterPrevious', duration: 800 } }
+	 */
+	animation?: AnimationProps
 }
 /**
  * Add media (audio/video) to slide
@@ -759,6 +801,11 @@ export interface MediaProps extends PositionProps, DataOrPathProps, ObjectNamePr
 	 * @default false
 	 */
 	mute?: boolean
+	/**
+	 * Animation applied to this object
+	 * @example { animation: { type: 'fadeIn', trigger: 'afterPrevious', duration: 800 } }
+	 */
+	animation?: AnimationProps
 }
 
 // shapes =========================================================================================
@@ -883,6 +930,11 @@ export interface ShapeProps extends PositionProps, ObjectNameProps {
 	 * @deprecated v3.10.0 - use `objectName`
 	 */
 	shapeName?: string
+	/**
+	 * Animation applied to this object
+	 * @example { animation: { type: 'fadeIn', trigger: 'afterPrevious', duration: 800 } }
+	 */
+	animation?: AnimationProps
 }
 
 // tables =========================================================================================
@@ -1135,6 +1187,11 @@ export interface TableProps extends PositionProps, TextBaseProps, ObjectNameProp
 	 * @deprecated v3.3.0 - use `autoPageSlideStartY`
 	 */
 	newSlideStartY?: number
+	/**
+	 * Animation applied to this object
+	 * @example { animation: { type: 'fadeIn', trigger: 'afterPrevious', duration: 800 } }
+	 */
+	animation?: AnimationProps
 }
 export interface TableCell {
 	_type: SLIDE_OBJECT_TYPES.tablecell
@@ -1344,6 +1401,11 @@ export interface TextPropsOptions extends PositionProps, DataOrPathProps, TextBa
 	 * @deprecated v3.3.0 - use `line.endArrowType`
 	 */
 	lineTail?: 'none' | 'arrow' | 'diamond' | 'oval' | 'stealth' | 'triangle'
+	/**
+	 * Animation applied to this object
+	 * @example { animation: { type: 'fadeIn', trigger: 'afterPrevious', duration: 800 } }
+	 */
+	animation?: AnimationProps
 }
 export interface TextProps {
 	text?: string

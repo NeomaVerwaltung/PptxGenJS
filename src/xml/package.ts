@@ -5,7 +5,8 @@
 import { CRLF, LAYOUT_IDX_SERIES_BASE, OOXML_EXT, SLDNUMFLDID, SLIDE_OBJECT_TYPES } from '../core-enums'
 import { IPresentationProps, PresSlide, SlideLayout, SlideShowProps } from '../core-interfaces'
 import { createColorElement, encodeXmlEntities, getUuid } from '../gen-utils'
-import { genXmlMediaTiming, slideObjectToXml } from './slide'
+import { slideObjectToXml } from './slide'
+import { genXmlTiming } from './animation'
 import { genXmlTransition } from './transition'
 
 export function makeXmlContTypes (slides: PresSlide[], slideLayouts: SlideLayout[], masterSlide?: PresSlide): string {
@@ -198,7 +199,7 @@ export function makeXmlSlide (slide: PresSlide): string {
 		`${slide?.hidden ? ' show="0"' : ''}>` +
 		`${slideObjectToXml(slide)}` +
 		// CT_Slide sequence: cSld, clrMapOvr, transition, timing, extLst - order matters
-		`<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>${genXmlTransition(slide)}${genXmlMediaTiming(slide)}</p:sld>`
+		`<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>${genXmlTransition(slide)}${genXmlTiming(slide)}</p:sld>`
 	)
 }
 
