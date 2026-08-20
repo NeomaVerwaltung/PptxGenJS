@@ -11,6 +11,21 @@ export const ONEPT = 12700 // One (1) point (pt)
 export const CRLF = '\r\n' // AKA: Chr(13) & Chr(10)
 
 /**
+ * Microsoft PowerPoint / Markup Compatibility namespaces
+ * - extensions are always offered through `mc:AlternateContent` or an `extLst` wrapper
+ */
+export const MS_PPTX_NS = {
+	/** Markup Compatibility (ECMA-376 Part 3) - wraps extensions with a fallback */
+	mc: 'http://schemas.openxmlformats.org/markup-compatibility/2006',
+	/** PowerPoint 2010 main - MS-PPTX Appendix A 5.1 */
+	p14: 'http://schemas.microsoft.com/office/powerpoint/2010/main',
+	/** PowerPoint 2012 main - MS-PPTX Appendix A 5.2 */
+	p15: 'http://schemas.microsoft.com/office/powerpoint/2012/main',
+	/** PowerPoint 2016 main */
+	p16: 'http://schemas.microsoft.com/office/powerpoint/2016/main',
+} as const
+
+/**
  * Every OOXML extension URI this library emits, with the namespace it carries.
  *
  * This is the registry behind the MS-PPTX conformance profile in `docs/ms-pptx-profile.md`: an

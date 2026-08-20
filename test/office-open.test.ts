@@ -25,7 +25,7 @@ test('office: LibreOffice opens and converts a generated presentation', async ()
 		pptx.slideShow = { mode: 'browse', loop: true, browseMode: true, laserColor: 'FF0000' }
 		pptx.defaultImageDpi = 220
 		pptx.readonlyRecommended = true
-		const slide = pptx.addSlide()
+		const slide = pptx.addSlide({ transition: { type: 'wipe', direction: 'left', speed: 'slow' } })
 		slide.addText('OOXML consumer smoke test', { x: 0.5, y: 0.5, w: 5, h: 0.5 })
 		slide.addText([
 			{ text: 'ratio ' },
@@ -47,6 +47,7 @@ test('office: LibreOffice opens and converts a generated presentation', async ()
 			line: { type: 'gradient', width: 2, gradient: { type: 'radial', stops: [{ color: '00FF00', position: 0 }, { color: '000000', position: 100 }] } },
 		})
 		gradientSlide.addTable([[{ text: 'gradient cell', options: { fill: { type: 'gradient', gradient: { stops: [{ color: '111111', position: 0 }, { color: '888888', position: 100 }] } } } }]], { x: 0.5, y: 3, w: 4 })
+		pptx.addSlide({ transition: { type: 'morph', duration: 1200 } }).addText('modern transition', { x: 0.5, y: 0.5, w: 5, h: 0.5 })
 		await writeFile(presentationPath, (await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
 
 		await execFile(officeBinary, ['--headless', '--convert-to', 'pdf', '--outdir', directory, presentationPath], { timeout: 60_000 })
