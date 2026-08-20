@@ -10,6 +10,8 @@ Run the [Release workflow](https://github.com/NeomaVerwaltung/PptxGenJS/actions/
 2. Rebuilds `dist/`, verifies every bundle, and publishes to npm under the `latest` tag.
 3. Creates the GitHub Release with generated notes and attaches the bundles.
 
+The `release` environment's deployment branch policy must list both `master` (dispatch path) and the `v*` tag (published-release path); a missing entry makes the run fail before the approval prompt appears.
+
 Update `CHANGELOG.md` and the docs before starting the run — the workflow only touches version strings. For a beta, use the manual path below; the dispatch inputs cannot express a pre-release tag.
 
 ## Beta releases
