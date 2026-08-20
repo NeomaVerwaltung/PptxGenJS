@@ -115,8 +115,9 @@ for (const type of ['scatter', 'bubble', 'radar', 'doughnut', 'bar3d', 'multi'])
 
 test('coverage: media slide xml (audio + video + online video)', async () => {
 	const xml = await readPart(zip, 'ppt/slides/slide7.xml')
-	// NOTE: the library emits audio and video alike as `a:videoFile` + a `p14:media` extension
-	assert.equal([...xml.matchAll(/<a:videoFile /g)].length, 3, 'expected three media objects (audio, video, online video)')
+	// NOTE: per ECMA-376 audio references `a:audioFile` and video `a:videoFile`; both carry a `p14:media` extension
+	assert.equal([...xml.matchAll(/<a:audioFile /g)].length, 1, 'expected one audio object')
+	assert.equal([...xml.matchAll(/<a:videoFile /g)].length, 2, 'expected two video objects (embedded video, online video)')
 	assert.equal([...xml.matchAll(/<p14:media /g)].length, 2, 'expected two embedded media (online video is linked, not embedded)')
 })
 

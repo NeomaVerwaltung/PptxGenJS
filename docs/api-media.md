@@ -64,6 +64,25 @@ Either provide a URL location or base64 data along with type to create media.
 | `extn`  | string | media extension | use when the media file path does not already have an extension, ex: "/folder/SomeSong" |
 | `link`  | string | video URL       | (YouTube only): link to online video                                                    |
 
+### Playback Props
+
+These drive the slide timing tree (PowerPoint's Playback tab) and are all off by default. When none are set,
+no `<p:timing>` element is written, so existing output is unchanged.
+
+| Option       | Type    | Default | Description                                                                    |
+| :----------- | :------ | :------ | :----------------------------------------------------------------------------- |
+| `autoplay`   | boolean | `false` | start when the slide is shown instead of on click                              |
+| `loop`       | boolean | `false` | repeat until the slide advances ("Loop until Stopped")                         |
+| `fullScreen` | boolean | `false` | play video full-screen (`type: 'video'` only - ignored with a warning on audio) |
+| `mute`       | boolean | `false` | mute the media's audio                                                         |
+
+Playback options are not supported for `type: 'online'` (the embed handles playback) and are ignored with a
+warning.
+
+```typescript
+slide.addMedia({ type: 'video', path: '../media/sample.mp4', x: 1, y: 1, w: 6, h: 3.4, autoplay: true, loop: true, mute: true });
+```
+
 ## Example
 
 ![Media Examples](./assets/ex-media-slide.png)

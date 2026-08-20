@@ -735,6 +735,30 @@ export interface MediaProps extends PositionProps, DataOrPathProps, ObjectNamePr
 	 * @example '/sounds/simpsons_haha.mp3' // embed mp3 audio clip from local directory
 	 */
 	path?: string
+	/**
+	 * Start playing as soon as the slide is shown, without a click
+	 * - emitted as a media node in the slide timing tree with a `delay="0"` start condition
+	 *   (ECMA-376 19.5.30 `CT_TLCommonMediaNodeData`)
+	 * @default false (plays on click)
+	 */
+	autoplay?: boolean
+	/**
+	 * Repeat until the slide advances ("Loop until Stopped" in PowerPoint's Playback tab)
+	 * - sets `repeatCount="indefinite"` on the media node
+	 * @default false
+	 */
+	loop?: boolean
+	/**
+	 * Play video full-screen (`p:video@fullScrn`)
+	 * - video only; ignored with a warning for `type: 'audio'`
+	 * @default false
+	 */
+	fullScreen?: boolean
+	/**
+	 * Mute the media's audio (`p:cMediaNode@mute`)
+	 * @default false
+	 */
+	mute?: boolean
 }
 
 // shapes =========================================================================================
@@ -2027,6 +2051,11 @@ export interface ObjectOptions extends ImageProps, PositionProps, ShapeProps, Ta
 
 	cx?: Coord
 	cy?: Coord
+	/** media playback behaviour - drives the slide timing tree (ECMA-376 19.5 `CT_TLMediaNode`) @internal */
+	autoplay?: boolean
+	loop?: boolean
+	fullScreen?: boolean
+	mute?: boolean
 	margin?: Margin
 	colW?: number | number[] // table
 	rowH?: number | number[] // table
