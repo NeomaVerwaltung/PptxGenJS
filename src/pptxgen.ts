@@ -79,8 +79,10 @@ import {
 	WRITE_OUTPUT_TYPE,
 } from './core-enums'
 import {
+	AddFontProps,
 	AddSlideProps,
 	CompressionLevel,
+	EmbeddedFont,
 	DefineLayoutProps,
 	IPresentationProps,
 	PresLayout,
@@ -99,6 +101,7 @@ import {
 import * as genCharts from './charts'
 import * as genObj from './gen-objects'
 import * as genMedia from './gen-media'
+import * as genFonts from './gen-fonts'
 import * as genTable from './gen-tables'
 import * as genXml from './xml'
 import { warnDeprecatedOnce } from './gen-utils'
@@ -322,6 +325,12 @@ export default class PptxGenJS implements IPresentationProps {
 		return this._slideShow
 	}
 
+	/** fonts registered with `addFont()` */
+	private readonly _embeddedFonts: EmbeddedFont[]
+	public get embeddedFonts(): EmbeddedFont[] {
+		return this._embeddedFonts
+	}
+
 	/** master slide layout object */
 	private readonly _masterSlide: PresSlide
 	public get masterSlide(): PresSlide {
@@ -441,6 +450,7 @@ export default class PptxGenJS implements IPresentationProps {
 		this._chartTrackingRefBased = true
 		this._discardImageEditData = false
 		this._readonlyRecommended = false
+		this._embeddedFonts = []
 		//
 		this._slideLayouts = [
 			{
@@ -624,11 +634,13 @@ export default class PptxGenJS implements IPresentationProps {
 			zip.folder('ppt/theme')
 			zip.folder('ppt/notesMasters')?.folder('_rels')
 			zip.folder('ppt/notesSlides')?.folder('_rels')
-			zip.file('[Content_Types].xml', genXml.makeXmlContTypes(this.slides, this.slideLayouts, this.masterSlide)) // TODO: pass only `this` like below! 20200206
+			zip.file('[Content_Types].xml', genXml.makeXmlContTypes(this.slides, this.slideLayouts, this.masterSlide, this._embeddedFonts)) // TODO: pass only `this` like below! 20200206
 			zip.file('_rels/.rels', genXml.makeXmlRootRels())
 			zip.file('docProps/app.xml', genXml.makeXmlApp(this.slides, this.company)) // TODO: pass only `this` like below! 20200206
 			zip.file('docProps/core.xml', genXml.makeXmlCore(this.title, this.subject, this.author, this.revision)) // TODO: pass only `this` like below! 20200206
-			zip.file('ppt/_rels/presentation.xml.rels', genXml.makeXmlPresentationRels(this.slides))
+			zip.file('ppt/_rels/presentation.xml.rels', genXml.makeXmlPresentationRels(this.slides, this._embeddedFonts))
+			// Opt-in: no `ppt/fonts` folder exists unless `addFont()` was called
+			this._embeddedFonts.forEach((font, idx) => zip.file(genFonts.fontPartName(idx), font.data, { binary: true }))
 			zip.file('ppt/theme/theme1.xml', genXml.makeXmlTheme(this))
 			zip.file('ppt/presentation.xml', genXml.makeXmlPresentation(this))
 			zip.file('ppt/presProps.xml', genXml.makeXmlPresProps(this))
@@ -782,6 +794,24 @@ export default class PptxGenJS implements IPresentationProps {
 	 * @param {AddSlideProps} options - slide options
 	 * @returns {PresSlide} the new Slide
 	 */
+	/**
+	 * Embed a font in the presentation
+	 * - opt-in: without any `addFont()` call the package has no font parts and is unchanged
+	 * - PowerPoint stores embedded fonts as Embedded OpenType (EOT); convert TTF/OTF/WOFF first
+	 * - **you must hold a licence that permits embedding the font** - PptxGenJS ships no fonts and
+	 *   makes no licence checks
+	 * @param {AddFontProps} options - font props
+	 * @example pptx.addFont({ fontFace: 'Custom Sans', data: eotBase64 })
+	 * @example pptx.addFont({ fontFace: 'Custom Sans', data: boldEotBase64, style: 'bold' })
+	 */
+	addFont(options: AddFontProps): void {
+		const font = genFonts.createEmbeddedFont(options, this._embeddedFonts)
+		if (!font) return
+		const existing = this._embeddedFonts.findIndex(item => item.fontFace === font.fontFace && item.style === font.style)
+		if (existing > -1) this._embeddedFonts[existing] = font
+		else this._embeddedFonts.push(font)
+	}
+
 	addSlide(options?: AddSlideProps): PresSlide {
 		// TODO: DEPRECATED: arg0 string "masterSlideName" dep as of 3.2.0
 		const masterSlideName = typeof options === 'string' ? options : options?.masterName ? options.masterName : ''

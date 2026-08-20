@@ -22,6 +22,11 @@ test('office: LibreOffice opens and converts a generated presentation', async ()
 
 	try {
 		const pptx = new pptxgen()
+		// a minimal EOT stand-in: only the magic number at offset 34 is inspected
+		const eot = new Uint8Array(64)
+		eot[34] = 0x4c
+		eot[35] = 0x50
+		pptx.addFont({ fontFace: 'Smoke Sans', data: eot })
 		pptx.slideShow = { mode: 'browse', loop: true, browseMode: true, laserColor: 'FF0000' }
 		pptx.defaultImageDpi = 220
 		pptx.readonlyRecommended = true

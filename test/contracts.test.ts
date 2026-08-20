@@ -534,3 +534,122 @@ test('contract: invalid animation input is dropped with a warning', async () => 
 	assert.match(xml, /dur="500"/, 'non-finite duration falls back to the default')
 	assert.doesNotMatch(xml, /NaN/, 'no NaN attributes')
 })
+/**
+ * Minimal stand-in for an EOT font: the only bytes PptxGenJS inspects are the magic number
+ * `0x504C` at offset 34 (MS-EOT 2.1), so a 64-byte buffer with that field set is enough to
+ * exercise the part/relationship/content-type plumbing without shipping a font file.
+ */
+function fakeEot (): Uint8Array {
+	const bytes = new Uint8Array(64)
+	bytes[34] = 0x4c
+	bytes[35] = 0x50
+	bytes[36] = 0x77 // marker so the test can prove the bytes reached the part verbatim
+	return bytes
+}
+
+test('contract: embedded fonts add font parts, relationships, and a content type', async () => {
+	const eot = fakeEot()
+	const base64 = Buffer.from(eot).toString('base64')
+	const pptx = new pptxgen()
+	pptx.addFont({ fontFace: 'Custom Sans', data: base64 })
+	pptx.addFont({ fontFace: 'Custom Sans', data: eot, style: 'bold' })
+	pptx.addFont({ fontFace: 'Other & Co', data: eot.buffer, style: 'italic' })
+	pptx.addSlide().addText('embedded', { x: 1, y: 1, w: 4, h: 1, fontFace: 'Custom Sans' })
+	const fontZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+
+	// package-level coherence: every part declared, every relationship resolvable
+	await assertPptxPackageContracts(fontZip)
+
+	assert.match(await readPart(fontZip, '[Content_Types].xml'), /<Default Extension="fntdata" ContentType="application\/x-fontdata"\/>/, 'fntdata content type missing')
+
+	const rels = await readPart(fontZip, 'ppt/_rels/presentation.xml.rels')
+	const fontRels = [...rels.matchAll(/<Relationship Id="(rId\d+)" Type="http:\/\/schemas\.openxmlformats\.org\/officeDocument\/2006\/relationships\/font" Target="(fonts\/font\d+\.fntdata)"\/>/g)]
+	assert.equal(fontRels.length, 3, 'expected one font relationship per registered style')
+	assert.deepEqual(fontRels.map(rel => rel[2]), ['fonts/font1.fntdata', 'fonts/font2.fntdata', 'fonts/font3.fntdata'], 'font targets must be sequential')
+
+	// the presentation lists one embeddedFont per typeface, with a child element per style
+	const presentation = await readPart(fontZip, 'ppt/presentation.xml')
+	const relIds = fontRels.map(rel => rel[1])
+	assert.match(
+		presentation,
+		new RegExp(`<p:embeddedFontLst><p:embeddedFont><p:font typeface="Custom Sans"/><p:regular r:id="${relIds[0]}"/><p:bold r:id="${relIds[1]}"/></p:embeddedFont>` +
+			`<p:embeddedFont><p:font typeface="Other &amp; Co"/><p:italic r:id="${relIds[2]}"/></p:embeddedFont></p:embeddedFontLst>`),
+		'embeddedFontLst missing or malformed'
+	)
+	// CT_Presentation sequence: embeddedFontLst precedes defaultTextStyle
+	assert.match(presentation, /<\/p:embeddedFontLst><p:defaultTextStyle>/, 'embeddedFontLst must precede defaultTextStyle')
+
+	// the font bytes reach the part untouched
+	const part = fontZip.file('ppt/fonts/font1.fntdata')
+	assert.ok(part, 'font part missing')
+	const stored = await part.async('uint8array')
+	assert.equal(stored.length, eot.length, 'font part length changed')
+	assert.equal(stored[36], 0x77, 'font bytes were altered')
+})
+
+test('contract: presentations without addFont are unchanged', async () => {
+	const plain = new pptxgen()
+	plain.addSlide().addText('no fonts', { x: 1, y: 1, w: 4, h: 1 })
+	const plainZip = await JSZip.loadAsync((await plain.write({ outputType: 'nodebuffer' })) as Buffer)
+
+	assert.equal(Object.keys(plainZip.files).filter(file => file.includes('fonts')).length, 0, 'no font parts or folder may be created')
+	assert.doesNotMatch(await readPart(plainZip, '[Content_Types].xml'), /fntdata/, 'no fntdata content type when unused')
+	assert.doesNotMatch(await readPart(plainZip, 'ppt/_rels/presentation.xml.rels'), /relationships\/font/, 'no font relationship when unused')
+	assert.doesNotMatch(await readPart(plainZip, 'ppt/presentation.xml'), /embeddedFont/, 'no embeddedFontLst when unused')
+})
+
+test('contract: invalid addFont input is rejected before it reaches the package', async () => {
+	const warnings: string[] = []
+	const origWarn = console.warn
+	console.warn = (msg: string) => warnings.push(String(msg))
+	let zipNoFonts: JSZip
+	try {
+		const pptx = new pptxgen()
+		pptx.addFont(undefined as unknown as { fontFace: string, data: string })
+		pptx.addFont({ fontFace: '   ', data: Buffer.from(fakeEot()).toString('base64') })
+		pptx.addFont({ fontFace: 'No Data', data: '' })
+		pptx.addFont({ fontFace: 'Bad Style', data: fakeEot(), style: 'heavy' as unknown as 'bold' })
+		// a raw TTF starts with the 0x00010000 version tag and has no EOT magic number
+		const ttf = new Uint8Array(64)
+		ttf[1] = 0x01
+		pptx.addFont({ fontFace: 'Raw TTF', data: ttf })
+		pptx.addSlide()
+		zipNoFonts = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	} finally {
+		console.warn = origWarn
+	}
+
+	assert.ok(warnings.some(w => w.includes('an object is required')), 'non-object must warn')
+	assert.ok(warnings.some(w => w.includes('`fontFace` is required')), 'blank fontFace must warn')
+	assert.ok(warnings.some(w => w.includes('`data` must be base64 or binary')), 'missing data must warn')
+	assert.ok(warnings.some(w => w.includes('`style` must be')), 'invalid style must warn')
+	assert.ok(warnings.some(w => w.includes('does not look like EOT data')), 'non-EOT data must warn')
+
+	assert.equal(Object.keys(zipNoFonts.files).filter(file => file.includes('fonts')).length, 0, 'rejected fonts must not create parts')
+	assert.doesNotMatch(await readPart(zipNoFonts, 'ppt/presentation.xml'), /embeddedFont/, 'rejected fonts must not be listed')
+})
+
+test('contract: re-registering a font style replaces it rather than duplicating the part', async () => {
+	const first = fakeEot()
+	const second = fakeEot()
+	second[37] = 0x99
+	const warnings: string[] = []
+	const origWarn = console.warn
+	console.warn = (msg: string) => warnings.push(String(msg))
+	let replaceZip: JSZip
+	try {
+		const pptx = new pptxgen()
+		pptx.addFont({ fontFace: 'Custom Sans', data: first })
+		pptx.addFont({ fontFace: 'Custom Sans', data: second })
+		pptx.addSlide()
+		replaceZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	} finally {
+		console.warn = origWarn
+	}
+
+	assert.ok(warnings.some(w => w.includes('is already embedded')), 're-registration must warn')
+	assert.equal(Object.keys(replaceZip.files).filter(file => file.endsWith('.fntdata')).length, 1, 'expected a single font part')
+	const stored = await (replaceZip.file('ppt/fonts/font1.fntdata') as JSZip.JSZipObject).async('uint8array')
+	assert.equal(stored[37], 0x99, 'the latest registration must win')
+	await assertPptxPackageContracts(replaceZip)
+})

@@ -153,3 +153,35 @@ warning.
 
 Recorded laser traces (`p14:laserTraceLst`) and show-event lists (`p14:showEvtLst`) are recordings
 PowerPoint captures while presenting, not authoring options, so PptxGenJS does not generate them.
+## Embedded Fonts
+
+Embedding a font makes text render with that typeface on machines that do not have it installed. This
+is opt-in: without an `addFont()` call the package has no font parts and is byte-for-byte unchanged.
+
+```typescript
+pptx.addFont({ fontFace: 'Custom Sans', data: eotBase64 });
+pptx.addFont({ fontFace: 'Custom Sans', data: boldEotBase64, style: 'bold' });
+
+pptx.addSlide().addText('Branded headline', { x: 1, y: 1, w: 8, h: 1, fontFace: 'Custom Sans' });
+```
+
+| Option     | Type                                  | Default   | Description                                              |
+| :--------- | :------------------------------------ | :-------- | :------------------------------------------------------- |
+| `fontFace` | string                                |           | **required** - typeface name, as used in `fontFace`      |
+| `data`     | string \| ArrayBuffer \| Uint8Array   |           | **required** - EOT font data (base64 or binary)          |
+| `style`    | string                                | `regular` | `regular`, `bold`, `italic`, or `boldItalic`             |
+
+Call `addFont()` once per style of a typeface; they are grouped into one `<p:embeddedFont>` entry.
+
+### Font data must be EOT
+
+PowerPoint stores embedded fonts as **Embedded OpenType**. PptxGenJS does not convert font files and
+ships none: convert your TTF/OTF/WOFF first (for example with `ttf2eot` or `fonteditor-core`) and pass
+the resulting bytes. Data that lacks the EOT magic number is rejected with a warning rather than
+written, because a `.fntdata` part holding raw TTF produces a deck PowerPoint cannot open.
+
+### Licensing
+
+**You are responsible for holding a licence that permits embedding the font.** Many commercial and
+some open fonts restrict or forbid embedding. PptxGenJS performs no licence checks and bundles no
+font files.

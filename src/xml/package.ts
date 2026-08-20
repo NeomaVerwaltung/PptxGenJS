@@ -3,13 +3,14 @@
  */
 
 import { CRLF, LAYOUT_IDX_SERIES_BASE, OOXML_EXT, SLDNUMFLDID, SLIDE_OBJECT_TYPES } from '../core-enums'
-import { IPresentationProps, PresSlide, SlideLayout, SlideShowProps } from '../core-interfaces'
+import { EmbeddedFont, IPresentationProps, PresSlide, SlideLayout, SlideShowProps } from '../core-interfaces'
 import { createColorElement, encodeXmlEntities, getUuid } from '../gen-utils'
+import { makeXmlEmbeddedFontLst } from '../gen-fonts'
 import { slideObjectToXml } from './slide'
 import { genXmlTiming } from './animation'
 import { genXmlTransition } from './transition'
 
-export function makeXmlContTypes (slides: PresSlide[], slideLayouts: SlideLayout[], masterSlide?: PresSlide): string {
+export function makeXmlContTypes (slides: PresSlide[], slideLayouts: SlideLayout[], masterSlide?: PresSlide, embeddedFonts: EmbeddedFont[] = []): string {
 	let strXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + CRLF
 	strXml += '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
 	strXml += '<Default Extension="xml" ContentType="application/xml"/>'
@@ -30,6 +31,8 @@ export function makeXmlContTypes (slides: PresSlide[], slideLayouts: SlideLayout
 			}
 		})
 	})
+	// Opt-in: the `fntdata` Default only appears when `addFont()` embedded something
+	if (embeddedFonts.length > 0) strXml += '<Default Extension="fntdata" ContentType="application/x-fontdata"/>'
 	strXml += '<Default Extension="vml" ContentType="application/vnd.openxmlformats-officedocument.vmlDrawing"/>'
 	strXml += '<Default Extension="xlsx" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"/>'
 
@@ -164,7 +167,18 @@ export function makeXmlCore (title: string, subject: string, author: string, rev
  * @param {PresSlide[]} slides - Presenation Slides
  * @returns XML
  */
-export function makeXmlPresentationRels (slides: PresSlide[]): string {
+/**
+ * Relationship id of the first embedded font part
+ * - the presentation part uses rId1 for the slide master, one per slide, then five fixed parts
+ *   (notesMaster, presProps, viewProps, theme, tableStyles), so fonts continue after those
+ * @param {number} slideCount - number of slides in the presentation
+ * @returns {number} first font rId
+ */
+function firstFontRelId (slideCount: number): number {
+	return slideCount + 7
+}
+
+export function makeXmlPresentationRels (slides: PresSlide[], embeddedFonts: EmbeddedFont[] = []): string {
 	let intRelNum = 1
 	let strXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + CRLF
 	strXml += '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
@@ -179,6 +193,9 @@ export function makeXmlPresentationRels (slides: PresSlide[]): string {
 		`<Relationship Id="rId${intRelNum + 2}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/viewProps" Target="viewProps.xml"/>` +
 		`<Relationship Id="rId${intRelNum + 3}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>` +
 		`<Relationship Id="rId${intRelNum + 4}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles" Target="tableStyles.xml"/>` +
+		embeddedFonts
+			.map((_font, idx) => `<Relationship Id="rId${firstFontRelId(slides.length) + idx}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/font" Target="fonts/font${idx + 1}.fntdata"/>`)
+			.join('') +
 		'</Relationships>'
 
 	return strXml
@@ -348,7 +365,10 @@ export function makeXmlPresentation (pres: IPresentationProps): string {
 	strXml += `<p:sldSz cx="${pres.presLayout.width}" cy="${pres.presLayout.height}"/>`
 	strXml += `<p:notesSz cx="${pres.presLayout.height}" cy="${pres.presLayout.width}"/>`
 
-	// STEP 5: Add text styles
+	// STEP 5: Add embedded fonts (SPEC: `embeddedFontLst` precedes `defaultTextStyle`)
+	strXml += makeXmlEmbeddedFontLst(pres.embeddedFonts ?? [], firstFontRelId(pres.slides.length), encodeXmlEntities)
+
+	// STEP 6: Add text styles
 	strXml += '<p:defaultTextStyle>'
 	for (let idy = 1; idy < 10; idy++) {
 		strXml +=
@@ -358,7 +378,7 @@ export function makeXmlPresentation (pres: IPresentationProps): string {
 	}
 	strXml += '</p:defaultTextStyle>'
 
-	// STEP 6: Add Sections (if any)
+	// STEP 7: Add Sections (if any)
 	if (pres.sections && pres.sections.length > 0) {
 		strXml += `<p:extLst><p:ext uri="${OOXML_EXT.sections.uri}">`
 		strXml += `<p14:sectionLst xmlns:p14="${OOXML_EXT.sections.ns}">`
