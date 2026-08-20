@@ -105,7 +105,7 @@ import * as genMedia from './gen-media'
 import * as genFonts from './gen-fonts'
 import * as genTable from './gen-tables'
 import * as genXml from './xml'
-import { warnDeprecatedOnce } from './gen-utils'
+import { getUuid, warnDeprecatedOnce } from './gen-utils'
 
 const VERSION = '4.1.0'
 
@@ -504,6 +504,7 @@ export default class PptxGenJS implements IPresentationProps {
 			addNotes: notOnMaster,
 			addShape: notOnMaster,
 			addTable: notOnMaster,
+			getSlide: notOnMaster,
 			addText: notOnMaster,
 			//
 			_name: '',
@@ -677,7 +678,7 @@ export default class PptxGenJS implements IPresentationProps {
 				zip.file(`ppt/slideLayouts/_rels/slideLayout${idx + 1}.xml.rels`, genXml.makeXmlSlideLayoutRel(idx + 1, this.slideLayouts))
 			})
 			this.slides.forEach((slide, idx) => {
-				zip.file(`ppt/slides/slide${idx + 1}.xml`, genXml.makeXmlSlide(slide))
+				zip.file(`ppt/slides/slide${idx + 1}.xml`, genXml.makeXmlSlide(slide, this.sections))
 				zip.file(`ppt/slides/_rels/slide${idx + 1}.xml.rels`, genXml.makeXmlSlideRel(this.slides, this.slideLayouts, idx + 1))
 				// Create all slide notes related items. Notes of empty strings are created for slides which do not have notes specified, to keep track of _rels.
 				zip.file(`ppt/notesSlides/notesSlide${idx + 1}.xml`, genXml.makeXmlNotesSlide(slide))
@@ -806,6 +807,9 @@ export default class PptxGenJS implements IPresentationProps {
 		const newSection: SectionProps = {
 			_type: 'user',
 			_slides: [],
+			// assigned here, not at export: a section zoom stores this GUID and must be able to
+			// resolve it as soon as the section exists
+			_id: `{${getUuid('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')}}`,
 			title: section.title,
 		}
 

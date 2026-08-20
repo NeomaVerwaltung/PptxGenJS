@@ -19,6 +19,7 @@ import {
 	PresSlide,
 	ReflectionProps,
 	ShadowProps,
+	SectionProps,
 	ShapeLineProps,
 	SlideLayout,
 	SoftEdgeProps,
@@ -40,6 +41,7 @@ import {
 } from '../gen-utils'
 
 import { genXmlPlaceholder, genXmlTextBody } from './text'
+import { genXmlZoom } from './zoom'
 
 const ImageSizingXml = {
 	cover: function (imgSize: { w: number, h: number }, boxDim: { w: number, h: number, x: number, y: number }) {
@@ -283,7 +285,7 @@ function genXmlSlideTreeStart (): string {
  *
  * The local table counter and object index determine OOXML non-visual IDs, so callers must keep this phase contiguous.
  */
-function genXmlSlideObjects (slide: PresSlide | SlideLayout): string {
+function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionProps[]): string {
 	let strSlideXml = ''
 	let intTableNum = 1
 	// STEP 3: Loop over all Slide.data objects and add them to this slide
@@ -799,6 +801,10 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout): string {
 				}
 				break
 
+			case SLIDE_OBJECT_TYPES.zoom:
+				strSlideXml += genXmlZoom(slideItemObj, slide, sections, { shapeId: idx + 2, x, y, cx, cy, locationAttr })
+				break
+
 			case SLIDE_OBJECT_TYPES.chart:
 				strSlideXml += '<p:graphicFrame>'
 				strSlideXml += ' <p:nvGraphicFramePr>'
@@ -930,11 +936,11 @@ function genXmlCreationId (slide: PresSlide | SlideLayout): string {
  * @param {PresSlide|SlideLayout} slideObject - slide object created within createSlideObject
  * @return {string} XML string with <p:cSld> as the root
  */
-export function slideObjectToXml (slide: PresSlide | SlideLayout): string {
+export function slideObjectToXml (slide: PresSlide | SlideLayout, sections: SectionProps[] = []): string {
 	let strSlideXml = slide._name ? `<p:cSld name="${encodeXmlEntities(slide._name)}">` : '<p:cSld>'
 	strSlideXml += genXmlSlideBackground(slide)
 	strSlideXml += genXmlSlideTreeStart()
-	strSlideXml += genXmlSlideObjects(slide)
+	strSlideXml += genXmlSlideObjects(slide, sections)
 	strSlideXml += genXmlSlideNumber(slide)
 	strSlideXml += genXmlSlideEnd(slide)
 	return strSlideXml

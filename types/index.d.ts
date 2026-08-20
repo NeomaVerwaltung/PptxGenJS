@@ -2967,6 +2967,53 @@ declare namespace PptxGenJS {
 		 */
 		style?: FontEmbedStyle
 	}
+	export interface ZoomBaseProps extends PositionProps, ObjectNameProps {
+		/**
+		 * Thumbnail shown for the zoom (base64 image)
+		 * - PowerPoint replaces it with a live thumbnail of the target when the file is opened; this is
+		 *   what every other consumer shows, and what the `mc:Fallback` picture uses
+		 * @default a 1x1 transparent placeholder
+		 * @example 'image/png;base64,iVBORw0KGgo...'
+		 */
+		cover?: string
+		/**
+		 * Return to the parent slide when the zoom finishes
+		 * @default true
+		 */
+		returnToParent?: boolean
+		/**
+		 * Keep the parent slide's background while zooming
+		 * @default true
+		 */
+		showBg?: boolean
+		/**
+		 * Zoom transition duration (milliseconds)
+		 */
+		transitionDur?: number
+		/**
+		 * Alt text for the zoom object
+		 */
+		altText?: string
+	}
+	export interface SlideZoomProps extends ZoomBaseProps {
+		/**
+		 * Slide to zoom to, 1-based
+		 */
+		slideNumber: number
+	}
+	export interface SectionZoomProps extends ZoomBaseProps {
+		/**
+		 * Title of the section to zoom to, as passed to `addSection()`
+		 */
+		sectionTitle: string
+	}
+	export interface SummaryZoomProps extends ZoomBaseProps {
+		/**
+		 * Titles of the sections the summary links to, in order
+		 * - at least one is required
+		 */
+		sectionTitles: string[]
+	}
 	export interface AddSlideProps {
 		masterName?: string // TODO: 20200528: rename to "masterTitle" (createMaster uses `title` so lets be consistent)
 		sectionTitle?: string
@@ -3149,6 +3196,21 @@ declare namespace PptxGenJS {
 		 * @return {Slide} this Slide
 		 */
 		addMedia(options: MediaProps): Slide
+		/**
+		 * Add a zoom to another slide
+		 * @param options - zoom props
+		 */
+		addZoom(options: SlideZoomProps): Slide
+		/**
+		 * Add a zoom to a section
+		 * @param options - zoom props
+		 */
+		addSectionZoom(options: SectionZoomProps): Slide
+		/**
+		 * Add a summary zoom linking several sections
+		 * @param options - zoom props
+		 */
+		addSummaryZoom(options: SummaryZoomProps): Slide
 		/**
 		 * Add speaker notes to Slide
 		 * @docs https://gitbrent.github.io/PptxGenJS/docs/speaker-notes.html

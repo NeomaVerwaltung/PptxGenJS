@@ -11,7 +11,9 @@ Two rules keep this page truthful, both enforced by `test/ms-pptx-profile.test.t
 1. An extension may only be written through the `OOXML_EXT` registry in `src/core-enums.ts` — an
    inline GUID literal in emitting code fails the test.
 2. Every extension that reaches a generated package must sit inside an `extLst` of the same namespace
-   prefix, which is what [MS-PPTX] §2.2 requires of a conforming extension.
+   prefix, which is what [MS-PPTX] §2.2 requires of a conforming extension. Markup that *replaces*
+   standard elements rather than extending them — zoom objects, modern transitions, Office math — uses
+   the other wrapper §2.2 allows, `mc:AlternateContent` with a `mc:Fallback`.
 
 ## References
 
@@ -34,6 +36,10 @@ Two rules keep this page truthful, both enforced by `test/ms-pptx-profile.test.t
 | `p14:media` | `p:nvPr/p:extLst` | `{DAA4B4D4-…}` | powerpoint/2010/main | §2.3.3.14 | `addMedia()` (embedded audio/video) |
 | `c15:*` | `c:extLst` | `{CE6537A1-…}` | drawing/2012/chart | MS-ODRAWXML | `showLeaderLines`, extended data labels |
 | `c16:uniqueId` | `c:extLst` | `{C3380CC4-…}` | drawing/2014/chart | MS-ODRAWXML | none (chart series identity) |
+| `p16:sldZm` | `p:spTree` via `mc:AlternateContent` | n/a (`mc:Choice Requires="p16"`) | powerpoint/2016/slidezoom | §2.2.15 / §2.10 | `slide.addZoom()` |
+| `p16:sectionZm` | `p:spTree` via `mc:AlternateContent` | n/a (`mc:Choice Requires="p16"`) | powerpoint/2016/sectionzoom | §2.2.15 / §2.9 | `slide.addSectionZoom()` |
+| `p16:summaryZm` | `p:spTree` via `mc:AlternateContent` | n/a (`mc:Choice Requires="p16"`) | powerpoint/2016/summaryzoom | §2.2.15 / §2.11 | `slide.addSummaryZoom()` |
+| `p166:zmPr` | inside a zoom object | n/a | powerpoint/2016/6/main | §2.2.15 | zoom `returnToParent`/`showBg`/`transitionDur` |
 
 Each row's package contract is asserted in `test/contracts.test.ts` or `test/issues.test.ts`, and the
 LibreOffice round-trip in `test/office-open.test.ts` (`npm run test:office`) covers them end to end.
@@ -52,7 +58,6 @@ distinguishes "unsupported" from "overlooked":
 | Design elements, Designer properties/tags | §2.2.17, §2.2.19, §2.2.20 | Server-driven Designer metadata with no authoring meaning |
 | Classification outcomes | §2.2.18 | Compliance metadata; must stay opt-in and is not implemented |
 | Modern placeholder type extension | §2.22.1.1 | `p:ph@type` alone is currently emitted, per ECMA-376 |
-| Zoom objects (slide/section/summary) | §2.2.15, §2.9–2.11 | Needs cover-image relationships and `p:pic`/`p:grpSp` fallbacks |
 
 ## Adding an extension
 
