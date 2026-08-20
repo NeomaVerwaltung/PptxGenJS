@@ -14,6 +14,14 @@ npm install @neo-ma/pptxgenjs
 yarn add @neo-ma/pptxgenjs
 ```
 
+### Std helpers (optional)
+
+Layout and diagram helpers ship as a separate, independently versioned package. See [Std Library](/std).
+
+```bash
+npm install @neo-ma/pptxgenjs-std
+```
+
 ### CDN (Browser Usage)
 
 Use the bundled or minified version via [jsDelivr](https://www.jsdelivr.com/package/npm/@neo-ma/pptxgenjs):

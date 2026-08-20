@@ -1,0 +1,15 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"noEmit": true,
+		// Tests import the core by relative path, so the program spans both packages
+		"rootDir": "../..",
+		"paths": {
+			"@neo-ma/pptxgenjs": ["../core/types/index.d.ts"]
+		}
+	},
+	"include": [
+		"src/**/*",
+		"test/**/*"
+	]
+}

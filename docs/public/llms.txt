@@ -43,6 +43,12 @@ await pres.writeFile({ fileName: "out.pptx" })
 - [Shapes and Color Schemes](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/shapes-and-schemes.md): enum values
 - [HTML to PowerPoint](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/html-to-powerpoint.md): tableToSlides
 
+## Std library
+
+Separate package `@neo-ma/pptxgenjs-std`, published independently. Plain functions over the public API - no runtime dependency on the core, `@neo-ma/pptxgenjs` is a peer used for types only.
+
+- [Std Library](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/std.md): `grid`/`gridFor` (cell placement instead of absolute inches, throws when out of range) and `waterfall` (bridge chart via stacked bars)
+
 ## Optional
 
 - [Deprecated APIs](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/deprecated.md)

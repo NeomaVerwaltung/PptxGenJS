@@ -1,0 +1,14 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"declaration": true,
+		"declarationDir": "./out/defs",
+		"outDir": "./out",
+		"rootDir": "./src" // ponytail: TS6 no longer infers this
+	},
+	"display": "Recommended",
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"include": [
+		"src/**/*"
+	]
+}

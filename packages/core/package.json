@@ -1,0 +1,87 @@
+{
+	"name": "@neo-ma/pptxgenjs",
+	"version": "4.2.0",
+	"author": {
+		"name": "Brent Ely",
+		"url": "https://github.com/gitbrent/"
+	},
+	"contributors": [
+		{
+			"name": "NEOMA GmbH",
+			"url": "https://neo-ma.de"
+		}
+	],
+	"description": "Create JavaScript PowerPoint Presentations",
+	"homepage": "https://github.com/NeomaVerwaltung/PptxGenJS#readme",
+	"license": "MIT",
+	"exports": {
+		"types": "./types/index.d.ts",
+		"import": "./dist/pptxgen.es.js",
+		"require": "./dist/pptxgen.cjs.js"
+	},
+	"main": "dist/pptxgen.cjs.js",
+	"module": "dist/pptxgen.es.js",
+	"files": [
+		"dist",
+		"types"
+	],
+	"types": "types",
+	"engines": {
+		"node": ">=20"
+	},
+	"browser": {
+		"fs": false,
+		"node:fs": false,
+		"node:http": false,
+		"node:https": false,
+		"os": false,
+		"path": false
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/NeomaVerwaltung/PptxGenJS.git"
+	},
+	"keywords": [
+		"es6-powerpoint",
+		"html-to-powerpoint",
+		"javascript-create-powerpoint",
+		"javascript-create-pptx",
+		"javascript-generate-pptx",
+		"javascript-powerpoint",
+		"javascript-powerpoint-charts",
+		"javascript-pptx",
+		"js-create-powerpoint",
+		"js-create-pptx",
+		"js-generate-powerpoint",
+		"js-powerpoint",
+		"js-powerpoint-library",
+		"js-powerpoint-pptx",
+		"node-powerpoint",
+		"officejs-alternative",
+		"react-powerpoint",
+		"slide-generator",
+		"typescript-powerpoint"
+	],
+	"bugs": {
+		"url": "https://github.com/NeomaVerwaltung/PptxGenJS/issues"
+	},
+	"scripts": {
+		"build": "rollup -c --bundleConfigAsCjs",
+		"dist": "gulp dist",
+		"prepare": "gulp dist",
+		"start": "gulp",
+		"ship": "gulp ship",
+		"watch": "rollup -cw",
+		"lint": "eslint src test",
+		"typecheck": "tsc --noEmit",
+		"test": "node --import tsx --test test/gen-utils.test.ts test/issues.test.ts test/audit-fixes.test.ts test/pptxgen.e2e.test.ts test/contracts.test.ts test/coverage.test.ts test/coverage-objects.test.ts test/ms-pptx-profile.test.ts",
+		"test:coverage": "node --import tsx --test --experimental-test-coverage test/gen-utils.test.ts test/issues.test.ts test/audit-fixes.test.ts test/pptxgen.e2e.test.ts test/contracts.test.ts test/coverage.test.ts test/coverage-objects.test.ts test/ms-pptx-profile.test.ts",
+		"test:office": "node --import tsx --test test/office-open.test.ts",
+		"check": "npm run lint && npm run typecheck && npm test",
+		"version": "node ../../scripts/sync-version.mjs && git add src/pptxgen.ts types/index.d.ts"
+	},
+	"dependencies": {
+		"image-size": "^2.0.2",
+		"jszip": "^3.10.1"
+	}
+}

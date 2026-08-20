@@ -6,9 +6,9 @@ PptxGenJS generates PresentationML that ECMA-376 defines, plus a small set of Mi
 that PowerPoint needs to render or track certain features. This page records **exactly which
 extensions are emitted**, where each one lives, and which specification defines it.
 
-Two rules keep this page truthful, both enforced by `test/ms-pptx-profile.test.ts`:
+Two rules keep this page truthful, both enforced by `packages/core/test/ms-pptx-profile.test.ts`:
 
-1. An extension may only be written through the `OOXML_EXT` registry in `src/core-enums.ts` — an
+1. An extension may only be written through the `OOXML_EXT` registry in `packages/core/src/core-enums.ts` — an
    inline GUID literal in emitting code fails the test.
 2. Every extension that reaches a generated package must sit inside an `extLst` of the same namespace
    prefix, which is what [MS-PPTX] §2.2 requires of a conforming extension. Markup that *replaces*
@@ -41,8 +41,8 @@ Two rules keep this page truthful, both enforced by `test/ms-pptx-profile.test.t
 | `p16:summaryZm` | `p:spTree` via `mc:AlternateContent` | n/a (`mc:Choice Requires="p16"`) | powerpoint/2016/summaryzoom | §2.2.15 / §2.11 | `slide.addSummaryZoom()` |
 | `p166:zmPr` | inside a zoom object | n/a | powerpoint/2016/6/main | §2.2.15 | zoom `returnToParent`/`showBg`/`transitionDur` |
 
-Each row's package contract is asserted in `test/contracts.test.ts` or `test/issues.test.ts`, and the
-LibreOffice round-trip in `test/office-open.test.ts` (`npm run test:office`) covers them end to end.
+Each row's package contract is asserted in `packages/core/test/contracts.test.ts` or `packages/core/test/issues.test.ts`, and the
+LibreOffice round-trip in `packages/core/test/office-open.test.ts` (`npm run test:office`) covers them end to end.
 
 ## Not emitted
 
@@ -67,4 +67,4 @@ distinguishes "unsupported" from "overlooked":
    Office-math paths do.
 3. Add a semantic contract test — the emitted URI, namespace, and element, plus proof that output is
    unchanged when the feature is unused.
-4. Add a row to the table above, and extend `test/office-open.test.ts` so the round-trip covers it.
+4. Add a row to the table above, and extend `packages/core/test/office-open.test.ts` so the round-trip covers it.
