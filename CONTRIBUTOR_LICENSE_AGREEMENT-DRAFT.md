@@ -15,11 +15,11 @@ or commit reference (the "Contribution").
 ## 2. Grant of Rights
 
 To the extent that the Contributor owns or controls rights in the Contribution,
-the Contributor grants NEOMA an exclusive, worldwide, perpetual, transferable,
-sublicensable right to use the Contribution in every **currently known** form
-of use. This includes the right to reproduce, modify, translate, combine,
-publish, distribute, make available to the public, license, sub-license,
-commercialise, and enforce rights in the Contribution.
+the Contributor grants NEOMA a worldwide, perpetual, irrevocable,
+non-exclusive, transferable, sublicensable right to use the Contribution in
+every **currently known** form of use. This includes the right to reproduce,
+modify, translate, combine, publish, distribute, make available to the public,
+license, sub-license, commercialise, and enforce rights in the Contribution.
 
 The Contributor consents, to the extent permitted by law, to NEOMA modifying,
 combining, publishing, and distributing the Contribution with or without
@@ -35,7 +35,7 @@ including its licence terms, contained in the Contribution.
 ## 4. Legal Limits
 
 Under German law, copyright itself remains with the author. This agreement is
-therefore a grant of exclusive rights of use, not a transfer of authorship.
+therefore a broad grant of rights of use, not a transfer of authorship.
 Rights in future or currently unknown forms of use are not granted by this
 draft and require a separate agreement in the form required by law.
 
