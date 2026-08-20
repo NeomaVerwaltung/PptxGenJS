@@ -11,6 +11,18 @@ This document describes the release process for the NEOMA distribution of PptxGe
 
 One workflow releases either. On the dispatch path the `package` input selects it; on the published-release path the tag prefix does (`std-v*` → std, anything else → core). The versions are unrelated — never bump them together.
 
+### Coupling policy
+
+std is **in beta and versioned independently** while it is `0.x`. It is not released alongside the core, and a core patch or minor never requires a std release.
+
+What ties them together is the peer range, not the version number:
+
+1. **Majors are coupled.** `peerDependencies` is a caret range, so `^4.2.0` already excludes a core `5.0.0`. When the core takes a major, std opts in deliberately — a new std major line with the peer widened (`"^4.2.0 || ^5.0.0"`) or moved, after verifying against it.
+2. **Minors set the floor.** Raise the peer floor whenever a helper starts relying on a core feature added in a minor. `waterfall` is the live example: it needs per-series `color: 'transparent'` (4.1.0) and per-point `dataLabels` (4.2.0), and on an older core it renders the wrong chart rather than failing. `packages/std/test/peer-floor.test.ts` is the one std test that imports the core by package name, so the `std-peer-floor` CI job can run it against the oldest core the manifest claims to support.
+3. **The release checks the promise.** Releasing std verifies the declared floor is actually published — easy to get wrong here, where std is developed against an unreleased core in the same worktree.
+
+**Revisit at std 1.0.** Once its API settles, lockstep versioning (std and core sharing a version, released together) becomes the simpler compatibility story and is a cheap switch. It is the wrong trade now: it would claim a stability guarantee a `0.x` package does not have, block breaking changes to std without a core major, and produce empty std releases on every core patch.
+
 ## Automatic release
 
 Run the [Release workflow](https://github.com/NeomaVerwaltung/PptxGenJS/actions/workflows/release.yml) via **Run workflow** on `master`, pick the package (`core`, `std`) and the increment (`patch`, `minor`, `major`). After an admin approves the `release` environment, the job:

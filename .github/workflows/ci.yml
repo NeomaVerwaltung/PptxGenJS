@@ -34,3 +34,30 @@ jobs:
         run: sudo apt-get update && sudo apt-get install --yes libreoffice-impress
       - name: Open generated presentation in LibreOffice
         run: PPTXGENJS_OFFICE_BIN=libreoffice npm run test:office
+
+  # The std package declares a peer floor rather than tracking the core's version. That promise is
+  # only real if the helpers are exercised against the oldest core the manifest claims to support,
+  # which is what `test/peer-floor.test.ts` (the one std test that imports the core by name) does.
+  std-peer-floor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - name: Resolve the declared peer floor
+        run: |
+          RANGE="$(node -p "require('./packages/std/package.json').peerDependencies['@neo-ma/pptxgenjs']")"
+          echo "FLOOR=$(npm view "@neo-ma/pptxgenjs@$RANGE" version --json | node -e 'const v=JSON.parse(require("fs").readFileSync(0,"utf8"));console.log(Array.isArray(v)?v[0]:v)')" >> "$GITHUB_ENV"
+      - name: Install that core over the workspace link
+        run: |
+          echo "Testing @neo-ma/pptxgenjs-std against core $FLOOR (the declared floor)"
+          mkdir -p packages/std/node_modules/@neo-ma
+          rm -rf packages/std/node_modules/@neo-ma/pptxgenjs
+          npm pack "@neo-ma/pptxgenjs@$FLOOR" --pack-destination /tmp --silent
+          mkdir -p /tmp/floor && tar -xzf "/tmp/neo-ma-pptxgenjs-$FLOOR.tgz" -C /tmp/floor
+          mv /tmp/floor/package packages/std/node_modules/@neo-ma/pptxgenjs
+      - run: npm run test -w @neo-ma/pptxgenjs-std
+

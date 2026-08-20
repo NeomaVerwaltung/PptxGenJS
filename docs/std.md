@@ -15,6 +15,12 @@ upstream API compatibility, while these helpers are free to change.
 npm install @neo-ma/pptxgenjs @neo-ma/pptxgenjs-std
 ```
 
+::: warning Beta
+`@neo-ma/pptxgenjs-std` is `0.x` and its API may still change between minor versions. It is
+versioned independently of the core: a core release never forces a std release, and the two version
+numbers are unrelated.
+:::
+
 **Requires `@neo-ma/pptxgenjs` 4.2.0 or later.** `waterfall` builds its invisible riser from a
 per-series `'transparent'` colour (4.1.0) and its signed labels from per-point data labels (4.2.0);
 on an older core both are ignored and the chart renders wrong rather than failing.

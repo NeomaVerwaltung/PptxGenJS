@@ -40,7 +40,7 @@ For PowerPoint compatibility, also consult Microsoft's [MS-OI29500 Office implem
 - Hand-written public types live in `packages/core/types/index.d.ts` and must be updated alongside API changes.
 - Anything that only produces or consumes plain option objects belongs in `packages/std/`, not the core; the core is for code that needs the internal slide object model. Std helpers type slides structurally (an object with the `addX` method they call) rather than importing the `Slide` class.
 - A new std helper is a file plus one line in its category's `index.ts`. A new std category also needs an entry in `packages/std/rollup.config.mjs` and in `exports` in `packages/std/package.json`; `src/index.ts` is a barrel and defines nothing.
-- The two packages version and release independently: core tags are `vX.Y.Z`, std tags are `std-vX.Y.Z`. One `Release` workflow serves both.
+- The two packages version and release independently: core tags are `vX.Y.Z`, std tags are `std-vX.Y.Z`. One `Release` workflow serves both. std is in beta (`0.x`) and stays independent; its only tie to the core is its `peerDependencies` floor, which must be raised whenever a helper starts using a newer core feature. See the coupling policy in `RELEASING.md`.
 
 ## Source map
 

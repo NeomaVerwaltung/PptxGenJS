@@ -12,6 +12,9 @@ compatibility, while these are opinions about layout and diagram shapes that sho
 npm install @neo-ma/pptxgenjs-std
 ```
 
+> **Beta.** This package is `0.x` and its API may change between minor versions. It is versioned
+> independently of the core - the two version numbers are unrelated.
+
 Requires `@neo-ma/pptxgenjs` 4.2.0 or later - `waterfall` relies on per-series `'transparent'`
 colours (4.1.0) and per-point data labels (4.2.0), both silently ignored by older cores.
 

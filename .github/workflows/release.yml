@@ -89,6 +89,13 @@ jobs:
           for file in $FILES; do
             test -s "$PKG_DIR/dist/$file"
           done
+      # std promises a peer floor instead of tracking the core's version. Releasing a floor that is
+      # not on npm yet is easy to do from this repo, where std is developed against unreleased core.
+      - name: Verify the declared peer floor is published
+        if: env.PKG_DIR == 'packages/std'
+        run: |
+          RANGE="$(node -p "require('./packages/std/package.json').peerDependencies['@neo-ma/pptxgenjs']")"
+          npm view "@neo-ma/pptxgenjs@$RANGE" version > /dev/null
       - name: Verify tag matches package.json version
         run: test "$TAG_PREFIX$(node -p "require('./$PKG_DIR/package.json').version")" = "$RELEASE_TAG"
       - run: npm install -g npm@latest # trusted publishing needs npm >= 11.5
