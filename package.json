@@ -45,7 +45,8 @@
 		"test:coverage": "node --import tsx --test --experimental-test-coverage test/gen-utils.test.ts test/issues.test.ts test/audit-fixes.test.ts test/pptxgen.e2e.test.ts test/contracts.test.ts test/coverage.test.ts test/coverage-objects.test.ts test/ms-pptx-profile.test.ts",
 		"test:office": "node --import tsx --test test/office-open.test.ts",
 		"check": "npm run lint && npm run typecheck && npm test",
-		"prepublishOnly": "npm run check"
+		"prepublishOnly": "npm run check",
+		"version": "node scripts/sync-version.mjs && git add src/pptxgen.ts types/index.d.ts"
 	},
 	"browser": {
 		"fs": false,
