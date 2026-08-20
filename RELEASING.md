@@ -1,6 +1,16 @@
 # Release Procedure
 
-This document describes the release process for the NEOMA distribution of PptxGenJS. A published GitHub Release triggers the npm publication and bundle upload.
+This document describes the release process for the NEOMA distribution of PptxGenJS. There are two paths, both running the same `Release` workflow: the **automatic release** below (recommended), and a manually published GitHub Release.
+
+## Automatic release
+
+Run the [Release workflow](https://github.com/NeomaVerwaltung/PptxGenJS/actions/workflows/release.yml) via **Run workflow** on `master` and pick the increment (`patch`, `minor`, `major`). After an admin approves the `release` environment, the job:
+
+1. Bumps `package.json`, `src/pptxgen.ts` and the `types/index.d.ts` header (`npm version` runs `scripts/sync-version.mjs`), commits `chore: release vX.Y.Z` and pushes the `vX.Y.Z` tag.
+2. Rebuilds `dist/`, verifies every bundle, and publishes to npm under the `latest` tag.
+3. Creates the GitHub Release with generated notes and attaches the bundles.
+
+Update `CHANGELOG.md` and the docs before starting the run — the workflow only touches version strings. For a beta, use the manual path below; the dispatch inputs cannot express a pre-release tag.
 
 ## Beta releases
 
@@ -8,7 +18,9 @@ Follow the standard preparation below, then create and publish a **pre-release**
 
 ## Build and update files
 
-1. Update the version in `package.json`.
+Only needed for the manual path; the automatic release handles steps 1, 2 and 5.
+
+1. Update the version in `package.json` (or run `npm version <level> --no-git-tag-version`, which syncs steps 2 and 5 for you).
 2. Update the version constant in `src/pptxgen.ts` (for example, `const VERSION = '4.0.1'`).
 3. Update `CHANGELOG.md` with the release date.
 4. Build the library: npm scripts > `ship`.
@@ -36,7 +48,7 @@ Confirm the following before publishing:
 2. The version constant in `src/pptxgen.ts` is updated.
 3. The version in the `types/index.d.ts` header is updated.
 
-## Release: GitHub
+## Release: GitHub (manual path)
 
 1. Commit all changes.
 2. Merge the working branch into `main`.
