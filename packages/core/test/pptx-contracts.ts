@@ -81,7 +81,7 @@ async function assertContentTypes (zip: JSZip, packageParts: Set<string>): Promi
 	for (const entry of asXmlObjects(types.Default)) {
 		const extension = entry['@_Extension']
 		const contentType = entry['@_ContentType']
-		assert.equal(typeof extension, 'string', 'content type default without Extension')
+		assert.ok(typeof extension === 'string', 'content type default without Extension')
 		assert.equal(typeof contentType, 'string', `content type default without ContentType for ${extension}`)
 		const normalizedExtension = extension.toLowerCase()
 		assert.ok(!defaults.has(normalizedExtension), `duplicate content type default for .${extension}`)
@@ -92,7 +92,7 @@ async function assertContentTypes (zip: JSZip, packageParts: Set<string>): Promi
 	for (const entry of asXmlObjects(types.Override)) {
 		const partName = entry['@_PartName']
 		const contentType = entry['@_ContentType']
-		assert.equal(typeof partName, 'string', 'content type override without PartName')
+		assert.ok(typeof partName === 'string', 'content type override without PartName')
 		assert.equal(typeof contentType, 'string', `content type override without ContentType for ${partName}`)
 		const normalizedPartName = partName.replace(/^\//, '')
 		assert.ok(packageParts.has(normalizedPartName), `content type points to missing package part: ${normalizedPartName}`)
@@ -105,6 +105,9 @@ async function assertContentTypes (zip: JSZip, packageParts: Set<string>): Promi
 	}
 }
 
+// @note these files are typechecked through `packages/std` (which includes its `test/**`), not by
+// core's own `tsc --noEmit`. Assert with `assert.ok(typeof x === 'string')` rather than
+// `assert.equal(typeof x, 'string')`: only the former narrows the parsed `unknown` values.
 function relationshipsFromXml (xml: string, name: string): Relationship[] {
 	const parsed = parseXml(xml, name)
 	const relationships = parsed.Relationships
@@ -114,8 +117,8 @@ function relationshipsFromXml (xml: string, name: string): Relationship[] {
 		const id = entry['@_Id']
 		const target = entry['@_Target']
 		const targetMode = entry['@_TargetMode']
-		assert.equal(typeof id, 'string', `relationship without Id in ${name}`)
-		assert.equal(typeof target, 'string', `relationship without Target in ${name}`)
+		assert.ok(typeof id === 'string', `relationship without Id in ${name}`)
+		assert.ok(typeof target === 'string', `relationship without Target in ${name}`)
 		assert.ok(targetMode === undefined || typeof targetMode === 'string', `invalid TargetMode in ${name}`)
 		return { id, target, targetMode }
 	})

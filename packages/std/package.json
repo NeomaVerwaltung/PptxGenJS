@@ -1,0 +1,64 @@
+{
+	"name": "@neo-ma/pptxgenjs-std",
+	"version": "0.1.0",
+	"author": {
+		"name": "NEOMA GmbH",
+		"url": "https://neo-ma.de"
+	},
+	"description": "Layout and diagram helpers for @neo-ma/pptxgenjs",
+	"homepage": "https://github.com/NeomaVerwaltung/PptxGenJS#readme",
+	"license": "MIT",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.mjs",
+			"require": "./dist/index.cjs"
+		},
+		"./layout": {
+			"types": "./dist/layout/index.d.ts",
+			"import": "./dist/layout/index.mjs",
+			"require": "./dist/layout/index.cjs"
+		},
+		"./charts": {
+			"types": "./dist/charts/index.d.ts",
+			"import": "./dist/charts/index.mjs",
+			"require": "./dist/charts/index.cjs"
+		}
+	},
+	"main": "dist/index.cjs",
+	"module": "dist/index.mjs",
+	"types": "dist/index.d.ts",
+	"files": [
+		"dist"
+	],
+	"engines": {
+		"node": ">=20"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/NeomaVerwaltung/PptxGenJS.git",
+		"directory": "packages/std"
+	},
+	"bugs": {
+		"url": "https://github.com/NeomaVerwaltung/PptxGenJS/issues"
+	},
+	"keywords": [
+		"pptxgenjs",
+		"powerpoint",
+		"pptx",
+		"waterfall-chart",
+		"slide-layout"
+	],
+	"scripts": {
+		"build": "rollup -c --bundleConfigAsCjs && tsc -p tsconfig.build.json",
+		"lint": "eslint src test",
+		"prepare": "npm run build",
+		"typecheck": "tsc --noEmit",
+		"test": "node --import tsx --test test/layout.test.ts test/charts.test.ts test/exports.test.ts",
+		"test:coverage": "node --import tsx --test --experimental-test-coverage test/layout.test.ts test/charts.test.ts test/exports.test.ts",
+		"check": "npm run lint && npm run typecheck && npm test"
+	},
+	"peerDependencies": {
+		"@neo-ma/pptxgenjs": "^4"
+	}
+}
