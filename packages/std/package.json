@@ -60,7 +60,7 @@
 		"check": "npm run lint && npm run typecheck && npm test"
 	},
 	"peerDependencies": {
-		"@neo-ma/pptxgenjs": "^4"
+		"@neo-ma/pptxgenjs": "^4.2.0"
 	},
 	"devDependencies": {
 		"@neo-ma/pptxgenjs": "^4.2.0"

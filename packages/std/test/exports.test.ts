@@ -74,11 +74,14 @@ test('every exports target is published', () => {
 test('the core is a peer, not a runtime dependency', () => {
 	// A `dependencies` entry would let a consumer end up with a second copy of the core at another
 	// version, while these helpers act on the slide objects the consumer's own instance created.
-	assert.equal(PACKAGE.peerDependencies['@neo-ma/pptxgenjs'], '^4')
+	// `waterfall` needs per-series `color: 'transparent'` (4.1.0) for the riser and per-point
+	// `dataLabels` (4.2.0) for the signed labels. A wider range would report a satisfied peer and
+	// then render the wrong chart, so the floor tracks the newest feature in use.
+	assert.equal(PACKAGE.peerDependencies['@neo-ma/pptxgenjs'], '^4.2.0')
 	assert.equal(PACKAGE.dependencies, undefined, 'std must stay dependency-free at runtime')
 	// Declared as a dev dependency too, so this package resolves the core's types on its own rather
-	// than by accident of sharing a workspace with it.
-	assert.match(PACKAGE.devDependencies['@neo-ma/pptxgenjs'], /^\^4/)
+	// than by accident of sharing a workspace with it - at the same floor it promises consumers.
+	assert.equal(PACKAGE.devDependencies['@neo-ma/pptxgenjs'], PACKAGE.peerDependencies['@neo-ma/pptxgenjs'])
 
 	const sources = categories.flatMap(category =>
 		readdirSync(join(SRC, category)).map(file => readFileSync(join(SRC, category, file), 'utf8'))

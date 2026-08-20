@@ -12,6 +12,9 @@ compatibility, while these are opinions about layout and diagram shapes that sho
 npm install @neo-ma/pptxgenjs-std
 ```
 
+Requires `@neo-ma/pptxgenjs` 4.2.0 or later - `waterfall` relies on per-series `'transparent'`
+colours (4.1.0) and per-point data labels (4.2.0), both silently ignored by older cores.
+
 `@neo-ma/pptxgenjs` is a **peer** dependency, not a regular one: these helpers act on the slide
 objects your own presentation created, so a second copy of the core at another version would be
 exactly wrong. It is used for types only - nothing here imports it at runtime.
