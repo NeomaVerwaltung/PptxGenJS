@@ -12,7 +12,15 @@ compatibility, while these are opinions about layout and diagram shapes that sho
 npm install @neo-ma/pptxgenjs-std
 ```
 
-`@neo-ma/pptxgenjs` is a peer dependency, used for types only - nothing here imports it at runtime.
+> **Beta.** This package is `0.x` and its API may change between minor versions. It is versioned
+> independently of the core - the two version numbers are unrelated.
+
+Requires `@neo-ma/pptxgenjs` 4.2.0 or later - `waterfall` relies on per-series `'transparent'`
+colours (4.1.0) and per-point data labels (4.2.0), both silently ignored by older cores.
+
+`@neo-ma/pptxgenjs` is a **peer** dependency, not a regular one: these helpers act on the slide
+objects your own presentation created, so a second copy of the core at another version would be
+exactly wrong. It is used for types only - nothing here imports it at runtime.
 The package ships `dist/index.mjs` and `dist/index.cjs`, so plain Node resolves both without a
 bundler. It versions independently from the core; its release tags are `std-vX.Y.Z`.
 

@@ -15,8 +15,19 @@ upstream API compatibility, while these helpers are free to change.
 npm install @neo-ma/pptxgenjs @neo-ma/pptxgenjs-std
 ```
 
-`@neo-ma/pptxgenjs` is a peer dependency used for types only - the helpers never import it at
-runtime. The package ships `.mjs` and `.cjs` builds, so plain Node resolves both without a bundler.
+::: warning Beta
+`@neo-ma/pptxgenjs-std` is `0.x` and its API may still change between minor versions. It is
+versioned independently of the core: a core release never forces a std release, and the two version
+numbers are unrelated.
+:::
+
+**Requires `@neo-ma/pptxgenjs` 4.2.0 or later.** `waterfall` builds its invisible riser from a
+per-series `'transparent'` colour (4.1.0) and its signed labels from per-point data labels (4.2.0);
+on an older core both are ignored and the chart renders wrong rather than failing.
+
+`@neo-ma/pptxgenjs` is a **peer** dependency rather than a regular one: the helpers act on the slide
+objects your own presentation created, so a second copy of the core resolved at a different version
+would be exactly wrong. It is used for types only - nothing is imported from it at runtime. The package ships `.mjs` and `.cjs` builds, so plain Node resolves both without a bundler.
 It versions independently from the core.
 
 Helpers are grouped into categories, each reachable as its own subpath. Import from the root barrel

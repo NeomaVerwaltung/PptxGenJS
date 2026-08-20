@@ -61,9 +61,27 @@ test('the barrel and the subpaths hand back the same functions', () => {
 	assert.equal(barrel.waterfall, charts.waterfall)
 })
 
-test('the core is a peer dependency only - the helpers never import it at runtime', () => {
-	assert.equal(PACKAGE.peerDependencies['@neo-ma/pptxgenjs'], '^4')
-	assert.equal(PACKAGE.dependencies, undefined, 'std must stay dependency-free')
+test('every exports target is published', () => {
+	const targets = Object.values(PACKAGE.exports).flatMap(entry => Object.values(entry as Record<string, string>))
+	assert.ok(targets.length > 0)
+	for (const target of targets) {
+		assert.match(target, /^\.\/dist\//, `${target} is outside dist/, so \`files\` would not publish it`)
+	}
+	assert.deepEqual(PACKAGE.files, ['dist'], 'the publish list must still cover every exports target')
+	assert.equal(PACKAGE.sideEffects, false, 'pure helpers: bundlers must be free to drop unused categories')
+})
+
+test('the core is a peer, not a runtime dependency', () => {
+	// A `dependencies` entry would let a consumer end up with a second copy of the core at another
+	// version, while these helpers act on the slide objects the consumer's own instance created.
+	// `waterfall` needs per-series `color: 'transparent'` (4.1.0) for the riser and per-point
+	// `dataLabels` (4.2.0) for the signed labels. A wider range would report a satisfied peer and
+	// then render the wrong chart, so the floor tracks the newest feature in use.
+	assert.equal(PACKAGE.peerDependencies['@neo-ma/pptxgenjs'], '^4.2.0')
+	assert.equal(PACKAGE.dependencies, undefined, 'std must stay dependency-free at runtime')
+	// Declared as a dev dependency too, so this package resolves the core's types on its own rather
+	// than by accident of sharing a workspace with it - at the same floor it promises consumers.
+	assert.equal(PACKAGE.devDependencies['@neo-ma/pptxgenjs'], PACKAGE.peerDependencies['@neo-ma/pptxgenjs'])
 
 	const sources = categories.flatMap(category =>
 		readdirSync(join(SRC, category)).map(file => readFileSync(join(SRC, category, file), 'utf8'))
