@@ -3,11 +3,19 @@ name: Release
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      level:
+        description: Version increment
+        type: choice
+        default: patch
+        options: [patch, minor, major]
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     # Gate: the "release" environment has required reviewers (admins) — job waits for approval.
+    # On the dispatch path this one approval covers the version bump too.
     environment: release
     permissions:
       contents: write
@@ -15,12 +23,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.event.release.tag_name || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22.x
           cache: npm
           registry-url: https://registry.npmjs.org
+      # Dispatch path: bump + tag here. A tag pushed with GITHUB_TOKEN cannot trigger
+      # another workflow, so the whole release runs in this one job.
+      - name: Bump version and push tag
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          npm version "${{ inputs.level }}" --message "chore: release v%s"
+          git push --follow-tags
+      - name: Resolve release tag
+        run: echo "RELEASE_TAG=${RELEASE_TAG:-v$(node -p "require('./package.json').version")}" >> "$GITHUB_ENV"
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
       - run: npm ci
       # dist/ is not committed (issue #16) - `npm ci` builds it via `prepare`.
       # Require every public browser bundle before publishing or attaching assets.
@@ -30,13 +51,16 @@ jobs:
             test -s "dist/$file"
           done
       - name: Verify tag matches package.json version
-        env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: test "v$(node -p "require('./package.json').version")" = "$RELEASE_TAG"
       - run: npm install -g npm@latest # trusted publishing needs npm >= 11.5
       - run: npm publish --provenance --access public --tag "$NPM_TAG"
         env:
           NPM_TAG: ${{ github.event.release.prerelease && 'beta' || 'latest' }}
+      - name: Create the GitHub release
+        if: github.event_name == 'workflow_dispatch'
+        run: gh release create "$RELEASE_TAG" --generate-notes
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - name: Upload built bundles to the release
         run: >
           gh release upload "$RELEASE_TAG"
@@ -45,5 +69,4 @@ jobs:
           dist/pptxgen.es.js
           dist/pptxgen.min.js
         env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
           GITHUB_TOKEN: ${{ github.token }}
