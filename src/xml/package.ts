@@ -378,8 +378,13 @@ export function makeXmlPresentation (pres: IPresentationProps): string {
  * Create `ppt/presProps.xml`
  * @return {string} XML
  */
-export function makeXmlPresProps (): string {
-	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${CRLF}<p:presentationPr xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"/>`
+export function makeXmlPresProps (pres?: IPresentationProps): string {
+	const attrs = 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"'
+	// Opt-in only: without it the part stays the empty element every prior version wrote
+	if (!pres?.chartTrackingRefBased) return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${CRLF}<p:presentationPr ${attrs}/>`
+
+	const ext = `<p:ext uri="${OOXML_EXT.chartTrackingRefBased.uri}"><p15:chartTrackingRefBased xmlns:p15="${OOXML_EXT.chartTrackingRefBased.ns}" val="1"/></p:ext>`
+	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${CRLF}<p:presentationPr ${attrs}><p:extLst>${ext}</p:extLst></p:presentationPr>`
 }
 
 /**

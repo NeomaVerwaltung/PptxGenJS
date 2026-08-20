@@ -30,6 +30,8 @@ export const OOXML_EXT = {
 	svgBlip: { uri: '{96DAC541-7B7A-43D3-8B79-37D633B846F1}', ns: 'http://schemas.microsoft.com/office/drawing/2016/SVG/main' },
 	/** MS-ODRAWXML - `ahyp:hlinkClr` in `a:hlinkClick/a:extLst` (hyperlink follows text color) */
 	hyperlinkColor: { uri: '{A12FA001-AC4F-418D-AE19-62706E023703}', ns: 'http://schemas.microsoft.com/office/drawing/2018/hyperlinkcolor' },
+	/** MS-PPTX 2.2.12 / 2.4.1.1 - `p15:chartTrackingRefBased` in `p:presentationPr/p:extLst` */
+	chartTrackingRefBased: { uri: '{FD5EFAAD-0ECE-453E-9831-46B23BE46B34}', ns: 'http://schemas.microsoft.com/office/powerpoint/2012/main' },
 	/** MS-PPTX 2.2.5 / 2.3.1.25 - `p14:sectionLst` in `p:presentation/p:extLst` */
 	sections: { uri: '{521415D9-36F7-43E2-AB2F-B90AF26B5E84}', ns: 'http://schemas.microsoft.com/office/powerpoint/2010/main' },
 	/** MS-PPTX 2.2.11 / 2.4.1.6 - `p15:sldGuideLst` in `p:presentation/p:extLst` */

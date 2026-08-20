@@ -164,3 +164,55 @@ test('contract: OMML input is normalized without touching plain text output', as
 	const plainXml = await readPart(await JSZip.loadAsync((await plain.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
 	assert.doesNotMatch(plainXml, /mc:AlternateContent|a14:m|m:oMath/, 'text-only output must not gain math markup')
 })
+
+test('contract: chartTrackingRefBased is on by default and can be turned off', async () => {
+	const withChart = (pptx: pptxgen): void => {
+		pptx.addSlide().addChart(pptx.ChartType.bar, [{ name: 'Sales', labels: ['Q1'], values: [10] }], { x: 1, y: 1, w: 4, h: 3 })
+	}
+	// @note chart part numbering is process-global, so resolve the part rather than assuming `chart1.xml`
+	const chartPart = (source: JSZip): string => {
+		const name = Object.keys(source.files).find(file => /^ppt\/charts\/chart\d+\.xml$/.test(file))
+		assert.ok(name, 'chart part missing')
+		return name
+	}
+
+	// DEFAULT: PowerPoint writes this on every presentation it creates, so PptxGenJS does too
+	const on = new pptxgen()
+	assert.equal(on.chartTrackingRefBased, true, 'chartTrackingRefBased should default to true')
+	withChart(on)
+	const onZip = await JSZip.loadAsync((await on.write({ outputType: 'nodebuffer' })) as Buffer)
+	await assertPptxPackageContracts(onZip)
+	const onXml = await readPart(onZip, 'ppt/presProps.xml')
+	// MS-PPTX 2.2 requires extensions to sit inside an extLst wrapper with the URI from 2.2.12
+	assert.match(
+		onXml,
+		/<p:presentationPr [^>]*><p:extLst><p:ext uri="\{FD5EFAAD-0ECE-453E-9831-46B23BE46B34\}"><p15:chartTrackingRefBased xmlns:p15="http:\/\/schemas\.microsoft\.com\/office\/powerpoint\/2012\/main" val="1"\/><\/p:ext><\/p:extLst><\/p:presentationPr>$/,
+		'chartTrackingRefBased extension missing or malformed'
+	)
+
+	// OFF: the part goes back to the empty element written before this property existed
+	const off = new pptxgen()
+	off.chartTrackingRefBased = false
+	withChart(off)
+	const offZip = await JSZip.loadAsync((await off.write({ outputType: 'nodebuffer' })) as Buffer)
+	const offXml = await readPart(offZip, 'ppt/presProps.xml')
+	assert.doesNotMatch(offXml, /extLst|chartTrackingRefBased/, 'disabling must remove the extension')
+	assert.match(offXml, /<p:presentationPr [^>]*\/>$/, 'disabled presProps.xml must be the empty element')
+
+	// This is a presentation-level flag: it must not touch chart output either way, which is what
+	// makes the default safe to change - slides stay visually identical
+	assert.equal(await readPart(onZip, chartPart(onZip)), await readPart(offZip, chartPart(offZip)), 'chart XML changed')
+
+	// a non-boolean from plain JS must not silently flip the flag in either direction
+	const warnings: string[] = []
+	const origWarn = console.warn
+	console.warn = (msg: string) => warnings.push(String(msg))
+	try {
+		const bogus = new pptxgen()
+		;(bogus as unknown as { chartTrackingRefBased: unknown }).chartTrackingRefBased = 'no'
+		assert.equal(bogus.chartTrackingRefBased, true, 'a non-boolean must leave the default in place')
+	} finally {
+		console.warn = origWarn
+	}
+	assert.ok(warnings.some(warning => warning.includes('chartTrackingRefBased must be a boolean')), 'a non-boolean must warn')
+})
