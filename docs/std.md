@@ -131,6 +131,27 @@ row(area, [1, 0]); // Error: row: every weight must be > 0 (got [1, 0])
 row({ x: 0, y: 0, w: 4, h: 2 }, 5, 1); // Error: row: gap 1 leaves no room across 4
 ```
 
+### `cm` and `pt` - inches, from the unit you designed in
+
+Every `addX` option is in inches, and font sizes are in points. A layout specified in centimetres -
+most of them outside the US - otherwise carries a `/ 2.54` at every call site until one of them is
+wrong:
+
+```typescript
+import { cm, grid, pt } from "@neo-ma/pptxgenjs-std";
+
+slide.addText("Titel", { x: cm(2.5), y: cm(1.8), w: cm(20), h: cm(2) });
+
+// A4 landscape, in the units the page is specified in
+const at = grid({ w: cm(29.7), h: cm(21), margin: cm(1.27) });
+
+// A length given in points, where the option wants inches
+slide.addShape("line", { x: 1, y: pt(18), w: 4, h: 0 });
+```
+
+Both take a finite number and return inches; anything else throws rather than placing content at
+`NaN`. Negative values are legal - an offset can point the other way.
+
 ## `waterfall` - bridge chart
 
 PowerPoint has no waterfall chart type reachable through ECMA-376 `c:barChart`. `waterfall` builds
@@ -259,6 +280,27 @@ does not fit - the text is too long for the box at any size in range, and you ge
 than a silent overflow. `margin` (a number or a TRBL tuple, inches) is subtracted from the area
 first, for text boxes with inset.
 
+## `checkOverflow` - does this size fit
+
+`fitText` answers "what size fits". `checkOverflow` answers "does this size fit", which is the
+question a QA pass over an already-built deck asks - the size is already chosen, and PowerPoint
+renders an overflowing box without complaint, so the file looks correct and the slide does not:
+
+```typescript
+import { checkOverflow } from "@neo-ma/pptxgenjs-std";
+
+const { overflows, overflowBy, lines } = checkOverflow(box, body, { fontSize: 11 });
+if (overflows) findings.push(`text exceeds its box by ${overflowBy.toFixed(2)}in`);
+```
+
+`overflowBy` is the height beyond the area in inches, `0` when the text fits, so a report can say
+how far something spills instead of only that it does. It takes the same `margin` as `fitText` and
+the same measurement options as `measureText` - minus `w`, which the area supplies.
+
+Height only: `measureText` breaks a word too long for its line, so the measured width never exceeds
+the box. PowerPoint spills such a word instead of breaking it; `lines` shows where the break was
+assumed.
+
 ## `paginateTable` - a table across slides, measured
 
 The core's `autoPage` decides where rows break from a per-character constant, which is why it ships
@@ -334,6 +376,8 @@ import type {
     MeasureProps,
     Measurement,
     FitTextProps,
+    CheckOverflowProps,
+    OverflowResult,
     PaginateTableProps,
     TableFromHtmlProps,
 } from "@neo-ma/pptxgenjs-std";

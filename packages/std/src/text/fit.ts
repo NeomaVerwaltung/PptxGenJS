@@ -78,3 +78,48 @@ export function fitText (area: FitTextArea, text: string, props: FitTextProps = 
 
 	return { ...measure(low), fontSize: low, overflows: false }
 }
+
+export interface CheckOverflowProps extends Omit<MeasureProps, 'w'> {
+	/**
+	 * Text-box margin subtracted from the area before measuring, inches.
+	 * The core's default cell margin is 0.05 vertical / 0.1 horizontal. @default 0
+	 */
+	margin?: number | [number, number, number, number]
+}
+
+export interface OverflowResult extends Measurement {
+	/** True when the wrapped text does not fit the area at this size */
+	overflows: boolean
+	/** Inches the wrapped text exceeds the area height by, 0 when it fits */
+	overflowBy: number
+}
+
+/**
+ * Whether text fits a box at a given size, and by how much it does not.
+ *
+ * `fitText` answers "what size fits"; this answers "does this size fit", which is the question a
+ * QA pass over an already-built deck asks. PowerPoint silently spills text past a shape, so an
+ * overflowing box looks correct in the file and wrong on the screen.
+ *
+ * Height only: `measureText` breaks a word too long for the line, so measured width never exceeds
+ * the box. PowerPoint spills such a word instead - `lines` shows where the break was assumed.
+ *
+ * @example
+ * const { overflows, overflowBy } = checkOverflow(box, body, { fontSize: 11 })
+ * if (overflows) findings.push(`text exceeds its box by ${overflowBy.toFixed(2)}in`)
+ */
+export function checkOverflow (area: FitTextArea, text: string, props: CheckOverflowProps = {}): OverflowResult {
+	const { margin, ...measureProps } = props
+
+	if (!(area.w > 0) || !(area.h > 0)) throw new Error(`checkOverflow: area must have positive w and h (got ${area.w}x${area.h})`)
+
+	const [top, right, bottom, left] = resolveMargin(margin)
+	const w = area.w - left - right
+	const h = area.h - top - bottom
+	if (!(w > 0) || !(h > 0)) throw new Error(`checkOverflow: margin leaves no room in ${area.w}x${area.h}`)
+
+	const result = measureText(text, { ...measureProps, w })
+	const overflowBy = Math.max(0, result.h - h)
+
+	return { ...result, overflows: overflowBy > 0, overflowBy }
+}

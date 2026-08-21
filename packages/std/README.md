@@ -56,6 +56,19 @@ const [left, right] = row(body, [1, 2])
 
 Output is the same `{ x, y, w, h }` shape as the input, so slots nest.
 
+## `cm` / `pt` - inches, from the unit you designed in
+
+Every `addX` option is in inches. A layout specified in centimetres - most of them outside the US -
+otherwise gets a `/ 2.54` at every call site until one of them is wrong.
+
+```ts
+import { cm, grid, pt } from '@neo-ma/pptxgenjs-std'
+
+slide.addText('Titel', { x: cm(2.5), y: cm(1.8), w: cm(20), h: cm(2) })
+const at = grid({ w: cm(33.87), h: cm(19.05), margin: cm(1.27) })
+slide.addShape('line', { x: 1, y: pt(18), w: 4, h: 0 })
+```
+
 ## `measureText` / `fitText` - text size, computed
 
 Nothing in a `.pptx` records where text wraps. `measureText` works it out, using a browser canvas
@@ -68,6 +81,16 @@ import { measureText, fitText } from '@neo-ma/pptxgenjs-std'
 
 const { h } = measureText(paragraph, { w: 4, fontSize: 14 })
 const { fontSize } = fitText({ w: 4, h: 2 }, headline)
+```
+
+`checkOverflow` is the other direction - the size is fixed, the question is whether it fits, which is
+what a QA pass over a finished deck asks. It reports `overflowBy` in inches, so a finding can say how
+far the text spills rather than only that it does.
+
+```ts
+import { checkOverflow } from '@neo-ma/pptxgenjs-std'
+
+const { overflows, overflowBy } = checkOverflow(box, body, { fontSize: 11 })
 ```
 
 `registerFontMetrics(face, { widths })` adds a font; `scripts/extract-font-metrics.mjs` generates the

@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import pptxgen from '../../core/src/pptxgen'
-import { grid, gridFor, row, column } from '../src/layout'
+import { grid, gridFor, row, column, cm, pt } from '../src/layout'
 
 /** Grid maths lands on repeating fractions; compare at a tolerance no slide can render past. */
 const near = (actual: number, expected: number, what: string): void => {
@@ -151,4 +151,20 @@ test('row/column: reject what would silently misplace content', () => {
 	assert.throws(() => row(area, 2, -1), /gap must be >= 0/)
 	assert.throws(() => row(area, 5, 1), /leaves no room across 4/)
 	assert.throws(() => column(area, 5, 1), /leaves no room across 2/)
+})
+
+test('cm/pt: convert to the inches every addX option wants', () => {
+	near(cm(2.54), 1, 'one inch of centimetres')
+	near(cm(0), 0, 'zero converts')
+	near(cm(-1.27), -0.5, 'negative offsets are legal positions')
+	near(pt(72), 1, 'one inch of points')
+	near(pt(18), 0.25, 'a quarter inch')
+	// A4 landscape, the metric page these exist for
+	near(cm(29.7), 11.692913385826772, 'A4 width')
+})
+
+test('cm/pt: reject what would place content at NaN', () => {
+	assert.throws(() => cm(Number.NaN), /cm: value must be a finite number/)
+	assert.throws(() => cm(Number.POSITIVE_INFINITY), /cm: value must be a finite number/)
+	assert.throws(() => pt(Number.NaN), /pt: value must be a finite number/)
 })
