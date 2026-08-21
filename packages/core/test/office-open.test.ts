@@ -35,6 +35,7 @@ test('office: LibreOffice opens and converts a generated presentation', async ()
 		const slide = pptx.addSlide({ transition: { type: 'wipe', direction: 'left', speed: 'slow' } })
 		slide.creationId = true
 		slide.addZoom({ slideNumber: 2, x: 6, y: 0.5, w: 2, h: 1.2 })
+		slide.addComment({ text: 'consumer smoke comment', author: 'Ada Lovelace', x: 4, y: 2, created: '2026-08-20T09:00:00Z', replies: [{ text: 'ack', author: 'Grace Hopper', created: '2026-08-20T10:00:00Z' }] })
 		slide.addText('OOXML consumer smoke test', { x: 0.5, y: 0.5, w: 5, h: 0.5, animation: { type: 'fadeIn' } })
 		slide.addText([
 			{ text: 'ratio ' },

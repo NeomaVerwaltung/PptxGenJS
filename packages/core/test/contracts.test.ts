@@ -936,3 +936,117 @@ test('contract: presentations without zooms are unchanged', async () => {
 	assert.doesNotMatch(xml, /mc:AlternateContent|p16:|p166:/, 'a slide without zooms must not gain zoom markup')
 	assert.equal(Object.keys(plainZip.files).filter(file => /^ppt\/media\/.+/.test(file)).length, 0, 'no cover images may be created')
 })
+
+test('contract: comments add author and comment parts wired to the slide', async () => {
+	const pptx = new pptxgen()
+	pptx.commentAuthors = [{ name: 'Ada Lovelace', initials: 'AL', userId: 'ada@example.com', providerId: 'AD' }]
+	const reviewed = pptx.addSlide()
+	reviewed.addText('review me', { x: 1, y: 1, w: 4, h: 1 })
+	reviewed.addComment({
+		text: 'Check this figure',
+		author: 'Ada Lovelace',
+		x: 4,
+		y: 2,
+		created: '2026-08-20T09:00:00Z',
+		replies: [{ text: 'Fixed', author: 'Grace Hopper', created: '2026-08-20T10:00:00Z' }],
+	})
+	reviewed.addComment({ text: 'Resolved thread', author: 'Grace Hopper', resolved: true, created: '2026-08-20T11:00:00Z' })
+	pptx.addSlide().addText('no comments here', { x: 1, y: 1, w: 3, h: 1 })
+
+	const cmZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	// validates that every part is declared and every relationship resolves
+	await assertPptxPackageContracts(cmZip)
+
+	// only the slide with comments gets a part
+	assert.ok(cmZip.file('ppt/comments/commentSlide1.xml'), 'comment part missing')
+	assert.equal(cmZip.file('ppt/comments/commentSlide2.xml'), null, 'a slide without comments must not get a part')
+
+	// content types (MS-PPTX 2.1.5 / 2.1.6)
+	const types = await readPart(cmZip, '[Content_Types].xml')
+	assert.match(types, /<Override PartName="\/ppt\/authors\.xml" ContentType="application\/vnd\.ms-powerpoint\.authors\+xml"\/>/, 'authors content type missing')
+	assert.match(types, /<Override PartName="\/ppt\/comments\/commentSlide1\.xml" ContentType="application\/vnd\.ms-powerpoint\.comments\+xml"\/>/, 'comments content type missing')
+
+	// the author part is reached from the presentation; the comment part only from its slide
+	assert.match(await readPart(cmZip, 'ppt/_rels/presentation.xml.rels'), /Type="http:\/\/schemas\.microsoft\.com\/office\/2018\/10\/relationships\/authors" Target="authors\.xml"/, 'authors relationship missing')
+	const slideRels = await readPart(cmZip, 'ppt/slides/_rels/slide1.xml.rels')
+	const commentRelId = /<Relationship Id="(rId\d+)" Type="http:\/\/schemas\.microsoft\.com\/office\/2018\/10\/relationships\/comments" Target="\.\.\/comments\/commentSlide1\.xml"\/>/.exec(slideRels)?.[1]
+	assert.ok(commentRelId, 'slide comment relationship missing')
+
+	// the `p188:commentRel` pointer must name that same relationship, and sit in the p:sld extLst
+	const slideXml = await readPart(cmZip, 'ppt/slides/slide1.xml')
+	assert.match(
+		slideXml,
+		new RegExp(`<p:extLst><p:ext uri="\\{6950BFC3-D8DA-4A85-94F7-54DA5524770B\\}"><p188:commentRel xmlns:p188="[^"]+" r:id="${commentRelId}"\\/><\\/p:ext><\\/p:extLst><\\/p:sld>$`),
+		'commentRel pointer missing, misplaced, or pointing at the wrong relationship'
+	)
+
+	// authors: the declared one keeps its metadata, the reply-only one is added with derived initials
+	const authors = await readPart(cmZip, 'ppt/authors.xml')
+	assert.match(authors, /<p188:author id="(\{[0-9a-f-]{36}\})" name="Ada Lovelace" initials="AL" userId="ada@example\.com" providerId="AD"\/>/, 'declared author lost its metadata')
+	assert.match(authors, /<p188:author id="\{[0-9a-f-]{36}\}" name="Grace Hopper" initials="GH" userId="" providerId="None"\/>/, 'author named only by a comment was not added')
+	assert.equal([...authors.matchAll(/<p188:author /g)].length, 2, 'authors must be deduped')
+
+	// comments: anchor moniker, position, thread, and text
+	const comments = await readPart(cmZip, 'ppt/comments/commentSlide1.xml')
+	const slideId = /<p:sldId id="(\d+)"/.exec(await readPart(cmZip, 'ppt/presentation.xml'))?.[1]
+	assert.match(comments, new RegExp(`<pc:sldMkLst><pc:docMkLst><pc:docMk/></pc:docMkLst><pc:sldMk sldId="${slideId}"/></pc:sldMkLst>`), 'comment anchor moniker wrong')
+	assert.match(comments, /<p188:pos x="3657600" y="1828800"\/>/, 'comment anchor position wrong (4in, 2in)')
+	assert.match(comments, /<p188:replyLst><p188:reply [^>]*created="2026-08-20T10:00:00Z">.*?<a:t>Fixed<\/a:t>/, 'reply missing')
+	assert.match(comments, /created="2026-08-20T11:00:00Z" status="resolved">/, 'resolved status missing')
+	assert.match(comments, /<a:t>Check this figure<\/a:t>/, 'comment text missing')
+	assert.equal([...comments.matchAll(/<p188:cm /g)].length, 2, 'expected two comments on the slide')
+
+	// derived ids must be valid GUIDs - a mnemonic letter like `r` is not a hex digit
+	const ids = [...authors.matchAll(/ id="(\{[^"]+\})"/g), ...comments.matchAll(/ id="(\{[^"]+\})"/g)].map(match => match[1])
+	assert.ok(ids.length >= 5, 'ids not found')
+	ids.forEach(id => {
+		assert.match(id, /^\{[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}$/, `${id} is not a valid GUID`)
+	})
+})
+
+test('contract: comments are reproducible when created timestamps are supplied', async () => {
+	const build = (): pptxgen => {
+		const pptx = new pptxgen()
+		const slide = pptx.addSlide()
+		slide.addComment({ text: 'stable', author: 'Ada', created: '2026-08-20T09:00:00Z' })
+		return pptx
+	}
+	const partOf = async (pptx: pptxgen, name: string): Promise<string> =>
+		await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), name)
+
+	assert.equal(await partOf(build(), 'ppt/comments/commentSlide1.xml'), await partOf(build(), 'ppt/comments/commentSlide1.xml'), 'comment part is not reproducible')
+	assert.equal(await partOf(build(), 'ppt/authors.xml'), await partOf(build(), 'ppt/authors.xml'), 'author part is not reproducible')
+})
+
+test('contract: invalid comment input is rejected and unused comments cost nothing', async () => {
+	const warnings: string[] = []
+	const origWarn = console.warn
+	console.warn = (msg: string) => warnings.push(String(msg))
+	let comments = ''
+	try {
+		const pptx = new pptxgen()
+		const slide = pptx.addSlide()
+		slide.addComment({ text: '   ', author: 'Ada' })
+		slide.addComment({ text: 'no author', author: '' })
+		// a half-specified anchor would place the comment at the slide origin
+		slide.addComment({ text: 'partial anchor', author: 'Ada', x: 3, created: '2026-08-20T09:00:00Z' })
+		comments = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/comments/commentSlide1.xml')
+	} finally {
+		console.warn = origWarn
+	}
+
+	assert.ok(warnings.some(w => w.includes('addComment: `text` is required')), 'blank text must warn')
+	assert.ok(warnings.some(w => w.includes('addComment: `author` is required')), 'blank author must warn')
+	assert.ok(warnings.some(w => w.includes('anchored comment needs both `x` and `y`')), 'partial anchor must warn')
+	assert.equal([...comments.matchAll(/<p188:cm /g)].length, 1, 'only the valid comment may be emitted')
+	assert.doesNotMatch(comments, /<p188:pos/, 'a partial anchor must not be written')
+	assert.doesNotMatch(comments, /NaN|undefined/, 'no invalid attribute values')
+
+	// nothing is added to a presentation that never calls addComment()
+	const plain = new pptxgen()
+	plain.addSlide().addText('quiet', { x: 1, y: 1, w: 2, h: 1 })
+	const plainZip = await JSZip.loadAsync((await plain.write({ outputType: 'nodebuffer' })) as Buffer)
+	assert.equal(Object.keys(plainZip.files).filter(file => /authors\.xml|comments\//.test(file)).length, 0, 'no comment parts or folder may be created')
+	assert.doesNotMatch(await readPart(plainZip, '[Content_Types].xml'), /authors|comments/, 'no comment content types when unused')
+	assert.doesNotMatch(await readPart(plainZip, 'ppt/slides/slide1.xml'), /commentRel/, 'no commentRel pointer when unused')
+})

@@ -51,6 +51,7 @@ export default defineConfig({
 					{ text: 'Sections', link: '/sections' },
 					{ text: 'Shapes & Schemes', link: '/shapes-and-schemes' },
 					{ text: 'Speaker Notes', link: '/speaker-notes' },
+					{ text: 'Comments', link: '/comments' },
 				],
 			},
 			{

@@ -22,6 +22,20 @@ export const DEF_GUIDE_COLOR = 'A4A3A4'
  * - each zoom kind has its own namespace, all bound to the `p16` prefix inside `mc:Choice`
  * - `p166` (2016/6/main) carries the shared `zmPr` zoom properties
  */
+/**
+ * Modern threaded comments (MS-PPTX 2.16)
+ * - `ppt/authors.xml` holds the author table (2.1.6), one comment part per slide holds the
+ *   comments (2.1.5), and `pc` monikers anchor each comment to its slide (2.12)
+ */
+export const COMMENT = {
+	p188: 'http://schemas.microsoft.com/office/powerpoint/2018/8/main',
+	pc: 'http://schemas.microsoft.com/office/powerpoint/2013/main/command',
+	authorsContentType: 'application/vnd.ms-powerpoint.authors+xml',
+	commentsContentType: 'application/vnd.ms-powerpoint.comments+xml',
+	authorsRelType: 'http://schemas.microsoft.com/office/2018/10/relationships/authors',
+	commentsRelType: 'http://schemas.microsoft.com/office/2018/10/relationships/comments',
+} as const
+
 export const ZOOM_NS = {
 	slide: 'http://schemas.microsoft.com/office/powerpoint/2016/slidezoom',
 	section: 'http://schemas.microsoft.com/office/powerpoint/2016/sectionzoom',
@@ -85,6 +99,8 @@ export const OOXML_EXT = {
 	laserColor: { uri: '{EC167BDD-8182-4AB7-AECC-EB403E3ABB37}', ns: 'http://schemas.microsoft.com/office/powerpoint/2010/main' },
 	/** MS-PPTX 2.2.16 / 2.14.1.1 - `p1710:readonlyRecommended` in `p:presentationPr/p:extLst` */
 	readonlyRecommended: { uri: '{1BD7E111-0CB8-44D6-8891-C1BB2F81B7CC}', ns: 'http://schemas.microsoft.com/office/powerpoint/2017/10/main' },
+	/** MS-PPTX 2.2.10 - `p188:commentRel` in `p:sld/p:extLst` (points at the slide's comment part) */
+	commentRel: { uri: '{6950BFC3-D8DA-4A85-94F7-54DA5524770B}', ns: 'http://schemas.microsoft.com/office/powerpoint/2018/8/main' },
 	/** MS-PPTX 2.2.5 / 2.3.1.25 - `p14:sectionLst` in `p:presentation/p:extLst` */
 	sections: { uri: '{521415D9-36F7-43E2-AB2F-B90AF26B5E84}', ns: 'http://schemas.microsoft.com/office/powerpoint/2010/main' },
 	/** MS-PPTX 2.2.11 / 2.4.1.6 - `p15:sldGuideLst` in `p:presentation/p:extLst` */

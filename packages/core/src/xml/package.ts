@@ -2,15 +2,15 @@
  * OOXML package-part rendering.
  */
 
-import { CRLF, DEF_GUIDE_COLOR, EMU, LAYOUT_IDX_SERIES_BASE, OOXML_EXT, SLDNUMFLDID, SLIDE_OBJECT_TYPES } from '../core-enums'
+import { COMMENT, CRLF, DEF_GUIDE_COLOR, EMU, LAYOUT_IDX_SERIES_BASE, OOXML_EXT, SLDNUMFLDID, SLIDE_OBJECT_TYPES } from '../core-enums'
 import { EmbeddedFont, GuideProps, IPresentationProps, PresSlide, SectionProps, SlideLayout, SlideShowProps } from '../core-interfaces'
 import { createColorElement, encodeXmlEntities, getUuid } from '../gen-utils'
 import { makeXmlEmbeddedFontLst } from '../gen-fonts'
-import { slideObjectToXml } from './slide'
+import { genXmlSlideExtLst, slideObjectToXml } from './slide'
 import { genXmlTiming } from './animation'
 import { genXmlTransition } from './transition'
 
-export function makeXmlContTypes (slides: PresSlide[], slideLayouts: SlideLayout[], masterSlide?: PresSlide, embeddedFonts: EmbeddedFont[] = []): string {
+export function makeXmlContTypes (slides: PresSlide[], slideLayouts: SlideLayout[], masterSlide?: PresSlide, embeddedFonts: EmbeddedFont[] = [], hasComments = false): string {
 	let strXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + CRLF
 	strXml += '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
 	strXml += '<Default Extension="xml" ContentType="application/xml"/>'
@@ -31,6 +31,13 @@ export function makeXmlContTypes (slides: PresSlide[], slideLayouts: SlideLayout
 			}
 		})
 	})
+	// Opt-in: comment parts only appear when `addComment()` was used
+	if (hasComments) {
+		strXml += `<Override PartName="/ppt/authors.xml" ContentType="${COMMENT.authorsContentType}"/>`
+		slides.forEach((slide, idx) => {
+			if ((slide.comments ?? []).length > 0) strXml += `<Override PartName="/ppt/comments/commentSlide${idx + 1}.xml" ContentType="${COMMENT.commentsContentType}"/>`
+		})
+	}
 	// Opt-in: the `fntdata` Default only appears when `addFont()` embedded something
 	if (embeddedFonts.length > 0) strXml += '<Default Extension="fntdata" ContentType="application/x-fontdata"/>'
 	strXml += '<Default Extension="vml" ContentType="application/vnd.openxmlformats-officedocument.vmlDrawing"/>'
@@ -178,7 +185,7 @@ function firstFontRelId (slideCount: number): number {
 	return slideCount + 7
 }
 
-export function makeXmlPresentationRels (slides: PresSlide[], embeddedFonts: EmbeddedFont[] = []): string {
+export function makeXmlPresentationRels (slides: PresSlide[], embeddedFonts: EmbeddedFont[] = [], hasComments = false): string {
 	let intRelNum = 1
 	let strXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + CRLF
 	strXml += '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
@@ -196,6 +203,8 @@ export function makeXmlPresentationRels (slides: PresSlide[], embeddedFonts: Emb
 		embeddedFonts
 			.map((_font, idx) => `<Relationship Id="rId${firstFontRelId(slides.length) + idx}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/font" Target="fonts/font${idx + 1}.fntdata"/>`)
 			.join('') +
+		// the author part is reached from the presentation, after any font relationships
+		(hasComments ? `<Relationship Id="rId${firstFontRelId(slides.length) + embeddedFonts.length}" Type="${COMMENT.authorsRelType}" Target="authors.xml"/>` : '') +
 		'</Relationships>'
 
 	return strXml
@@ -216,7 +225,7 @@ export function makeXmlSlide (slide: PresSlide, sections: SectionProps[] = []): 
 		`${slide?.hidden ? ' show="0"' : ''}>` +
 		`${slideObjectToXml(slide, sections)}` +
 		// CT_Slide sequence: cSld, clrMapOvr, transition, timing, extLst - order matters
-		`<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>${genXmlTransition(slide)}${genXmlTiming(slide)}</p:sld>`
+		`<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>${genXmlTransition(slide)}${genXmlTiming(slide)}${genXmlSlideExtLst(slide)}</p:sld>`
 	)
 }
 

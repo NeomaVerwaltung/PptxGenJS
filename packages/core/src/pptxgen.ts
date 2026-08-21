@@ -81,6 +81,7 @@ import {
 import {
 	AddFontProps,
 	AddSlideProps,
+	CommentAuthorProps,
 	CompressionLevel,
 	EmbeddedFont,
 	GuideProps,
@@ -103,6 +104,7 @@ import * as genCharts from './charts'
 import * as genObj from './gen-objects'
 import * as genMedia from './gen-media'
 import * as genFonts from './gen-fonts'
+import * as genComments from './gen-comments'
 import * as genTable from './gen-tables'
 import * as genXml from './xml'
 import { getUuid, warnDeprecatedOnce } from './gen-utils'
@@ -324,6 +326,19 @@ export default class PptxGenJS implements IPresentationProps {
 
 	public get slideShow(): SlideShowProps | undefined {
 		return this._slideShow
+	}
+
+	/**
+	 * Comment authors, with the identity metadata PowerPoint shows
+	 * - authors named by `addComment()` that are not listed here are added automatically
+	 */
+	private _commentAuthors?: CommentAuthorProps[]
+	public set commentAuthors(value: CommentAuthorProps[] | undefined) {
+		this._commentAuthors = value
+	}
+
+	public get commentAuthors(): CommentAuthorProps[] | undefined {
+		return this._commentAuthors
 	}
 
 	/** fonts registered with `addFont()` */
@@ -659,11 +674,26 @@ export default class PptxGenJS implements IPresentationProps {
 			zip.folder('ppt/theme')
 			zip.folder('ppt/notesMasters')?.folder('_rels')
 			zip.folder('ppt/notesSlides')?.folder('_rels')
-			zip.file('[Content_Types].xml', genXml.makeXmlContTypes(this.slides, this.slideLayouts, this.masterSlide, this._embeddedFonts)) // TODO: pass only `this` like below! 20200206
+			// Comments are opt-in: without `addComment()` no author or comment part is created
+			const hasComments = this.slides.some(slide => (slide.comments ?? []).length > 0)
+			const commentAuthors = hasComments ? genComments.collectCommentAuthors(this.slides, this._commentAuthors) : []
+			if (hasComments) {
+				zip.folder('ppt/comments')
+				zip.file('ppt/authors.xml', genComments.makeXmlCommentAuthors(commentAuthors))
+				// `created` cannot be derived, so it falls back to a single export timestamp
+				const exportedAt = new Date().toISOString()
+				this.slides.forEach((slide, idx) => {
+					if ((slide.comments ?? []).length > 0) {
+						zip.file(genComments.commentPartName(idx + 1), genComments.makeXmlSlideComments(slide, commentAuthors, exportedAt))
+					}
+				})
+			}
+
+			zip.file('[Content_Types].xml', genXml.makeXmlContTypes(this.slides, this.slideLayouts, this.masterSlide, this._embeddedFonts, hasComments)) // TODO: pass only `this` like below! 20200206
 			zip.file('_rels/.rels', genXml.makeXmlRootRels())
 			zip.file('docProps/app.xml', genXml.makeXmlApp(this.slides, this.company)) // TODO: pass only `this` like below! 20200206
 			zip.file('docProps/core.xml', genXml.makeXmlCore(this.title, this.subject, this.author, this.revision)) // TODO: pass only `this` like below! 20200206
-			zip.file('ppt/_rels/presentation.xml.rels', genXml.makeXmlPresentationRels(this.slides, this._embeddedFonts))
+			zip.file('ppt/_rels/presentation.xml.rels', genXml.makeXmlPresentationRels(this.slides, this._embeddedFonts, hasComments))
 			// Opt-in: no `ppt/fonts` folder exists unless `addFont()` was called
 			this._embeddedFonts.forEach((font, idx) => zip.file(genFonts.fontPartName(idx), font.data, { binary: true }))
 			zip.file('ppt/theme/theme1.xml', genXml.makeXmlTheme(this))

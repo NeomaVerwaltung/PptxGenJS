@@ -40,6 +40,7 @@ import {
 	valToPts,
 } from '../gen-utils'
 
+import { slideCommentRelId } from './relationships'
 import { genXmlPlaceholder, genXmlTextBody } from './text'
 import { genXmlZoom } from './zoom'
 
@@ -910,6 +911,24 @@ function genXmlSlideEnd (slide: PresSlide | SlideLayout): string {
  * @param {PresSlide | SlideLayout} slide - slide object
  * @returns {string} XML string
  */
+/**
+ * Create the `p:sld` extension list, currently the `p188:commentRel` pointer (MS-PPTX 2.2.10)
+ * - Office writes this alongside the slide relationship; without it some builds ignore the part
+ * @note belongs after `p:timing`, at the end of the CT_Slide sequence
+ * @param {PresSlide | SlideLayout} slide - slide object
+ * @returns {string} XML string
+ */
+export function genXmlSlideExtLst (slide: PresSlide | SlideLayout): string {
+	const comments = (slide as PresSlide).comments ?? []
+	if (comments.length === 0) return ''
+
+	return (
+		`<p:extLst><p:ext uri="${OOXML_EXT.commentRel.uri}">` +
+		`<p188:commentRel xmlns:p188="${OOXML_EXT.commentRel.ns}" r:id="rId${slideCommentRelId(slide as PresSlide)}"/>` +
+		'</p:ext></p:extLst>'
+	)
+}
+
 function genXmlCreationId (slide: PresSlide | SlideLayout): string {
 	const requested = slide.creationId
 	if (!requested) return ''
