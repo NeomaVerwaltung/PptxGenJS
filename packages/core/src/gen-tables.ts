@@ -4,7 +4,7 @@
 
 import { DEF_FONT_SIZE, DEF_SLIDE_MARGIN_IN, EMU, LINEH_MODIFIER, ONEPT, SLIDE_OBJECT_TYPES } from './core-enums'
 import { PresLayout, SlideLayout, TableCell, TableToSlidesProps, TableRow, TableRowSlide, TableCellProps, BorderProps } from './core-interfaces'
-import { debugLog, getSmartParseNumber, inch2Emu, isDebugEnabled, rgbToHex, valToPts } from './gen-utils'
+import { debugLog, getSmartParseNumber, inch2Emu, isDebugEnabled, rgbToHex, valToPts, warnDeprecatedOnce } from './gen-utils'
 import PptxGenJS from './pptxgen'
 
 /**
@@ -457,6 +457,24 @@ function paginateTableRows(
 }
 
 /**
+ * Warn once per process for the auto-paging weight knobs (DEPRECATION-PLAN.md F10).
+ *
+ * Runs before `paginateTableRows` copies `tableProps.autoPageCharWeight` onto each cell
+ * (line ~362), so the per-cell check only ever sees caller-supplied values.
+ */
+function warnDeprecatedAutoPageWeights (tableRows: TableCell[][], tableProps: TableToSlidesProps): void {
+	const cellHas = (prop: 'autoPageCharWeight' | 'autoPageLineWeight'): boolean =>
+		tableRows.some(row => row.some(cell => typeof cell.options?.[prop] === 'number'))
+
+	if (typeof tableProps.autoPageCharWeight === 'number' || cellHas('autoPageCharWeight')) {
+		warnDeprecatedOnce('autoPageCharWeight', '`autoPageCharWeight` is deprecated and is removed in v5.0 along with built-in table auto-paging - it tunes an inaccurate character-width estimate; a measured paginator ships in @neo-ma/pptxgenjs-std')
+	}
+	if (typeof tableProps.autoPageLineWeight === 'number' || cellHas('autoPageLineWeight')) {
+		warnDeprecatedOnce('autoPageLineWeight', '`autoPageLineWeight` is deprecated and is removed in v5.0 along with built-in table auto-paging - it tunes an inaccurate line-height estimate; a measured paginator ships in @neo-ma/pptxgenjs-std')
+	}
+}
+
+/**
  * Takes an array of table rows and breaks into an array of slides, which contain the calculated amount of table rows that fit on that slide
  * @param {TableCell[][]} tableRows - table rows
  * @param {TableToSlidesProps} tableProps - table2slides properties
@@ -465,6 +483,8 @@ function paginateTableRows(
  * @return {TableRowSlide[]} array of table rows
  */
 export function getSlidesForTableRows(tableRows: TableCell[][] = [], tableProps: TableToSlidesProps = {}, presLayout: PresLayout, masterSlide?: SlideLayout): TableRowSlide[] {
+	warnDeprecatedAutoPageWeights(tableRows, tableProps)
+
 	const tablePropX = getSmartParseNumber(tableProps.x, 'X', presLayout)
 	const tablePropY = getSmartParseNumber(tableProps.y, 'Y', presLayout)
 	const tablePropW = getSmartParseNumber(tableProps.w, 'X', presLayout)

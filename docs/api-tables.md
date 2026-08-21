@@ -109,18 +109,25 @@ Auto-paging creates new slides automatically as table rows overflow the current 
 | Option                 | Default | Description                                    | Possible Values                                        |
 | :--------------------- | :------ | :--------------------------------------------- | :----------------------------------------------------- |
 | `autoPage`             | `false` | auto-page table                                | `true` or `false`. Ex: `{autoPage:true}`               |
-| `autoPageCharWeight`   | `0`     | char weight value (adjusts letter spacing)     | -1.0 to 1.0. Ex: `{autoPageCharWeight:0.5}`            |
-| `autoPageLineWeight`   | `0`     | line weight value (adjusts line height)        | -1.0 to 1.0. Ex: `{autoPageLineWeight:0.5}`            |
+| `autoPageCharWeight`   | `0`     | **deprecated v4.2.0** char weight value (adjusts letter spacing) | -1.0 to 1.0. Ex: `{autoPageCharWeight:0.5}` |
+| `autoPageLineWeight`   | `0`     | **deprecated v4.2.0** line weight value (adjusts line height) | -1.0 to 1.0. Ex: `{autoPageLineWeight:0.5}` |
 | `autoPageRepeatHeader` | `false` | repeat header row(s) on each auto-page slide   | `true` or `false`. Ex: `{autoPageRepeatHeader:true}`   |
 | `autoPageHeaderRows`   | `1`     | number of table rows that comprise the headers | 1-n. Ex: `2` repeats the first two rows on every slide |
 | `newSlideStartY`       |         | starting `y` value for tables on new Slides    | 0-n OR 'n%'. Ex:`{newSlideStartY:0.5}`                 |
 
+::: warning DEPRECATED
+Built-in auto-paging estimates where text wraps instead of measuring it, which is why the
+char and line weight knobs exist. Both knobs are deprecated in v4.2.0 and log a one-time
+warning; auto-paging itself (and `tableToSlides()`) is planned for removal in v5.0, replaced
+by a measured paginator in `@neo-ma/pptxgenjs-std`. See `DEPRECATION-PLAN.md` F10.
+:::
+
 ### Auto-Paging Property Notes
 
 - `autoPage`: allows the auto-paging functionality (as table rows overflow the Slide, new Slides will be added) to be disabled.
-- `autoPageCharWeight`: adjusts the calculated width of characters. If too much empty space is left on each line,
+- `autoPageCharWeight`: **deprecated v4.2.0.** Adjusts the calculated width of characters. If too much empty space is left on each line,
     then increase char weight value. Conversely, if the table rows are overflowing, then reduce the char weight value.
-- `autoPageLineWeight`: adjusts the calculated height of lines. If too much empty space is left under each table,
+- `autoPageLineWeight`: **deprecated v4.2.0.** Adjusts the calculated height of lines. If too much empty space is left under each table,
     then increase line weight value. Conversely, if the tables are overflowing the bottom of the Slides, then
     reduce the line weight value. Also helpful when using some fonts that do not have the usual golden ratio.
 - `newSlideStartY`: specifies where continuation tables are placed on new Slides. For example, a table may

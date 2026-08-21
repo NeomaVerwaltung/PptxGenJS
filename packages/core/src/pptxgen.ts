@@ -969,6 +969,7 @@ export default class PptxGenJS implements IPresentationProps {
 	 * Reproduces an HTML table as a PowerPoint table - including column widths, style, etc. - creates 1 or more slides as needed
 	 * @param {string} eleId - table HTML element ID
 	 * @param {TableToSlidesProps} options - generation options
+	 * @see DEPRECATION-PLAN.md F10 - depends on built-in auto-paging, which is planned for removal in v5.0
 	 */
 	tableToSlides(eleId: string, options: TableToSlidesProps = {}): void {
 		// @note set the `PPTXGENJS_DEBUG` env var for verbose output of the layout process

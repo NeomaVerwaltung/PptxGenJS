@@ -5,6 +5,12 @@ title: HTML to PowerPoint
 
 The `tableToSlides` method reproduces an HTML table across one or more slides (auto-paging).
 
+::: warning DEPRECATED
+`tableToSlides()` is built on the core's auto-paging engine, which estimates where text
+wraps rather than measuring it. Both are planned for removal in v5.0, replaced by a measured
+paginator and HTML importer in `@neo-ma/pptxgenjs-std`. See `DEPRECATION-PLAN.md` F10.
+:::
+
 - Supported cell styling includes background colors, borders, fonts, padding, etc.
 - Slide margin settings can be set using options, or by providing a Master Slide definition
 
@@ -34,8 +40,8 @@ slide.tableToSlides(htmlElementID, { OPTIONS });
 | `addTable`           | string  |         | add a table to each slide                          | Use the established syntax                                                              |
 | `addText`            | string  |         | add text to each slide                             | Use the established syntax                                                              |
 | `autoPage`           | boolean | `true`  | create new slides when content overflows           | Ex: `{autoPage: false}`                                                                 |
-| `autoPageCharWeight` | number  | `0.0`   | character weight used to determine when lines wrap | -1.0 to 1.0. Ex: `{autoPageCharWeight: 0.5}`                                            |
-| `autoPageLineWeight` | number  | `0.0`   | line weight used to determine when tables wrap     | -1.0 to 1.0. Ex: `{autoPageLineWeight: 0.5}`                                            |
+| `autoPageCharWeight` | number  | `0.0`   | **deprecated v4.2.0** character weight used to determine when lines wrap | -1.0 to 1.0. Ex: `{autoPageCharWeight: 0.5}`                                            |
+| `autoPageLineWeight` | number  | `0.0`   | **deprecated v4.2.0** line weight used to determine when tables wrap     | -1.0 to 1.0. Ex: `{autoPageLineWeight: 0.5}`                                            |
 | `colW`               | number  |         | table column widths                                | Array of column widths. Ex: `{colW: [2.0, 3.0, 1.0]}`                                   |
 | `masterSlideName`    | string  |         | master slide to use                                | [Slide Masters](#slide-masters) name. Ex: `{master: 'TITLE_SLIDE'}`                     |
 | `newSlideStartY`     | number  |         | starting location on Slide after initial           | 0-(slide height). Ex: `{newSlideStartY:0.5}`                                            |

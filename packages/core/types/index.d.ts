@@ -194,6 +194,7 @@ declare class PptxGenJS {
 	 * Reproduces an HTML table as a PowerPoint table - including column widths, style, etc. - creates 1 or more slides as needed
 	 * @param {string} eleId table HTML element ID
 	 * @param {TableToSlidesProps} props generation options
+	 * @see DEPRECATION-PLAN.md F10 - depends on built-in auto-paging, which is planned for removal in v5.0
 	 */
 	tableToSlides(eleId: string, props?: PptxGenJS.TableToSlidesProps): void
 }
@@ -1768,6 +1769,7 @@ declare namespace PptxGenJS {
 		/**
 		 * Whether to enable auto-paging
 		 * - auto-paging creates new slides as content overflows a slide
+		 * @see DEPRECATION-PLAN.md F10 - built-in auto-paging is planned for removal in v5.0, replaced by a measured paginator in @neo-ma/pptxgenjs-std
 		 * @default true
 		 */
 		autoPage?: boolean
@@ -1778,6 +1780,7 @@ declare namespace PptxGenJS {
 		 * @see https://gitbrent.github.io/PptxGenJS/docs/api-tables.html
 		 * @default 0.0
 		 * @example 0.5 // lines are longer (increases the number of characters that can fit on a given line)
+		 * @deprecated v4.2.0 - tuning knob for the built-in wrap estimate; removed in v5.0 with the auto-paging engine (see DEPRECATION-PLAN.md F10)
 		 */
 		autoPageCharWeight?: number
 		/**
@@ -1787,6 +1790,7 @@ declare namespace PptxGenJS {
 		 * @see https://gitbrent.github.io/PptxGenJS/docs/api-tables.html
 		 * @default 0.0
 		 * @example 0.5 // tables are taller (increases the number of lines that can fit on a given slide)
+		 * @deprecated v4.2.0 - tuning knob for the built-in line-height estimate; removed in v5.0 with the auto-paging engine (see DEPRECATION-PLAN.md F10)
 		 */
 		autoPageLineWeight?: number
 		/**
@@ -1833,6 +1837,7 @@ declare namespace PptxGenJS {
 		 * @see https://gitbrent.github.io/PptxGenJS/docs/api-tables.html
 		 * @default 0.0
 		 * @example 0.5 // lines are longer (increases the number of characters that can fit on a given line)
+		 * @deprecated v4.2.0 - tuning knob for the built-in wrap estimate; removed in v5.0 with the auto-paging engine (see DEPRECATION-PLAN.md F10)
 		 */
 		autoPageCharWeight?: number
 		/**
@@ -1842,6 +1847,7 @@ declare namespace PptxGenJS {
 		 * @see https://gitbrent.github.io/PptxGenJS/docs/api-tables.html
 		 * @default 0.0
 		 * @example 0.5 // tables are taller (increases the number of lines that can fit on a given slide)
+		 * @deprecated v4.2.0 - tuning knob for the built-in line-height estimate; removed in v5.0 with the auto-paging engine (see DEPRECATION-PLAN.md F10)
 		 */
 		autoPageLineWeight?: number
 		/**
@@ -1876,6 +1882,7 @@ declare namespace PptxGenJS {
 		/**
 		 * Whether to enable auto-paging
 		 * - auto-paging creates new slides as content overflows a slide
+		 * @see DEPRECATION-PLAN.md F10 - built-in auto-paging is planned for removal in v5.0, replaced by a measured paginator in @neo-ma/pptxgenjs-std
 		 * @default false
 		 */
 		autoPage?: boolean
@@ -1886,6 +1893,7 @@ declare namespace PptxGenJS {
 		 * @see https://gitbrent.github.io/PptxGenJS/docs/api-tables.html
 		 * @default 0.0
 		 * @example 0.5 // lines are longer (increases the number of characters that can fit on a given line)
+		 * @deprecated v4.2.0 - tuning knob for the built-in wrap estimate; removed in v5.0 with the auto-paging engine (see DEPRECATION-PLAN.md F10)
 		 */
 		autoPageCharWeight?: number
 		/**
@@ -1895,6 +1903,7 @@ declare namespace PptxGenJS {
 		 * @see https://gitbrent.github.io/PptxGenJS/docs/api-tables.html
 		 * @default 0.0
 		 * @example 0.5 // tables are taller (increases the number of lines that can fit on a given slide)
+		 * @deprecated v4.2.0 - tuning knob for the built-in line-height estimate; removed in v5.0 with the auto-paging engine (see DEPRECATION-PLAN.md F10)
 		 */
 		autoPageLineWeight?: number
 		/**

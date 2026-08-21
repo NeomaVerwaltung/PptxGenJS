@@ -100,7 +100,7 @@ The helper sequence is:
 
 ## Table pagination
 
-`getSlidesForTableRows()` transforms normalized table cells into `TableRowSlide[]` instances for auto-paging. It intentionally mutates `tableProps`: defaulting `slideMargin`, materializing `colW`, and passing `autoPageCharWeight` into cell options are part of the established flow.
+`getSlidesForTableRows()` transforms normalized table cells into `TableRowSlide[]` instances for auto-paging. It intentionally mutates `tableProps`: defaulting `slideMargin`, materializing `colW`, and passing `autoPageCharWeight` into cell options are part of the established flow. Planned for removal in v5.0 (`DEPRECATION-PLAN.md` F10) — the chars-per-line estimate it depends on is unfixable without glyph metrics.
 
 Its phases are:
 
