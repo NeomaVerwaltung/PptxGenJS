@@ -1155,7 +1155,12 @@ export function addTextDefinition(target: PresSlide | SlideLayout, text: TextPro
 		options: opts || {},
 	}
 
-	function cleanOpts(itemOpts: ObjectOptions): TextPropsOptions {
+	/**
+	 * @param {ObjectOptions} itemOpts - options to normalize
+	 * @param {boolean} isShapeLevel - whether these are the shape's options rather than a text run's;
+	 *   only the shape's `_bodyProp` is serialized, and warning on both would double every message
+	 */
+	function cleanOpts(itemOpts: ObjectOptions, isShapeLevel = false): TextPropsOptions {
 		// STEP 1: Set some options
 		{
 			// A.1: Color (placeholders should inherit their colors or override them, so don't default them)
@@ -1212,6 +1217,29 @@ export function addTextDefinition(target: PresSlide | SlideLayout, text: TextPro
 			itemOpts._bodyProp.vert = itemOpts.vert || undefined // VALS: [eaVert,horz,mongolianVert,vert,vert270,wordArtVert,wordArtVertRtl]
 			itemOpts._bodyProp.wrap = typeof itemOpts.wrap === 'boolean' ? itemOpts.wrap : true
 
+			// Columns: `numCol` is 1-16 per ECMA-376 21.1.2.1.1, and a value outside that range
+			// makes `a:bodyPr` unparseable, so clamp rather than pass it through
+			// Columns: `numCol` is 1-16 per ECMA-376 21.1.2.1.1, and a value outside that range makes
+			// `a:bodyPr` unparseable, so it is dropped rather than passed through
+			if (itemOpts.columns !== undefined) {
+				const columns = typeof itemOpts.columns === 'number' && isFinite(itemOpts.columns) ? Math.round(itemOpts.columns) : NaN
+				if (isNaN(columns) || columns < 1 || columns > 16) {
+					if (isShapeLevel) console.warn(`[pptxgenjs] \`columns\` must be a whole number between 1 and 16 - "${String(itemOpts.columns)}" ignored`)
+				} else if (columns > 1) {
+					itemOpts._bodyProp.numCol = columns
+				}
+			}
+			if (itemOpts.columnSpacing !== undefined) {
+				const spacing = typeof itemOpts.columnSpacing === 'number' && isFinite(itemOpts.columnSpacing) ? itemOpts.columnSpacing : NaN
+				if (isNaN(spacing) || spacing < 0) {
+					if (isShapeLevel) console.warn(`[pptxgenjs] \`columnSpacing\` must be a number >= 0 (inches) - "${String(itemOpts.columnSpacing)}" ignored`)
+				} else if (itemOpts._bodyProp.numCol) {
+					itemOpts._bodyProp.spcCol = inch2Emu(spacing)
+				} else if (isShapeLevel) {
+					console.warn('[pptxgenjs] `columnSpacing` has no effect without `columns` > 1 - value ignored')
+				}
+			}
+
 			// E: Inset
 			// @deprecated 3.10.0 (`inset` - use `margin`)
 			if ((itemOpts.inset && !isNaN(Number(itemOpts.inset))) || itemOpts.inset === 0) {
@@ -1244,7 +1272,7 @@ export function addTextDefinition(target: PresSlide | SlideLayout, text: TextPro
 	}
 
 	// STEP 1: Create/Clean object options
-	newObject.options = cleanOpts(newObject.options ?? {})
+	newObject.options = cleanOpts(newObject.options ?? {}, true)
 
 	// STEP 2: Create/Clean text options
 	newObject.text?.forEach(item => (item.options = cleanOpts(item.options || {})))

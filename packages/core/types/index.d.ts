@@ -2156,6 +2156,18 @@ declare namespace PptxGenJS {
 		 */
 		wrap?: boolean
 		/**
+		 * Split the text box into newspaper-style columns (`a:bodyPr@numCol`)
+		 * - range: 1-16; PowerPoint's Format Shape > Text Options > Columns
+		 * @default 1
+		 */
+		columns?: number
+		/**
+		 * Space between columns, in inches (`a:bodyPr@spcCol`)
+		 * - only meaningful with `columns` > 1
+		 * @default 0
+		 */
+		columnSpacing?: number
+		/**
 		 * Office Math (OMML) markup for this run
 		 * - the run is emitted as a math zone instead of a plain text run; `text` becomes the
 		 *   `mc:Fallback` shown by consumers that do not understand Office math

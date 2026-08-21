@@ -269,3 +269,23 @@ slide.addText([
 ```
 
 `omml` is a per-run payload: on a multi-run `addText()` call it is not inherited by sibling runs.
+
+## Columns
+
+Split a text box into newspaper-style columns, as PowerPoint's Format Shape > Text Options > Columns does.
+
+```typescript
+slide.addText(longParagraph, { x: 1, y: 1, w: 8, h: 4, columns: 2, columnSpacing: 0.25 });
+```
+
+| Option          | Type   | Default | Description                                        |
+| :-------------- | :----- | :------ | :------------------------------------------------- |
+| `columns`       | number | `1`     | number of columns, 1-16                            |
+| `columnSpacing` | number | `0`     | gap between columns, in inches                     |
+
+A single column is the schema default and is not written. A count outside 1-16, a negative spacing, or a
+spacing without `columns > 1` is ignored with a warning — an out-of-range `numCol` makes `a:bodyPr`
+unparseable.
+
+Columns combine with autofit: PowerPoint flows text through the columns first, then applies the
+`fit` behaviour to the result.

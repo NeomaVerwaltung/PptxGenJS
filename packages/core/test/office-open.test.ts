@@ -41,6 +41,7 @@ test('office: LibreOffice opens and converts a generated presentation', async ()
 			{ text: 'ratio ' },
 			{ text: 'a/b', options: { omml: '<m:f><m:num><m:r><m:t>a</m:t></m:r></m:num><m:den><m:r><m:t>b</m:t></m:r></m:den></m:f>' } },
 		], { x: 0.5, y: 1, w: 5, h: 0.5 })
+		slide.addText('column one flows into column two when the box is full', { x: 0.5, y: 5.5, w: 5, h: 1, columns: 2, columnSpacing: 0.25 })
 		slide.addTable([['Region', 'Sales'], ['West', '20']], { x: 0.5, y: 1.5, w: 5 })
 		slide.addChart(pptx.ChartType.bar, [{ name: 'Sales', labels: ['Q1', 'Q2'], values: [10, 20] }], { x: 0.5, y: 3, w: 6, h: 3 })
 		const mediaSlide = pptx.addSlide()

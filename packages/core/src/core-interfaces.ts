@@ -1255,6 +1255,10 @@ export interface TextPropsOptions extends PositionProps, DataOrPathProps, TextBa
 		bIns?: number
 		vert?: 'eaVert' | 'horz' | 'mongolianVert' | 'vert' | 'vert270' | 'wordArtVert' | 'wordArtVertRtl'
 		wrap?: boolean
+		/** `a:bodyPr@numCol` - 1-16 */
+		numCol?: number
+		/** `a:bodyPr@spcCol` - inter-column spacing in EMU */
+		spcCol?: number
 	}
 	_lineIdx?: number
 
@@ -1368,6 +1372,18 @@ export interface TextPropsOptions extends PositionProps, DataOrPathProps, TextBa
 	 * @default true
 	 */
 	wrap?: boolean
+	/**
+	 * Split the text box into newspaper-style columns (`a:bodyPr@numCol`)
+	 * - range: 1-16; PowerPoint's Format Shape > Text Options > Columns
+	 * @default 1
+	 */
+	columns?: number
+	/**
+	 * Space between columns, in inches (`a:bodyPr@spcCol`)
+	 * - only meaningful with `columns` > 1
+	 * @default 0
+	 */
+	columnSpacing?: number
 	/**
 	 * Office Math (OMML) markup for this run
 	 * - the run is emitted as a math zone instead of a plain text run; `text` becomes the
