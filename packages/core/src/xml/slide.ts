@@ -409,8 +409,10 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 					const itemOpts: ObjectOptions = slideItemObj.options ?? {}
 					// A: Table Height provided without rowH? Then distribute rows
 					let intRowH = 0 // IMPORTANT: Default must be zero for auto-sizing to work
-					if (Array.isArray(objTabOpts.rowH) && objTabOpts.rowH[rIdx]) intRowH = inch2Emu(Number(objTabOpts.rowH[rIdx]))
-					else if (objTabOpts.rowH && !isNaN(Number(objTabOpts.rowH))) intRowH = inch2Emu(Number(objTabOpts.rowH))
+					// `rowH` is either one value for every row or a per-row array; `inch2Emu` resolves inches, EMU and unit-suffixed strings alike
+					const rowHOpt = Array.isArray(objTabOpts.rowH) ? objTabOpts.rowH[rIdx] : objTabOpts.rowH
+					const rowHEmu = rowHOpt ? inch2Emu(rowHOpt) : NaN
+					if (!isNaN(rowHEmu)) intRowH = rowHEmu
 					else if (itemOpts.cy || itemOpts.h) {
 						intRowH = Math.round(
 							(itemOpts.h ? inch2Emu(itemOpts.h) : typeof itemOpts.cy === 'number' ? itemOpts.cy : 1) /

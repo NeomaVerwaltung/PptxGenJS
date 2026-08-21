@@ -152,6 +152,10 @@ slide.addShape("line", { x: 1, y: pt(18), w: 4, h: 0 });
 Both take a finite number and return inches; anything else throws rather than placing content at
 `NaN`. Negative values are legal - an offset can point the other way.
 
+For a plain literal, the core also accepts the unit inline - `{ x: "2.5cm" }` - which needs no import.
+`cm` and `pt` are for the arithmetic case: a value that is computed, or fed to `grid`/`row`/`stack`,
+where a number is what the next step needs.
+
 ## `waterfall` - bridge chart
 
 PowerPoint has no waterfall chart type reachable through ECMA-376 `c:barChart`. `waterfall` builds
