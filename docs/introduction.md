@@ -32,10 +32,30 @@ Presentation                 new pptxgen()
 2. **Add Slides** — `pres.addSlide()` returns a Slide you add content to.
 3. **Add objects to a Slide** — every object is one `slide.addX(...)` call that takes the content plus an
    **options object**. Options follow the same conventions everywhere: position and size are `x`, `y`, `w`,
-   `h` in **inches** (or `%`), and colors are hex strings without `#` (e.g. `"363636"`).
+   `h` in **inches** (or `%`, or a unit-suffixed string - see below), and colors are hex strings without `#`
+   (e.g. `"363636"`).
 4. **Save** — `pres.writeFile()` (Node/browser download) or `pres.write(...)` for a Blob/Buffer/base64/stream.
 
 This is the complete API surface. The remaining documentation describes the options each `addX` method accepts.
+
+### Units
+
+A bare number on `x`/`y`/`w`/`h` is inches - except that a value of 100 or more is read as EMU, a
+compatibility rule inherited from upstream. To state the unit instead, pass a suffixed string:
+
+```typescript
+slide.addText("Titel", { x: "2.5cm", y: "1.8cm", w: "20cm", h: "2cm" })
+slide.addShape("line", { x: 1, y: "18pt", w: 4, h: 0 })
+```
+
+`in`, `cm`, `mm` and `pt` are accepted, negative values included; the suffix makes the value
+unambiguous, so the inches-vs-EMU rule never applies to it. An unrecognised suffix is not guessed at -
+it resolves to `0`, the same as any other unparsable coordinate. `%` still means a percentage of the
+slide.
+
+This covers `x`/`y`/`w`/`h`. The other inch-valued options (`colW`, `rowH`, `inset`, cell `margin`)
+tolerate the same strings, but their types stay `number` and `autoPage` table splitting needs a
+numeric `colW` - convert those yourself, or with `cm`/`pt` from `@neo-ma/pptxgenjs-std`.
 
 ### Hello World
 

@@ -8,7 +8,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { measureText, registerFontMetrics, fitText } from '../src/text'
+import { measureText, registerFontMetrics, fitText, checkOverflow } from '../src/text'
 
 /** Calibri advance widths, per mille of the em, from the generated table */
 const SPACE = 0.226
@@ -145,4 +145,35 @@ test('fitText: rejects impossible areas and ranges', () => {
 	assert.throws(() => fitText({ w: 1, h: 1 }, 'x', { min: 0 }), /min must be > 0/)
 	assert.throws(() => fitText({ w: 1, h: 1 }, 'x', { min: 20, max: 10 }), /below min/)
 	assert.throws(() => fitText({ w: 1, h: 1 }, 'x', { margin: 1 }), /leaves no room/)
+})
+
+test('checkOverflow: reports the spill, not just that there is one', () => {
+	const long = 'A paragraph long enough that eleven point type cannot possibly fit it into half an inch of height, no matter how wide the box gets.'
+	const spills = checkOverflow({ w: 3, h: 0.5 }, long, { fontSize: 11 })
+	assert.ok(spills.overflows, 'text taller than its box overflows')
+	assert.ok(spills.overflowBy > 0, `expected a positive overflow, got ${spills.overflowBy}`)
+	assert.equal(spills.overflowBy, spills.h - 0.5, 'overflowBy is the height beyond the area')
+
+	const fits = checkOverflow({ w: 6, h: 4 }, 'Short line', { fontSize: 11 })
+	assert.equal(fits.overflows, false)
+	assert.equal(fits.overflowBy, 0)
+})
+
+test('checkOverflow: a word too long for the line is broken, then counted in height', () => {
+	const result = checkOverflow({ w: 0.4, h: 0.3 }, 'Wirtschaftspruefungsgesellschaft', { fontSize: 18 })
+	assert.ok(result.lines.length > 1, 'the word was broken across lines')
+	assert.ok(result.overflowBy > 0, 'those lines do not fit 0.3in')
+})
+
+test('checkOverflow: agrees with fitText at the size fitText picked', () => {
+	const text = 'Ergebnisqualitaet und Marktposition im Vergleich zum Wettbewerb'
+	const area = { w: 3.5, h: 1.2 }
+	const { fontSize } = fitText(area, text, { max: 40 })
+	assert.equal(checkOverflow(area, text, { fontSize }).overflows, false, 'the chosen size must fit')
+	assert.equal(checkOverflow(area, text, { fontSize: fontSize + 1 }).overflows, true, 'one point larger must not')
+})
+
+test('checkOverflow: rejects impossible areas', () => {
+	assert.throws(() => checkOverflow({ w: 0, h: 1 }, 'x'), /positive w and h/)
+	assert.throws(() => checkOverflow({ w: 1, h: 1 }, 'x', { margin: 1 }), /leaves no room/)
 })

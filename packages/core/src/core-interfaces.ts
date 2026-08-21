@@ -14,9 +14,11 @@ import { CHART_NAME, PLACEHOLDER_TYPE, SHAPE_NAME, SLIDE_OBJECT_TYPES, TEXT_HALI
  * - Percentage (0-100)
  *
  * @example 10.25 // coordinate in inches
+ * @example '2.5cm' // coordinate with an explicit unit (in/cm/mm/pt)
  * @example '75%' // coordinate as percentage of slide size
  */
-export type Coord = number | `${number}%`
+export type UnitLength = `${number}in` | `${number}cm` | `${number}mm` | `${number}pt`
+export type Coord = number | `${number}%` | UnitLength
 export interface PositionProps {
 	/**
 	 * Horizontal position

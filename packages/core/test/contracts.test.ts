@@ -1050,3 +1050,18 @@ test('contract: invalid comment input is rejected and unused comments cost nothi
 	assert.doesNotMatch(await readPart(plainZip, '[Content_Types].xml'), /authors|comments/, 'no comment content types when unused')
 	assert.doesNotMatch(await readPart(plainZip, 'ppt/slides/slide1.xml'), /commentRel/, 'no commentRel pointer when unused')
 })
+
+test('contract: unit-suffixed lengths reach the slide XML as EMU', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addText('Metrisch', { x: '2.54cm', y: '25.4mm', w: '72pt', h: '1in' })
+	slide.addTable([['A', 'B']], { x: '2.54cm', y: 3, colW: ['2.54cm', '2.54cm'], rowH: '2.54cm' })
+	const unitZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	const xml = await readPart(unitZip, 'ppt/slides/slide1.xml')
+
+	assert.doesNotMatch(xml, /NaN/, 'no coordinate resolved to NaN')
+	assert.match(xml, /<a:off x="914400" y="914400"\/><a:ext cx="914400" cy="914400"\/>/, 'cm/mm/pt/in all resolve to one inch')
+	// colW/rowH stay typed `number`; the shared parse means an untyped caller gets the length, not a NaN in the XML
+	assert.equal((xml.match(/<a:gridCol w="914400"\/>/g) ?? []).length, 2, 'colW tolerates suffixed lengths')
+	assert.match(xml, /<a:tr h="914400">/, 'rowH tolerates suffixed lengths')
+})

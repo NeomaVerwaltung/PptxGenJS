@@ -53,7 +53,7 @@ test('the barrel defines nothing of its own', () => {
 })
 
 test('every export is a callable helper', () => {
-	assert.deepEqual(Object.keys(barrel).sort(), ['column', 'cssColorToHex', 'fitText', 'grid', 'gridFor', 'measureText', 'paginateTable', 'registerFontMetrics', 'row', 'tableFromHtml', 'waterfall'])
+	assert.deepEqual(Object.keys(barrel).sort(), ['checkOverflow', 'cm', 'column', 'cssColorToHex', 'fitText', 'grid', 'gridFor', 'measureText', 'paginateTable', 'pt', 'registerFontMetrics', 'row', 'tableFromHtml', 'waterfall'])
 	for (const [name, value] of Object.entries(barrel)) assert.equal(typeof value, 'function', `${name} should be a function`)
 })
 
