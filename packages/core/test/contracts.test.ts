@@ -1065,3 +1065,56 @@ test('contract: unit-suffixed lengths reach the slide XML as EMU', async () => {
 	assert.equal((xml.match(/<a:gridCol w="914400"\/>/g) ?? []).length, 2, 'colW tolerates suffixed lengths')
 	assert.match(xml, /<a:tr h="914400">/, 'rowH tolerates suffixed lengths')
 })
+test('contract: multi-column text boxes emit numCol and spcCol', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addText('two columns of flowing text', { x: 1, y: 1, w: 6, h: 2, columns: 2, columnSpacing: 0.25 })
+	slide.addText('three columns, default gap', { x: 1, y: 4, w: 6, h: 2, columns: 3 })
+	slide.addText('single column stays plain', { x: 1, y: 6, w: 6, h: 1, columns: 1 })
+	const colZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	await assertPptxPackageContracts(colZip)
+	const xml = await readPart(colZip, 'ppt/slides/slide1.xml')
+
+	assert.doesNotMatch(xml, /NaN|undefined/, 'column options must not leak invalid values')
+	// 0.25in = 228600 EMU; ECMA-376 21.1.2.1.1 puts numCol/spcCol before rtlCol
+	assert.match(xml, /<a:bodyPr [^>]*numCol="2" spcCol="228600" rtlCol="0"/, 'two-column body properties missing')
+	assert.match(xml, /<a:bodyPr [^>]*numCol="3" rtlCol="0"/, 'three-column body properties missing')
+	// `numCol="1"` is the schema default, so writing it would be noise
+	assert.equal([...xml.matchAll(/numCol="1"/g)].length, 0, 'a single column must not be written')
+	assert.equal([...xml.matchAll(/numCol="/g)].length, 2, 'expected exactly two multi-column text boxes')
+})
+
+test('contract: invalid column options are dropped with a warning', async () => {
+	const warnings: string[] = []
+	const origWarn = console.warn
+	console.warn = (msg: string) => warnings.push(String(msg))
+	let xml = ''
+	try {
+		const pptx = new pptxgen()
+		const slide = pptx.addSlide()
+		// ECMA-376 allows 1-16; anything else makes a:bodyPr unparseable
+		slide.addText('too many', { x: 1, y: 1, w: 4, h: 1, columns: 17 })
+		slide.addText('too few', { x: 1, y: 2, w: 4, h: 1, columns: 0 })
+		slide.addText('not a number', { x: 1, y: 3, w: 4, h: 1, columns: 'two' as unknown as number })
+		slide.addText('negative gap', { x: 1, y: 4, w: 4, h: 1, columns: 2, columnSpacing: -1 })
+		slide.addText('gap without columns', { x: 1, y: 5, w: 4, h: 1, columnSpacing: 0.5 })
+		xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+	} finally {
+		console.warn = origWarn
+	}
+
+	assert.equal(warnings.filter(w => w.includes('`columns` must be a whole number between 1 and 16')).length, 3, 'out-of-range columns must warn')
+	assert.ok(warnings.some(w => w.includes('`columnSpacing` must be a number >= 0')), 'negative spacing must warn')
+	assert.ok(warnings.some(w => w.includes('`columnSpacing` has no effect without `columns`')), 'orphan spacing must warn')
+
+	assert.equal([...xml.matchAll(/numCol="/g)].length, 1, 'only the valid column count survives')
+	assert.match(xml, /numCol="2" rtlCol="0"/, 'a rejected spacing must leave the column count intact')
+	assert.doesNotMatch(xml, /spcCol=/, 'no invalid spacing may be written')
+})
+
+test('contract: text boxes without column options are unchanged', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addText('plain', { x: 1, y: 1, w: 4, h: 1 })
+	const xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+	assert.doesNotMatch(xml, /numCol|spcCol/, 'a text box without columns must not gain column attributes')
+})
