@@ -470,9 +470,11 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 									: ''
 						fillColor = fillColor || cellOpts.fill ? cellOpts.fill : ''
 						// A gradient needs the whole fill object; the color-only path above cannot carry stops
+						// gradient, pattern, and picture fills carry more than a color, so the whole
+						// fill object has to reach the emitter - the color-only path cannot express them
 						const cellFillProps = cell._optImp?.fill ?? cellOpts.fill
 						const cellFill =
-							typeof cellFillProps === 'object' && cellFillProps?.type === 'gradient'
+							typeof cellFillProps === 'object' && (cellFillProps?.type === 'gradient' || cellFillProps?.type === 'pattern' || cellFillProps?.type === 'image')
 								? genXmlColorSelection(cellFillProps)
 								: fillColor ? genXmlColorSelection(fillColor) : ''
 

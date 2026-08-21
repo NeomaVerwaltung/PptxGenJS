@@ -305,6 +305,72 @@ export interface AnimationProps {
 	 */
 	duration?: number
 }
+export type PatternType =
+	// ECMA-376 20.1.10.51 ST_PresetPatternVal - all 54 preset patterns
+	| 'pct5' | 'pct10' | 'pct20' | 'pct25' | 'pct30' | 'pct40' | 'pct50' | 'pct60' | 'pct70' | 'pct75'
+	| 'pct80' | 'pct90'
+	| 'horz' | 'vert' | 'ltHorz' | 'ltVert' | 'dkHorz' | 'dkVert' | 'narHorz' | 'narVert'
+	| 'dashHorz' | 'dashVert'
+	| 'cross' | 'dnDiag' | 'upDiag' | 'ltDnDiag' | 'ltUpDiag' | 'dkDnDiag' | 'dkUpDiag'
+	| 'wdDnDiag' | 'wdUpDiag' | 'dashDnDiag' | 'dashUpDiag' | 'diagCross'
+	| 'smCheck' | 'lgCheck' | 'smGrid' | 'lgGrid' | 'dotGrid' | 'smConfetti' | 'lgConfetti'
+	| 'horzBrick' | 'diagBrick' | 'solidDmnd' | 'openDmnd' | 'dotDmnd'
+	| 'plaid' | 'sphere' | 'weave' | 'divot' | 'shingle' | 'wave' | 'trellis' | 'zigZag'
+export interface ShapePatternProps {
+	/**
+	 * Preset pattern (ECMA-376 20.1.8.47 `a:pattFill@prst`)
+	 */
+	preset: PatternType
+	/**
+	 * Foreground (pattern line) color
+	 * - `HexColor` or `ThemeColor`
+	 * @default '000000'
+	 */
+	color?: Color
+	/**
+	 * Background color behind the pattern
+	 * - `HexColor` or `ThemeColor`
+	 * @default 'FFFFFF'
+	 */
+	backColor?: Color
+}
+export interface ShapeImageFillProps {
+	/**
+	 * Image data (base64), with a mime header
+	 * - one of `data` or `path` is required
+	 * @example 'image/png;base64,iVBORw0KGgo...'
+	 */
+	data?: string
+	/**
+	 * Image path or URL
+	 * - one of `data` or `path` is required
+	 */
+	path?: string
+	/**
+	 * How the image fills the shape
+	 * - `stretch` scales it to the shape (ECMA-376 20.1.8.56)
+	 * - `tile` repeats it at its natural size (20.1.8.58)
+	 * @default 'stretch'
+	 */
+	sizing?: 'stretch' | 'tile'
+	/**
+	 * `tile` only: scale applied to each tile (percent)
+	 * @default 100
+	 */
+	scale?: number
+	/**
+	 * `tile` only: where tiling starts
+	 * @default 'tl'
+	 */
+	alignment?: 'tl' | 't' | 'tr' | 'l' | 'ctr' | 'r' | 'bl' | 'b' | 'br'
+	/**
+	 * Whether the fill rotates with the shape
+	 * @default true
+	 */
+	rotateWithShape?: boolean
+	/** relationship id resolved when the object is created @internal */
+	_rId?: number
+}
 export interface ShapeFillProps {
 	/**
 	 * Fill color
@@ -324,7 +390,19 @@ export interface ShapeFillProps {
 	 * Fill type
 	 * @default 'solid'
 	 */
-	type?: 'none' | 'solid' | 'gradient'
+	type?: 'none' | 'solid' | 'gradient' | 'pattern' | 'image'
+	/**
+	 * Pattern fill definition
+	 * - required when `type` is `'pattern'`
+	 * @example { type:'pattern', pattern:{ preset:'diagCross', color:'0000FF', backColor:'FFFFFF' } }
+	 */
+	pattern?: ShapePatternProps
+	/**
+	 * Picture fill definition
+	 * - required when `type` is `'image'`
+	 * @example { type:'image', image:{ data:'image/png;base64,iV[...]', sizing:'tile' } }
+	 */
+	image?: ShapeImageFillProps
 	/**
 	 * Gradient fill definition
 	 * - required when `type` is `'gradient'`

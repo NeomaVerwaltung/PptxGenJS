@@ -119,6 +119,20 @@ export const OOXML_EXT = {
 	chartSeriesId: { uri: '{C3380CC4-5D6E-409C-BE32-E72D297353CC}', ns: 'http://schemas.microsoft.com/office/drawing/2014/chart' },
 } as const
 export const LAYOUT_IDX_SERIES_BASE = 2147483649
+/** ECMA-376 20.1.10.51 ST_PresetPatternVal - the 54 preset fill patterns */
+export const PATTERN_TYPES = new Set([
+	'pct5', 'pct10', 'pct20', 'pct25', 'pct30', 'pct40', 'pct50', 'pct60', 'pct70', 'pct75', 'pct80', 'pct90',
+	'horz', 'vert', 'ltHorz', 'ltVert', 'dkHorz', 'dkVert', 'narHorz', 'narVert', 'dashHorz', 'dashVert',
+	'cross', 'dnDiag', 'upDiag', 'ltDnDiag', 'ltUpDiag', 'dkDnDiag', 'dkUpDiag', 'wdDnDiag', 'wdUpDiag',
+	'dashDnDiag', 'dashUpDiag', 'diagCross',
+	'smCheck', 'lgCheck', 'smGrid', 'lgGrid', 'dotGrid', 'smConfetti', 'lgConfetti',
+	'horzBrick', 'diagBrick', 'solidDmnd', 'openDmnd', 'dotDmnd',
+	'plaid', 'sphere', 'weave', 'divot', 'shingle', 'wave', 'trellis', 'zigZag',
+])
+
+/** ECMA-376 20.1.10.55 ST_RectAlignment - where a tiled picture fill starts */
+export const TILE_ALIGNMENTS = new Set(['tl', 't', 'tr', 'l', 'ctr', 'r', 'bl', 'b', 'br'])
+
 export const REGEX_HEX_COLOR = /^[0-9a-fA-F]{6}$/
 export const LINEH_MODIFIER = 1.67 // AKA: Golden Ratio Typography
 

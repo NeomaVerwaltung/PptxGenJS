@@ -1203,3 +1203,95 @@ test('contract: invalid hover and sound input is dropped with a warning', async 
 	assert.doesNotMatch(xml, /<a:snd /, 'no invalid sound may be written')
 	assert.doesNotMatch(xml, /r:id="rId0"/, 'no link may reference a non-existent relationship')
 })
+const FILL_PNG = 'image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkAAIAAAoAAv/lxKUAAAAASUVORK5CYII='
+
+test('contract: pattern fills emit a:pattFill with both colors', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addShape(pptx.ShapeType.rect, { x: 1, y: 1, w: 2, h: 1, fill: { type: 'pattern', pattern: { preset: 'diagCross', color: '0000FF', backColor: 'FFFF00' } } })
+	// defaults: black on white, per ECMA-376
+	slide.addShape(pptx.ShapeType.rect, { x: 4, y: 1, w: 2, h: 1, fill: { type: 'pattern', pattern: { preset: 'smGrid' } } })
+	slide.addTable([[{ text: 'p', options: { fill: { type: 'pattern', pattern: { preset: 'wave', color: 'FF0000' } } } }]], { x: 1, y: 3, w: 4 })
+	const patZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	await assertPptxPackageContracts(patZip)
+	const xml = await readPart(patZip, 'ppt/slides/slide1.xml')
+
+	assert.doesNotMatch(xml, /NaN|undefined/, 'pattern options must not leak invalid values')
+	assert.match(xml, /<a:pattFill prst="diagCross"><a:fgClr><a:srgbClr val="0000FF"\/><\/a:fgClr><a:bgClr><a:srgbClr val="FFFF00"\/><\/a:bgClr><\/a:pattFill>/, 'pattern fill missing')
+	assert.match(xml, /<a:pattFill prst="smGrid"><a:fgClr><a:srgbClr val="000000"\/><\/a:fgClr><a:bgClr><a:srgbClr val="FFFFFF"\/><\/a:bgClr><\/a:pattFill>/, 'pattern defaults wrong')
+	// a table cell fill needs the whole fill object, not just a color
+	assert.match(xml, /<a:tcPr[\s\S]*?<a:pattFill prst="wave">/, 'table cell pattern fill missing')
+	assert.equal([...xml.matchAll(/<a:pattFill /g)].length, 3, 'expected three pattern fills')
+})
+
+test('contract: picture fills emit a:blipFill wired to an image relationship', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addShape(pptx.ShapeType.rect, { x: 1, y: 1, w: 2, h: 1, fill: { type: 'image', image: { data: FILL_PNG } } })
+	slide.addShape(pptx.ShapeType.rect, { x: 4, y: 1, w: 2, h: 1, fill: { type: 'image', image: { data: FILL_PNG, sizing: 'tile', scale: 50, alignment: 'ctr', rotateWithShape: false } } })
+	slide.addTable([[{ text: 'i', options: { fill: { type: 'image', image: { data: FILL_PNG } } } }]], { x: 1, y: 3, w: 4 })
+	const picZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	// proves each r:embed resolves and every media part is declared
+	await assertPptxPackageContracts(picZip)
+	const xml = await readPart(picZip, 'ppt/slides/slide1.xml')
+
+	assert.doesNotMatch(xml, /NaN|undefined/, 'picture-fill options must not leak invalid values')
+	assert.match(xml, /<a:blipFill rotWithShape="1"><a:blip r:embed="rId\d+"\/><a:stretch><a:fillRect\/><\/a:stretch><\/a:blipFill>/, 'stretch picture fill missing')
+	assert.match(xml, /<a:blipFill rotWithShape="0"><a:blip r:embed="rId\d+"\/><a:tile tx="0" ty="0" sx="50000" sy="50000" flip="none" algn="ctr"\/><\/a:blipFill>/, 'tiled picture fill missing')
+	assert.match(xml, /<a:tcPr[\s\S]*?<a:blipFill /, 'table cell picture fill missing')
+
+	// each fill's r:embed must name a real image relationship, and the bytes must be in the package
+	const rels = await readPart(picZip, 'ppt/slides/_rels/slide1.xml.rels')
+	const embeds = [...xml.matchAll(/<a:blip r:embed="(rId\d+)"\/>/g)].map(match => match[1])
+	assert.equal(embeds.length, 3, 'expected one blip per picture fill')
+	embeds.forEach(rid => {
+		assert.match(rels, new RegExp(`<Relationship Id="${rid}" Type="[^"]*\\/image" Target="\\.\\./media/[^"]+"\\/>`), `${rid} has no image relationship`)
+	})
+	assert.equal(Object.keys(picZip.files).filter(file => /^ppt\/media\/.+/.test(file)).length, 3, 'image parts missing')
+})
+
+test('contract: invalid pattern and picture fills degrade instead of writing broken XML', async () => {
+	const warnings: string[] = []
+	const origWarn = console.warn
+	console.warn = (msg: string) => warnings.push(String(msg))
+	let xml = ''
+	try {
+		const pptx = new pptxgen()
+		const slide = pptx.addSlide()
+		// `prst` is an enum, so an unknown value would make the element unparseable
+		slide.addShape(pptx.ShapeType.rect, { x: 1, y: 1, w: 2, h: 1, fill: { type: 'pattern', pattern: { preset: 'tartan' as unknown as 'wave' } } })
+		slide.addShape(pptx.ShapeType.rect, { x: 4, y: 1, w: 2, h: 1, fill: { type: 'pattern' } })
+		// a picture fill with no image would leave `a:blip` dangling, which reads as damage
+		slide.addShape(pptx.ShapeType.rect, { x: 1, y: 3, w: 2, h: 1, fill: { type: 'image', image: {} } })
+		slide.addShape(pptx.ShapeType.rect, { x: 4, y: 3, w: 2, h: 1, fill: { type: 'image', image: { data: 'not-base64' } } })
+		slide.addShape(pptx.ShapeType.rect, { x: 1, y: 5, w: 2, h: 1, fill: { type: 'image', image: { data: FILL_PNG, sizing: 'tile', alignment: 'middle' as unknown as 'ctr' } } })
+		xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+	} finally {
+		console.warn = origWarn
+	}
+
+	assert.ok(warnings.some(w => w.includes('unknown fill pattern "tartan"')), 'unknown preset must warn')
+	assert.ok(warnings.some(w => w.includes('requires `fill.pattern.preset`')), 'missing preset must warn')
+	assert.ok(warnings.some(w => w.includes('requires `fill.image.data` or `fill.image.path`')), 'missing image must warn')
+	assert.ok(warnings.some(w => w.includes('lacks a base64 header')), 'bad image data must warn')
+	assert.ok(warnings.some(w => w.includes('unknown tile alignment "middle"')), 'bad alignment must warn')
+
+	assert.match(xml, /<a:pattFill prst="pct50">/, 'an unknown preset falls back to pct50')
+	assert.equal([...xml.matchAll(/<a:blip r:embed=/g)].length, 1, 'only the valid picture fill may emit a blip')
+	assert.match(xml, /algn="tl"/, 'an unknown tile alignment falls back to tl')
+	assert.doesNotMatch(xml, /r:embed="rId0"/, 'no fill may reference a non-existent relationship')
+})
+
+test('contract: existing fill types are unaffected by pattern and picture support', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addShape(pptx.ShapeType.rect, { x: 1, y: 1, w: 2, h: 1, fill: { color: 'FF0000', transparency: 50 } })
+	slide.addShape(pptx.ShapeType.rect, { x: 4, y: 1, w: 2, h: 1, fill: { type: 'gradient', gradient: { stops: [{ color: 'FF0000', position: 0 }, { color: '0000FF', position: 100 }] } } })
+	slide.addTable([[{ text: 'c', options: { fill: { color: '112233' } } }]], { x: 1, y: 3, w: 4 })
+	const xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+
+	assert.doesNotMatch(xml, /pattFill|blipFill/, 'solid and gradient fills must not gain pattern or picture markup')
+	assert.match(xml, /<a:solidFill><a:srgbClr val="FF0000"><a:alpha val="50000"\/><\/a:srgbClr><\/a:solidFill>/, 'solid fill changed')
+	assert.match(xml, /<a:gradFill rotWithShape="1">/, 'gradient fill changed')
+	assert.match(xml, /<a:solidFill><a:srgbClr val="112233"\/><\/a:solidFill>/, 'table cell solid fill changed')
+})
