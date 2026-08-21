@@ -2,8 +2,8 @@
  * PptxGenJS: Utility Methods
  */
 
-import { EMU, REGEX_HEX_COLOR, DEF_FONT_COLOR, DEF_TEXT_GLOW, ONEPT, SchemeColor, SCHEME_COLORS } from './core-enums'
-import { PresLayout, TextGlowProps, PresSlide, SlideLayout, ShapeFillProps, Color, ShapeLineProps, Coord, ShadowProps, ShapeGradientProps, ShapeGradientStopProps } from './core-interfaces'
+import { DEF_FONT_COLOR, DEF_TEXT_GLOW, EMU, ONEPT, PATTERN_TYPES, REGEX_HEX_COLOR, SCHEME_COLORS, SchemeColor, TILE_ALIGNMENTS } from './core-enums'
+import { PresLayout, TextGlowProps, PresSlide, SlideLayout, ShapeFillProps, Color, ShapeLineProps, Coord, ShadowProps, ShapeGradientProps, ShapeGradientStopProps, ShapeImageFillProps, ShapePatternProps } from './core-interfaces'
 
 /** debug namespace, used for both the log prefix and the `NODE_DEBUG` section name */
 const DEBUG_NS = 'pptxgenjs'
@@ -389,6 +389,47 @@ function createGradientFillElement (gradient: ShapeGradientProps): string {
 }
 
 /**
+ * Create a DrawingML `a:pattFill` element (ECMA-376 20.1.8.47)
+ * @param {ShapePatternProps} pattern - pattern props
+ * @returns {string} XML string
+ */
+function createPatternFillElement (pattern: ShapePatternProps): string {
+	// `prst` is an enum: an unknown value makes the element unparseable, so fall back to a safe preset
+	const preset = PATTERN_TYPES.has(pattern.preset) ? pattern.preset : 'pct50'
+	if (!PATTERN_TYPES.has(pattern.preset)) {
+		console.warn(`[pptxgenjs] unknown fill pattern "${String(pattern.preset)}" - "pct50" used instead`)
+	}
+
+	return (
+		`<a:pattFill prst="${preset}">` +
+		`<a:fgClr>${createColorElement(pattern.color ?? '000000')}</a:fgClr>` +
+		`<a:bgClr>${createColorElement(pattern.backColor ?? 'FFFFFF')}</a:bgClr>` +
+		'</a:pattFill>'
+	)
+}
+
+/**
+ * Create a DrawingML `a:blipFill` element for a picture fill (ECMA-376 20.1.8.14)
+ * - the image relationship is resolved when the object is created, so `_rId` is set by then
+ * @param {ShapeImageFillProps} image - picture fill props
+ * @returns {string} XML string
+ */
+function createImageFillElement (image: ShapeImageFillProps): string {
+	// `stretch` scales the image to the shape (20.1.8.56); `tile` repeats it (20.1.8.58)
+	let mode = '<a:stretch><a:fillRect/></a:stretch>'
+	if (image.sizing === 'tile') {
+		const scale = typeof image.scale === 'number' && isFinite(image.scale) && image.scale > 0 ? Math.round(image.scale * 1000) : 100000
+		const algn = TILE_ALIGNMENTS.has(image.alignment ?? 'tl') ? (image.alignment ?? 'tl') : 'tl'
+		if (image.alignment && !TILE_ALIGNMENTS.has(image.alignment)) {
+			console.warn(`[pptxgenjs] unknown tile alignment "${String(image.alignment)}" - "tl" used instead`)
+		}
+		mode = `<a:tile tx="0" ty="0" sx="${scale}" sy="${scale}" flip="none" algn="${algn}"/>`
+	}
+
+	return `<a:blipFill rotWithShape="${image.rotateWithShape === false ? '0' : '1'}"><a:blip r:embed="rId${image._rId ?? 0}"/>${mode}</a:blipFill>`
+}
+
+/**
  * Create color selection
  * @param {Color | ShapeFillProps | ShapeLineProps} props fill props
  * @returns XML string
@@ -399,12 +440,16 @@ export function genXmlColorSelection (props: Color | ShapeFillProps | ShapeLineP
 	let internalElements = ''
 	let outText = ''
 	let gradient: ShapeGradientProps | undefined
+	let pattern: ShapePatternProps | undefined
+	let image: ShapeImageFillProps | undefined
 
 	if (props) {
 		if (typeof props === 'string') colorVal = props
 		else {
 			if (props.type) fillType = props.type
 			if (props.gradient) gradient = props.gradient
+			if (props.pattern) pattern = props.pattern
+			if (props.image) image = props.image
 			if (props.color) colorVal = props.color
 			if (props.alpha) internalElements += `<a:alpha val="${Math.round((100 - props.alpha) * 1000)}"/>` // DEPRECATED: @deprecated v3.3.0
 			if (props.transparency) internalElements += `<a:alpha val="${Math.round((100 - props.transparency) * 1000)}"/>`
@@ -421,6 +466,22 @@ export function genXmlColorSelection (props: Color | ShapeFillProps | ShapeLineP
 				} else {
 					console.warn('[pptxgenjs] `fill.type:"gradient"` requires `fill.gradient.stops` with at least 2 stops - solid fill used instead')
 					outText += `<a:solidFill>${createColorElement(colorVal || gradient?.stops?.[0]?.color, internalElements)}</a:solidFill>`
+				}
+				break
+			case 'pattern':
+				if (pattern?.preset) {
+					outText += createPatternFillElement(pattern)
+				} else {
+					console.warn('[pptxgenjs] `fill.type:"pattern"` requires `fill.pattern.preset` - solid fill used instead')
+					outText += `<a:solidFill>${createColorElement(colorVal, internalElements)}</a:solidFill>`
+				}
+				break
+			case 'image':
+				// without a relationship the `a:blip` would dangle, which PowerPoint reports as damage
+				if (image?._rId) {
+					outText += createImageFillElement(image)
+				} else {
+					console.warn('[pptxgenjs] `fill.type:"image"` requires `fill.image.data` or `fill.image.path` - fill omitted')
 				}
 				break
 			default: // @note need a statement as having only "break" is removed by rollup, then tiggers "no-default" js-linter

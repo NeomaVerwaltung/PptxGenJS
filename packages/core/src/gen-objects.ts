@@ -37,6 +37,7 @@ import {
 	MediaProps,
 	HyperlinkProps,
 	SectionZoomProps,
+	ShapeFillProps,
 	SlideZoomProps,
 	SummaryZoomProps,
 	ObjectOptions,
@@ -871,11 +872,52 @@ export function resolveHyperlinkRels (target: PresSlide | SlideLayout, link?: Hy
 	}
 }
 
+/**
+ * Resolve a picture fill's image into a slide relationship
+ * - `genXmlColorSelection` is pure, so the rId has to be attached before the XML is generated
+ * - a picture fill without usable image data is dropped, since a dangling `a:blip` reads as damage
+ * @param {PresSlide | SlideLayout} target - slide or layout the fill belongs to
+ * @param {ShapeFillProps} fill - fill props, mutated with the resolved relationship id
+ */
+export function resolveImageFill (target: PresSlide | SlideLayout, fill?: ShapeFillProps): void {
+	if (fill?.type !== 'image') return
+
+	const image = fill.image
+	const data = image?.data ?? ''
+	const path = image?.path ?? ''
+	if (!image || (!data && !path)) {
+		console.warn('[pptxgenjs] `fill.type:"image"` requires `fill.image.data` or `fill.image.path` - fill ignored')
+		fill.type = 'none'
+		return
+	}
+	if (data && !data.toLowerCase().includes('base64,')) {
+		console.warn('[pptxgenjs] `fill.image.data` lacks a base64 header (ex: \'image/png;base64,iV[...]\') - fill ignored')
+		fill.type = 'none'
+		return
+	}
+
+	const extn = (/image\/(\w+);/.exec(data)?.[1] ?? path.split('?')[0].split('.').pop() ?? 'png').toLowerCase()
+	// PERF: an identical image already on this slide reuses its part, as `addImage` does
+	const dupe = target._relsMedia.filter(item => item.path && item.path === path && item.type === `image/${extn}` && !item.isDuplicate)[0]
+	const rId = getNewRelId(target)
+	target._relsMedia.push({
+		path: path || `preencoded.${extn}`,
+		type: `image/${extn}`,
+		extn,
+		data,
+		rId,
+		isDuplicate: !!(dupe?.Target),
+		Target: dupe?.Target ?? `../media/image-${target._slideNum}-${target._relsMedia.length + 1}.${extn}`,
+	})
+	image._rId = rId
+}
+
 export function addShapeDefinition(target: PresSlide | SlideLayout, shapeName: SHAPE_NAME, opts: ShapeProps): void {
 	const options = typeof opts === 'object' ? opts : {}
 	options.line = options.line || { type: 'none' }
 	resolveHyperlinkRels(target, options.hyperlink)
 	resolveHyperlinkRels(target, options.hyperlinkHover)
+	resolveImageFill(target, options.fill)
 	const newObject: ISlideObject = {
 		_type: SLIDE_OBJECT_TYPES.text,
 		shape: shapeName || SHAPE_TYPE.RECTANGLE,
@@ -999,6 +1041,8 @@ export function addTableDefinition(
 				// C: Set cell borders
 				const cellOpts = newCell.options ?? {}
 				newCell.options = cellOpts
+				// a picture fill needs its relationship resolved before the cell is serialized
+				if (typeof cellOpts.fill === 'object') resolveImageFill(target, cellOpts.fill)
 				const initialBorder = cellOpts.border || opt.border || [{ type: 'none' }, { type: 'none' }, { type: 'none' }, { type: 'none' }]
 
 				// CASE 1: border interface is: BorderOptions | [BorderOptions, BorderOptions, BorderOptions, BorderOptions]

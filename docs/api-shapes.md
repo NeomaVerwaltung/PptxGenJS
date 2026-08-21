@@ -49,7 +49,7 @@ slide.addText("ShapeType.line", {
 | Name         | Type                                                                    | Description         | Possible Values                                             |
 | :----------- | :---------------------------------------------------------------------- | :------------------ | :---------------------------------------------------------- |
 | `align`      | string                                                                  | alignment           | `left` or `center` or `right`. Default: `left`              |
-| `fill`       | `ShapeFillProps`       | fill props          | Fill color/transparency props, or a gradient (see below)    |
+| `fill`       | `ShapeFillProps`       | fill props          | Solid color, gradient, pattern, or picture fill (see below) |
 | `flipH`      | boolean                                                                 | flip Horizontal     | `true` or `false`                                           |
 | `flipV`      | boolean                                                                 | flip Vertical       | `true` or `false`                                           |
 | `hyperlink`  | `HyperlinkProps`  | hyperlink props     | (see type link)                                             |
@@ -92,3 +92,52 @@ slide.addShape(pptx.ShapeType.rect, {
     line: { type: 'gradient', width: 2, gradient: { type: 'radial', stops: [{ color: '00FF00', position: 0 }, { color: '000000', position: 100 }] } },
 })
 ```
+
+## Pattern Fills
+
+Set `fill.type` to `pattern` with one of the 54 ECMA-376 preset patterns.
+
+```javascript
+slide.addShape(pptx.ShapeType.rect, {
+    x: 1, y: 1, w: 4, h: 2,
+    fill: { type: 'pattern', pattern: { preset: 'diagCross', color: '0000FF', backColor: 'FFFF00' } },
+})
+```
+
+| Option      | Type   | Default    | Description                        |
+| :---------- | :----- | :--------- | :--------------------------------- |
+| `preset`    | string |            | **required** - preset pattern name |
+| `color`     | Color  | `000000`   | pattern (foreground) color         |
+| `backColor` | Color  | `FFFFFF`   | color behind the pattern           |
+
+Presets are the `ST_PresetPatternVal` names: percentage shades (`pct5`…`pct90`), lines (`horz`, `vert`,
+`ltHorz`, `dkVert`, `narHorz`, `dashVert`, …), diagonals (`dnDiag`, `ltUpDiag`, `wdDnDiag`, `diagCross`, …),
+grids and checks (`smGrid`, `lgCheck`, `dotGrid`, `smConfetti`, …), and textures (`plaid`, `sphere`,
+`weave`, `divot`, `shingle`, `wave`, `trellis`, `zigZag`, `horzBrick`, `diagBrick`, `solidDmnd`,
+`openDmnd`, `dotDmnd`). An unknown preset falls back to `pct50` with a warning.
+
+## Picture Fills
+
+Set `fill.type` to `image` to fill a shape or table cell with a picture. The image becomes a normal
+image relationship, so the same file used twice by path is stored once.
+
+```javascript
+slide.addShape(pptx.ShapeType.rect, {
+    x: 1, y: 1, w: 4, h: 2,
+    fill: { type: 'image', image: { path: '/img/texture.png', sizing: 'tile', scale: 50 } },
+})
+```
+
+| Option            | Type    | Default   | Description                                                |
+| :---------------- | :------ | :-------- | :--------------------------------------------------------- |
+| `data`            | string  |           | base64 image data with a mime header (`data` or `path`)     |
+| `path`            | string  |           | image path or URL (`data` or `path`)                        |
+| `sizing`          | string  | `stretch` | `stretch` scales to the shape, `tile` repeats the image     |
+| `scale`           | number  | `100`     | `tile` only: per-tile scale (percent)                       |
+| `alignment`       | string  | `tl`      | `tile` only: `tl`,`t`,`tr`,`l`,`ctr`,`r`,`bl`,`b`,`br`     |
+| `rotateWithShape` | boolean | `true`    | whether the fill rotates with the shape                     |
+
+A picture fill without usable image data is dropped with a warning rather than written, because a
+`a:blip` with no relationship makes PowerPoint report the file as damaged.
+
+Both fill types work on shapes and table cells.
