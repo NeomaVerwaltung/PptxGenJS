@@ -710,6 +710,9 @@ export default class PptxGenJS implements IPresentationProps {
 			this.slides.forEach((slide, idx) => {
 				zip.file(`ppt/slides/slide${idx + 1}.xml`, genXml.makeXmlSlide(slide, this.sections))
 				zip.file(`ppt/slides/_rels/slide${idx + 1}.xml.rels`, genXml.makeXmlSlideRel(this.slides, this.slideLayouts, idx + 1))
+				// Content parts hold markup PresentationML does not define; the caller supplied its
+				// content type, so it is written verbatim next to its slide
+				;(slide._contentParts ?? []).forEach(part => zip.file(`ppt/slides/contentParts/${part.fileName}`, part.data))
 				// Create all slide notes related items. Notes of empty strings are created for slides which do not have notes specified, to keep track of _rels.
 				zip.file(`ppt/notesSlides/notesSlide${idx + 1}.xml`, genXml.makeXmlNotesSlide(slide))
 				zip.file(`ppt/notesSlides/_rels/notesSlide${idx + 1}.xml.rels`, genXml.makeXmlNotesSlideRel(idx + 1))

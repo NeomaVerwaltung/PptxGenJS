@@ -1295,3 +1295,76 @@ test('contract: existing fill types are unaffected by pattern and picture suppor
 	assert.match(xml, /<a:gradFill rotWithShape="1">/, 'gradient fill changed')
 	assert.match(xml, /<a:solidFill><a:srgbClr val="112233"\/><\/a:solidFill>/, 'table cell solid fill changed')
 })
+const CP_PNG = 'image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkAAIAAAoAAv/lxKUAAAAASUVORK5CYII='
+const CP_INK = '<inkml:ink xmlns:inkml="http://www.w3.org/2003/InkML"><inkml:trace>0 0, 10 10</inkml:trace></inkml:ink>'
+const CP_INK_REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/customXml'
+
+test('contract: content parts embed a payload with the fallback the spec requires', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addContentPart({ data: CP_INK, contentType: 'application/inkml+xml', relationshipType: CP_INK_REL, ink: true, cover: CP_PNG, x: 1, y: 1, w: 3, h: 2, fileName: 'ink1.xml' })
+	slide.addContentPart({ data: '<custom/>', contentType: 'application/xml', relationshipType: 'http://example.com/rel/custom', x: 5, y: 1, w: 2, h: 1 })
+
+	const cpZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	// every part declared, every relationship resolvable, no duplicate ids
+	await assertPptxPackageContracts(cpZip)
+	const xml = await readPart(cpZip, 'ppt/slides/slide1.xml')
+
+	assert.doesNotMatch(xml, /NaN|undefined/, 'content-part options must not leak invalid values')
+	assert.equal([...xml.matchAll(/<p14:contentPart /g)].length, 2, 'expected two content parts')
+	assert.match(xml, /<mc:Choice xmlns:p14="[^"]+" Requires="p14"><p14:contentPart r:id="rId\d+" p14:bwMode="auto"><p14:nvContentPartPr><p14:cNvPr id="\d+" name="Ink 1"\/><p14:cNvContentPartPr\/><p14:nvPr\/><\/p14:nvContentPartPr><p14:xfrm>/, 'content-part choice malformed')
+
+	// MS-PPTX 2.2.3.1 requires a picture fallback for ink, 2.2.3 a shape fallback otherwise
+	assert.match(xml, /<mc:Fallback><p:pic>[\s\S]*?<a:blip r:embed="rId\d+"\/>/, 'ink must fall back to a picture showing its preview')
+	assert.match(xml, /<mc:Fallback><p:sp>[\s\S]*?<a:noFill\/>/, 'a non-ink content part must fall back to a shape')
+
+	// the payload lands next to its slide with the caller's content type declared
+	assert.ok(cpZip.file('ppt/slides/contentParts/ink1.xml'), 'ink payload part missing')
+	assert.equal(await readPart(cpZip, 'ppt/slides/contentParts/ink1.xml'), CP_INK, 'payload must be written verbatim')
+	const types = await readPart(cpZip, '[Content_Types].xml')
+	assert.match(types, /<Override PartName="\/ppt\/slides\/contentParts\/ink1\.xml" ContentType="application\/inkml\+xml"\/>/, 'caller content type not declared')
+	assert.match(types, /ContentType="application\/xml"\/>/, 'second content type not declared')
+
+	// the caller's relationship type is used verbatim, and no rId is reused
+	const rels = await readPart(cpZip, 'ppt/slides/_rels/slide1.xml.rels')
+	assert.ok(rels.includes(`<Relationship Id="rId1" Type="${CP_INK_REL}" Target="contentParts/ink1.xml"/>`), 'ink relationship missing or wrong type')
+	assert.match(rels, /Type="http:\/\/example\.com\/rel\/custom" Target="contentParts\/contentPart2\.xml"/, 'custom relationship type not honoured')
+	const ids = [...rels.matchAll(/<Relationship Id="(rId\d+)"/g)].map(match => match[1])
+	assert.equal(new Set(ids).size, ids.length, `duplicate relationship ids: ${ids.join(',')}`)
+})
+
+test('contract: content parts without a verifiable package contract are refused', async () => {
+	const warnings: string[] = []
+	const origWarn = console.warn
+	console.warn = (msg: string) => warnings.push(String(msg))
+	let zipOut: JSZip
+	try {
+		const pptx = new pptxgen()
+		const slide = pptx.addSlide()
+		slide.addContentPart({ data: '', contentType: 'application/xml', relationshipType: 'http://x.test/r' })
+		slide.addContentPart({ data: '<a/>', contentType: '', relationshipType: 'http://x.test/r' })
+		slide.addContentPart({ data: '<a/>', contentType: 'application/xml', relationshipType: '' })
+		// ink without a raster preview would fall back to nothing
+		slide.addContentPart({ data: CP_INK, contentType: 'application/inkml+xml', relationshipType: CP_INK_REL, ink: true })
+		zipOut = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	} finally {
+		console.warn = origWarn
+	}
+
+	assert.ok(warnings.some(w => w.includes('`data` is required')), 'missing payload must warn')
+	assert.ok(warnings.some(w => w.includes('`contentType` is required')), 'missing content type must warn')
+	assert.ok(warnings.some(w => w.includes('`relationshipType` is required')), 'missing relationship type must warn')
+	assert.ok(warnings.some(w => w.includes('ink requires a base64 `cover` image')), 'ink without a preview must warn')
+
+	const xml = await readPart(zipOut, 'ppt/slides/slide1.xml')
+	assert.doesNotMatch(xml, /p14:contentPart/, 'no content part may be emitted from rejected input')
+	assert.equal(Object.keys(zipOut.files).filter(file => /contentParts\/.+/.test(file)).length, 0, 'no payload parts may be written')
+})
+
+test('contract: presentations without content parts are unchanged', async () => {
+	const plain = new pptxgen()
+	plain.addSlide().addText('none', { x: 1, y: 1, w: 3, h: 1 })
+	const plainZip = await JSZip.loadAsync((await plain.write({ outputType: 'nodebuffer' })) as Buffer)
+	assert.equal(Object.keys(plainZip.files).filter(file => file.includes('contentParts')).length, 0, 'no content-part folder may be created')
+	assert.doesNotMatch(await readPart(plainZip, 'ppt/slides/slide1.xml'), /contentPart/, 'a slide without content parts must be unchanged')
+})

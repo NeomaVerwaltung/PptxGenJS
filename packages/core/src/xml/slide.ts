@@ -43,6 +43,7 @@ import {
 import { slideCommentRelId } from './relationships'
 import { genXmlHyperlink } from './hyperlink'
 import { genXmlPlaceholder, genXmlTextBody } from './text'
+import { genXmlContentPart } from './content-part'
 import { genXmlZoom } from './zoom'
 
 const ImageSizingXml = {
@@ -795,6 +796,10 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 					strSlideXml += ' </p:spPr>'
 					strSlideXml += '</p:pic>'
 				}
+				break
+
+			case SLIDE_OBJECT_TYPES.contentPart:
+				strSlideXml += genXmlContentPart(slideItemObj, { shapeId: idx + 2, x, y, cx, cy })
 				break
 
 			case SLIDE_OBJECT_TYPES.zoom:

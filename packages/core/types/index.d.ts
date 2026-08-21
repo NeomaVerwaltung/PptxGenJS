@@ -3254,6 +3254,45 @@ declare namespace PptxGenJS {
 		 */
 		replies?: CommentReplyProps[]
 	}
+	export interface ContentPartProps extends PositionProps, ObjectNameProps {
+		/**
+		 * Payload markup for the embedded part
+		 * - for ink this is the InkML document; for anything else, that format's markup
+		 */
+		data: string
+		/**
+		 * Content type of the payload, declared in `[Content_Types].xml`
+		 * - belongs to the format being embedded, so it is required rather than guessed
+		 * @example 'application/inkml+xml'
+		 */
+		contentType: string
+		/**
+		 * Relationship type linking the slide to the payload part
+		 * - also format-specific and therefore required
+		 * @example 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/customXml'
+		 */
+		relationshipType: string
+		/**
+		 * File name for the payload inside the package
+		 * @default 'contentPart<n>.xml'
+		 */
+		fileName?: string
+		/**
+		 * Whether this content part holds ink
+		 * - ink must fall back to a raster picture, so `cover` becomes required (MS-PPTX 2.2.3.1)
+		 * @default false
+		 */
+		ink?: boolean
+		/**
+		 * Raster preview shown by consumers that cannot render the payload (base64 image)
+		 * - required when `ink` is true
+		 */
+		cover?: string
+		/**
+		 * Alt text for the fallback shape
+		 */
+		altText?: string
+	}
 	export interface AddSlideProps {
 		masterName?: string // TODO: 20200528: rename to "masterTitle" (createMaster uses `title` so lets be consistent)
 		sectionTitle?: string
@@ -3437,14 +3476,19 @@ declare namespace PptxGenJS {
 		 */
 		addMedia(options: MediaProps): Slide
 		/**
-		 * Add a zoom to another slide
-		 * @param options - zoom props
-		 */
-		/**
 		 * Add a threaded comment to this Slide
 		 * @param options - comment props
 		 */
 		addComment(options: CommentProps): Slide
+		/**
+		 * Embed markup PresentationML does not define as its own package part
+		 * @param options - content-part props
+		 */
+		addContentPart(options: ContentPartProps): Slide
+		/**
+		 * Add a zoom to another slide
+		 * @param options - zoom props
+		 */
 		addZoom(options: SlideZoomProps): Slide
 		/**
 		 * Add a zoom to a section

@@ -2135,6 +2135,13 @@ export interface ISlideObject {
 	_type: SLIDE_OBJECT_TYPES
 	options?: ObjectOptions
 	// zoom
+	// content part
+	/** relationship id of the embedded payload part @internal */
+	contentPartRid?: number
+	/** raster preview relationship id, used by the ink fallback @internal */
+	coverRid?: number
+	/** whether the payload is ink, which requires a picture fallback @internal */
+	contentPartKind?: 'ink' | 'content'
 	/** which `p16` element and fallback shape to emit @internal */
 	zoomKind?: 'slide' | 'section' | 'summary'
 	/** zoom targets, resolved to ids at export @internal */
@@ -2309,7 +2316,17 @@ export interface ObjectOptions extends ImageProps, PositionProps, ShapeProps, Ta
 	colW?: number | number[] // table
 	rowH?: number | number[] // table
 }
+/** A payload part embedded by `addContentPart()` @internal */
+export interface IContentPart {
+	fileName: string
+	data: string
+	contentType: string
+	relationshipType: string
+	rId: number
+}
 export interface SlideBaseProps {
+	/** content parts to write for this slide @internal */
+	_contentParts?: IContentPart[]
 	_bkgdImgRid?: number
 	/** comments added to this slide (MS-PPTX 2.16) @internal */
 	comments?: CommentProps[]
@@ -2602,6 +2619,45 @@ export interface CommentProps {
 	 * Replies in the comment thread
 	 */
 	replies?: CommentReplyProps[]
+}
+export interface ContentPartProps extends PositionProps, ObjectNameProps {
+	/**
+	 * Payload markup for the embedded part
+	 * - for ink this is the InkML document; for anything else, that format's markup
+	 */
+	data: string
+	/**
+	 * Content type of the payload, declared in `[Content_Types].xml`
+	 * - belongs to the format being embedded, so it is required rather than guessed
+	 * @example 'application/inkml+xml'
+	 */
+	contentType: string
+	/**
+	 * Relationship type linking the slide to the payload part
+	 * - also format-specific and therefore required
+	 * @example 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/customXml'
+	 */
+	relationshipType: string
+	/**
+	 * File name for the payload inside the package
+	 * @default 'contentPart<n>.xml'
+	 */
+	fileName?: string
+	/**
+	 * Whether this content part holds ink
+	 * - ink must fall back to a raster picture, so `cover` becomes required (MS-PPTX 2.2.3.1)
+	 * @default false
+	 */
+	ink?: boolean
+	/**
+	 * Raster preview shown by consumers that cannot render the payload (base64 image)
+	 * - required when `ink` is true
+	 */
+	cover?: string
+	/**
+	 * Alt text for the fallback shape
+	 */
+	altText?: string
 }
 export interface AddSlideProps {
 	masterName?: string // TODO: 20200528: rename to "masterTitle" (createMaster uses `title` so lets be consistent)
