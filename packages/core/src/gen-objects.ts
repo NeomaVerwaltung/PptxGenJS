@@ -36,6 +36,7 @@ import {
 	ImageProps,
 	MediaProps,
 	HyperlinkProps,
+	ContentPartProps,
 	SectionZoomProps,
 	ShapeFillProps,
 	SlideZoomProps,
@@ -910,6 +911,74 @@ export function resolveImageFill (target: PresSlide | SlideLayout, fill?: ShapeF
 		Target: dupe?.Target ?? `../media/image-${target._slideNum}-${target._relsMedia.length + 1}.${extn}`,
 	})
 	image._rId = rId
+}
+
+/**
+ * Add a content part to a slide (MS-PPTX 2.2.3), optionally holding ink (2.2.3.1)
+ * @param {PresSlide} target - slide to add the content part to
+ * @param {ContentPartProps} opt - content-part props
+ */
+export function addContentPartDefinition (target: PresSlide, opt: ContentPartProps): void {
+	if (typeof opt?.data !== 'string' || !opt.data.trim()) {
+		console.warn('[pptxgenjs] addContentPart: `data` is required - content part ignored')
+		return
+	}
+	// Both belong to the embedded format; a wrong value makes the package unopenable, so neither
+	// is guessed here
+	if (typeof opt.contentType !== 'string' || !opt.contentType.trim()) {
+		console.warn('[pptxgenjs] addContentPart: `contentType` is required (ex: \'application/inkml+xml\') - content part ignored')
+		return
+	}
+	if (typeof opt.relationshipType !== 'string' || !opt.relationshipType.trim()) {
+		console.warn('[pptxgenjs] addContentPart: `relationshipType` is required - content part ignored')
+		return
+	}
+	// MS-PPTX 2.2.3.1: ink must fall back to a raster picture, so a preview is not optional
+	const cover = opt.cover ?? ''
+	if (opt.ink && (!cover || !cover.toLowerCase().includes('base64,'))) {
+		console.warn('[pptxgenjs] addContentPart: ink requires a base64 `cover` image for its picture fallback - content part ignored')
+		return
+	}
+
+	const index = target._slideObjects.filter(obj => obj._type === SLIDE_OBJECT_TYPES.contentPart).length + 1
+	const partRid = getNewRelId(target)
+	target._contentParts = target._contentParts ?? []
+	target._contentParts.push({
+		fileName: opt.fileName ?? `contentPart${index}.xml`,
+		data: opt.data,
+		contentType: opt.contentType,
+		relationshipType: opt.relationshipType,
+		rId: partRid,
+	})
+
+	let coverRid: number | undefined
+	if (cover) {
+		const extn = /image\/(\w+);/.exec(cover)?.[1] ?? 'png'
+		coverRid = getNewRelId(target)
+		target._relsMedia.push({
+			path: `preencoded.${extn}`,
+			type: `image/${extn}`,
+			extn,
+			data: cover,
+			rId: coverRid,
+			Target: `../media/image-${target._slideNum}-${target._relsMedia.length + 1}.${extn}`,
+		})
+	}
+
+	target._slideObjects.push({
+		_type: SLIDE_OBJECT_TYPES.contentPart,
+		contentPartRid: partRid,
+		coverRid,
+		contentPartKind: opt.ink ? 'ink' : 'content',
+		options: {
+			x: opt.x ?? 1,
+			y: opt.y ?? 1,
+			w: opt.w ?? 3,
+			h: opt.h ?? 2,
+			objectName: opt.objectName ? encodeXmlEntities(opt.objectName) : `${opt.ink ? 'Ink' : 'Content Part'} ${index}`,
+			altText: opt.altText ?? '',
+		},
+	})
 }
 
 export function addShapeDefinition(target: PresSlide | SlideLayout, shapeName: SHAPE_NAME, opts: ShapeProps): void {

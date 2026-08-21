@@ -499,7 +499,8 @@ export function genXmlColorSelection (props: Color | ShapeFillProps | ShapeLineP
  * @returns {number} count of all current rels plus 1 for the caller to use as its "rId"
  */
 export function getNewRelId (target: PresSlide | SlideLayout): number {
-	return target._rels.length + target._relsChart.length + target._relsMedia.length + 1
+	// every relationship store on the slide has to be counted, or two of them collide on one rId
+	return target._rels.length + target._relsChart.length + target._relsMedia.length + (target._contentParts?.length ?? 0) + 1
 }
 
 /**

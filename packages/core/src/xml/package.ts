@@ -38,6 +38,12 @@ export function makeXmlContTypes (slides: PresSlide[], slideLayouts: SlideLayout
 			if ((slide.comments ?? []).length > 0) strXml += `<Override PartName="/ppt/comments/commentSlide${idx + 1}.xml" ContentType="${COMMENT.commentsContentType}"/>`
 		})
 	}
+	// Opt-in: each content part declares the content type of the format it embeds
+	slides.forEach(slide => {
+		;(slide._contentParts ?? []).forEach(part => {
+			strXml += `<Override PartName="/ppt/slides/contentParts/${part.fileName}" ContentType="${part.contentType}"/>`
+		})
+	})
 	// Opt-in: the `fntdata` Default only appears when `addFont()` embedded something
 	if (embeddedFonts.length > 0) strXml += '<Default Extension="fntdata" ContentType="application/x-fontdata"/>'
 	strXml += '<Default Extension="vml" ContentType="application/vnd.openxmlformats-officedocument.vmlDrawing"/>'

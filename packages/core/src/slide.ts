@@ -16,6 +16,7 @@ import {
 	ISlideRelMedia,
 	ImageProps,
 	CommentProps,
+	ContentPartProps,
 	MediaProps,
 	PresLayout,
 	PresSlide,
@@ -257,6 +258,20 @@ export default class Slide {
 		}
 		this._comments = this._comments ?? []
 		this._comments.push(comment)
+		return this
+	}
+
+	/**
+	 * Embed markup PresentationML does not define as its own package part (MS-PPTX 2.2.3)
+	 * - `contentType` and `relationshipType` belong to the format being embedded and are required:
+	 *   a wrong value produces a package PowerPoint reports as damaged
+	 * - set `ink: true` for InkML, which must also supply a `cover` for its picture fallback
+	 * @param {ContentPartProps} options - content-part props
+	 * @return {Slide} this Slide
+	 * @example slide.addContentPart({ data: inkml, contentType: 'application/inkml+xml', relationshipType: '...', ink: true, cover: pngBase64 })
+	 */
+	addContentPart(options: ContentPartProps): Slide {
+		genObj.addContentPartDefinition(this, cloneOpts(options))
 		return this
 	}
 

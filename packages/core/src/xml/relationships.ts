@@ -2,6 +2,7 @@
 
 import { COMMENT, CRLF } from '../core-enums'
 import { ISlideRel, ISlideRelChart, ISlideRelMedia, PresSlide, SlideLayout } from '../core-interfaces'
+import { encodeXmlEntities } from '../gen-utils'
 
 type DefaultRelationship = { target: string, type: string }
 
@@ -38,6 +39,12 @@ function slideObjectRelationsToXml (slide: PresSlide | SlideLayout, defaultRels:
 			if (strXml.includes(' Target="' + rel.Target + '"')) strXml += '<Relationship Id="rId' + relRid + '" Type="http://schemas.microsoft.com/office/2007/relationships/image" Target="' + rel.Target + '"/>'
 			else strXml += '<Relationship Id="rId' + relRid + '" Target="' + rel.Target + '" TargetMode="External" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/video"/>'
 		}
+	})
+
+	// A content part carries its own relationship type, since it belongs to the embedded format
+	;((slide as PresSlide)._contentParts ?? []).forEach(part => {
+		lastRid = Math.max(lastRid, part.rId)
+		strXml += `<Relationship Id="rId${part.rId}" Type="${part.relationshipType}" Target="contentParts/${encodeXmlEntities(part.fileName)}"/>`
 	})
 
 	defaultRels.forEach((rel, idx) => {

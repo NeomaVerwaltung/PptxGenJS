@@ -37,6 +37,7 @@ Two rules keep this page truthful, both enforced by `packages/core/test/ms-pptx-
 | `c15:*` | `c:extLst` | `{CE6537A1-…}` | drawing/2012/chart | MS-ODRAWXML | `showLeaderLines`, extended data labels |
 | `c16:uniqueId` | `c:extLst` | `{C3380CC4-…}` | drawing/2014/chart | MS-ODRAWXML | none (chart series identity) |
 | `p188:commentRel` | `p:sld/p:extLst` | `{6950BFC3-…}` | powerpoint/2018/8/main | §2.2.10 | written with `slide.addComment()` |
+| `p14:contentPart` | `p:spTree` via `mc:AlternateContent` | n/a (`mc:Choice Requires="p14"`) | powerpoint/2010/main | §2.2.3, §2.2.3.1 | `slide.addContentPart()` |
 | `p16:sldZm` | `p:spTree` via `mc:AlternateContent` | n/a (`mc:Choice Requires="p16"`) | powerpoint/2016/slidezoom | §2.2.15 / §2.10 | `slide.addZoom()` |
 | `p16:sectionZm` | `p:spTree` via `mc:AlternateContent` | n/a (`mc:Choice Requires="p16"`) | powerpoint/2016/sectionzoom | §2.2.15 / §2.9 | `slide.addSectionZoom()` |
 | `p16:summaryZm` | `p:spTree` via `mc:AlternateContent` | n/a (`mc:Choice Requires="p16"`) | powerpoint/2016/summaryzoom | §2.2.15 / §2.11 | `slide.addSummaryZoom()` |
@@ -56,7 +57,7 @@ distinguishes "unsupported" from "overlooked":
 | Laser traces, show-event lists | §2.2.6 | Recordings PowerPoint captures while presenting, not authoring options |
 | Comment change records | §2.18–§2.19 | `cmChg` needs the changes-information part deferred with §2.1.4 |
 | Comment tasks and reactions | §2.20, §2.21 | The `extLst` URIs have no documented source; a guessed URI risks the repair dialog |
-| Content parts, ink, Office App references | §2.2.3, §2.2.13 | Each needs an `mc:AlternateContent` fallback and extra package parts |
+| Office App / web-extension references | §2.2.13 | Needs the web-extension part graph from [MS-OWEXML] §2.1.3, which is not verifiable from available specification text |
 | Design elements, Designer properties/tags | §2.2.17, §2.2.19, §2.2.20 | Server-driven Designer metadata with no authoring meaning |
 | Classification outcomes | §2.2.18 | Compliance metadata; must stay opt-in and is not implemented |
 | Modern placeholder type extension | §2.22.1.1 | `p:ph@type` alone is currently emitted, per ECMA-376 |
