@@ -41,6 +41,7 @@ import {
 } from '../gen-utils'
 
 import { slideCommentRelId } from './relationships'
+import { genXmlHyperlink } from './hyperlink'
 import { genXmlPlaceholder, genXmlTextBody } from './text'
 import { genXmlZoom } from './zoom'
 
@@ -572,13 +573,9 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 
 				// B: The addition of the "txBox" attribute is the sole determiner of if an object is a shape or textbox
 				strSlideXml += `<p:nvSpPr><p:cNvPr id="${idx + 2}" name="${slideItemObj.options.objectName}">`
-				// <Hyperlink>
-				if (slideItemObj.options.hyperlink?.url) {
-					strSlideXml += `<a:hlinkClick r:id="rId${slideItemObj.options.hyperlink._rId}" tooltip="${slideItemObj.options.hyperlink.tooltip ? encodeXmlEntities(slideItemObj.options.hyperlink.tooltip) : ''}"/>`
-				}
-				if (slideItemObj.options.hyperlink?.slide) {
-					strSlideXml += `<a:hlinkClick r:id="rId${slideItemObj.options.hyperlink._rId}" tooltip="${slideItemObj.options.hyperlink.tooltip ? encodeXmlEntities(slideItemObj.options.hyperlink.tooltip) : ''}" action="ppaction://hlinksldjump"/>`
-				}
+				// <Hyperlink> - `a:hlinkHover` follows `a:hlinkClick` in CT_NonVisualDrawingProps
+				if (slideItemObj.options.hyperlink?._rId) strSlideXml += genXmlHyperlink(slideItemObj.options.hyperlink, 'click', 'shape')
+				if (slideItemObj.options.hyperlinkHover?._rId) strSlideXml += genXmlHyperlink(slideItemObj.options.hyperlinkHover, 'hover', 'shape')
 				// </Hyperlink>
 				strSlideXml += '</p:cNvPr>'
 				strSlideXml += '<p:cNvSpPr' + (slideItemObj.options?.isTextBox ? ' txBox="1"/>' : '/>')
@@ -698,14 +695,8 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 				strSlideXml += `<p:cNvPr id="${idx + 2}" name="${slideItemObj.options.objectName}" descr="${encodeXmlEntities(
 					slideItemObj.options.altText || slideItemObj.image
 				)}">`
-				if (slideItemObj.hyperlink?.url) {
-					strSlideXml += `<a:hlinkClick r:id="rId${slideItemObj.hyperlink._rId}" tooltip="${slideItemObj.hyperlink.tooltip ? encodeXmlEntities(slideItemObj.hyperlink.tooltip) : ''
-					}"/>`
-				}
-				if (slideItemObj.hyperlink?.slide) {
-					strSlideXml += `<a:hlinkClick r:id="rId${slideItemObj.hyperlink._rId}" tooltip="${slideItemObj.hyperlink.tooltip ? encodeXmlEntities(slideItemObj.hyperlink.tooltip) : ''
-					}" action="ppaction://hlinksldjump"/>`
-				}
+				if (slideItemObj.hyperlink?._rId) strSlideXml += genXmlHyperlink(slideItemObj.hyperlink, 'click', 'shape')
+				if (slideItemObj.hyperlinkHover?._rId) strSlideXml += genXmlHyperlink(slideItemObj.hyperlinkHover, 'hover', 'shape')
 				strSlideXml += '    </p:cNvPr>'
 				strSlideXml += '    <p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr>'
 				strSlideXml += '    <p:nvPr>' + genXmlPlaceholder(placeholderObj) + '</p:nvPr>'

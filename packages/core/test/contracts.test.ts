@@ -1118,3 +1118,88 @@ test('contract: text boxes without column options are unchanged', async () => {
 	const xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
 	assert.doesNotMatch(xml, /numCol|spcCol/, 'a text box without columns must not gain column attributes')
 })
+const HOVER_PNG = 'image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkAAIAAAoAAv/lxKUAAAAASUVORK5CYII='
+const HOVER_WAV = 'audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='
+
+test('contract: mouse-over actions use the right element for each host', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addShape(pptx.ShapeType.rect, {
+		x: 1, y: 1, w: 2, h: 1,
+		hyperlink: { url: 'https://example.com', tooltip: 'go' },
+		hyperlinkHover: { slide: 2, tooltip: 'peek' },
+	})
+	slide.addImage({ data: HOVER_PNG, x: 4, y: 1, w: 1, h: 1, hyperlinkHover: { url: 'https://hover.test' } })
+	slide.addText([{ text: 'link', options: { hyperlink: { url: 'https://a.test' }, hyperlinkHover: { slide: 2 } } }], { x: 1, y: 3, w: 3, h: 1 })
+	pptx.addSlide()
+
+	const hlZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	await assertPptxPackageContracts(hlZip)
+	const xml = await readPart(hlZip, 'ppt/slides/slide1.xml')
+
+	assert.doesNotMatch(xml, /NaN|undefined/, 'hyperlink options must not leak invalid values')
+	// DrawingML names the same concept differently by host: `hlinkHover` in p:cNvPr,
+	// `hlinkMouseOver` in a:rPr. Swapping them yields markup PowerPoint cannot parse.
+	assert.match(xml, /<a:hlinkClick [^>]*tooltip="go"[^>]*\/><a:hlinkHover r:id="rId\d+" action="ppaction:\/\/hlinksldjump" tooltip="peek"\/>/, 'shape hover must use a:hlinkHover, after the click link')
+	assert.match(xml, /<a:hlinkHover r:id="rId\d+" invalidUrl="" action="" tgtFrame="" tooltip="" history="1"\/>/, 'image hover link missing')
+	assert.match(xml, /<a:hlinkMouseOver r:id="rId\d+" action="ppaction:\/\/hlinksldjump" tooltip=""\/>/, 'text-run hover must use a:hlinkMouseOver')
+	assert.equal([...xml.matchAll(/<a:hlinkMouseOver/g)].length, 1, 'exactly one run-level hover expected')
+	assert.equal([...xml.matchAll(/<a:hlinkHover/g)].length, 2, 'exactly two shape-level hovers expected')
+	// the run-level hover element must not appear on a shape, nor vice versa
+	assert.doesNotMatch(xml, /<p:cNvPr[^>]*>(?:(?!<\/p:cNvPr>)[\s\S])*<a:hlinkMouseOver/, 'a:hlinkMouseOver must not appear in p:cNvPr')
+
+	// every link resolves to a relationship
+	const rels = await readPart(hlZip, 'ppt/slides/_rels/slide1.xml.rels')
+	;[...xml.matchAll(/<a:hlink\w+ r:id="(rId\d+)"/g)].map(match => match[1]).forEach(rid => {
+		assert.match(rels, new RegExp(`<Relationship Id="${rid}"`), `${rid} has no relationship`)
+	})
+})
+
+test('contract: action sounds and click attributes are emitted', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addText([{
+		text: 'noisy',
+		options: { hyperlink: { url: 'https://a.test', highlightClick: true, stopSoundsOnClick: true, sound: { data: HOVER_WAV, name: 'ding.wav' } } },
+	}], { x: 1, y: 1, w: 3, h: 1 })
+	const sndZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	// proves the wav part is declared with a content type and its relationship resolves
+	await assertPptxPackageContracts(sndZip)
+	const xml = await readPart(sndZip, 'ppt/slides/slide1.xml')
+
+	assert.match(xml, /<a:hlinkClick [^>]*highlightClick="1" endSnd="1">/, 'click attributes must be settable')
+	assert.match(xml, /<a:snd r:embed="rId\d+" name="ding\.wav"\/>/, 'action sound missing')
+	assert.equal(Object.keys(sndZip.files).filter(file => /^ppt\/media\/.+\.wav$/.test(file)).length, 1, 'wav part missing')
+	assert.match(await readPart(sndZip, '[Content_Types].xml'), /Extension="wav"/, 'wav content type missing')
+
+	// both default to false in the schema, so an ordinary link writes neither
+	const plain = new pptxgen()
+	plain.addSlide().addText([{ text: 'quiet', options: { hyperlink: { url: 'https://a.test' } } }], { x: 1, y: 1, w: 3, h: 1 })
+	const plainXml = await readPart(await JSZip.loadAsync((await plain.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+	assert.doesNotMatch(plainXml, /highlightClick|endSnd|a:snd|hlinkHover|hlinkMouseOver/, 'a plain link must not gain hover, sound, or click attributes')
+})
+
+test('contract: invalid hover and sound input is dropped with a warning', async () => {
+	const warnings: string[] = []
+	const origWarn = console.warn
+	console.warn = (msg: string) => warnings.push(String(msg))
+	let xml = ''
+	try {
+		const pptx = new pptxgen()
+		const slide = pptx.addSlide()
+		slide.addShape(pptx.ShapeType.rect, { x: 1, y: 1, w: 2, h: 1, hyperlinkHover: {} })
+		slide.addShape(pptx.ShapeType.rect, { x: 4, y: 1, w: 2, h: 1, hyperlinkHover: { url: 'https://b.test', sound: {} } })
+		slide.addShape(pptx.ShapeType.rect, { x: 1, y: 3, w: 2, h: 1, hyperlinkHover: { url: 'https://c.test', sound: { data: 'not-base64' } } })
+		xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+	} finally {
+		console.warn = origWarn
+	}
+
+	assert.ok(warnings.some(w => w.includes('hyperlink requires either `url` or `slide`')), 'a target-less link must warn')
+	assert.ok(warnings.some(w => w.includes('`sound` requires `data` or `path`')), 'a sound without data must warn')
+	assert.ok(warnings.some(w => w.includes('`sound.data` lacks a base64 header')), 'bad sound data must warn')
+
+	assert.equal([...xml.matchAll(/<a:hlinkHover/g)].length, 2, 'links with a target survive; the target-less one does not')
+	assert.doesNotMatch(xml, /<a:snd /, 'no invalid sound may be written')
+	assert.doesNotMatch(xml, /r:id="rId0"/, 'no link may reference a non-existent relationship')
+})
