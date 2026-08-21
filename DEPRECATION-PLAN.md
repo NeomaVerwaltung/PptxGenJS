@@ -87,11 +87,15 @@ the same engine, so it cannot stay behind: it is DOM scraping plus `addTable`, w
 also composition of public API. It moves to std with the paginator (assumed default); the
 alternative is dropping the HTML-import feature outright.
 
-Blocked on: the std paginator does not exist yet. The weight knobs warn today (they have no
-future under any implementation); `autoPage` and `tableToSlides` carry a plan-doc pointer
-only, and their runtime warning turns on when the std replacement ships. The knob
+Status: the replacement shipped. `@neo-ma/pptxgenjs-std/tables` provides `paginateTable`
+(measured pagination) and `tableFromHtml` (the HTML importer), both built on that package's
+`measureText`, so `autoPage`, `tableToSlides()` and the two weight knobs are all deprecated
+and warn once per process, each naming the helper to migrate to before v5.0. The
 `@deprecated` tags read `vNEXT` until a release sets them (RELEASING.md, pre-release
 verification step 4).
+
+Remaining before removal: std is `0.x`, so the migration target is beta until it reaches
+`1.0`. That gates deleting the code in v5.0 - not the warnings, which are live now.
 
 ## Plan
 
@@ -130,8 +134,8 @@ three `zip.generateAsync` calls behave the same. One-line change + one test.
    `TableProps` and `TableCellProps`; delete `parseTextToLines`, `paginateTableRows` and
    `getSlidesForTableRows` from src/gen-tables.ts along with the `autoPage*` props that
    only feed them (`autoPage`, `autoPageRepeatHeader`, `autoPageSlideStartY`, `autoPageHeaderRows`; the `addHeaderToEach` / `newSlideStartY` aliases go with F4), and remove `tableToSlides()`. `addTable` keeps single-slide layout.
-   Gated on `@neo-ma/pptxgenjs-std` shipping a measured paginator + HTML importer first —
-   without it this is a feature removal, not a migration.
+   The migration target exists (`paginateTable`, `tableFromHtml`); the remaining gate is std
+   reaching `1.0`, so consumers are not moved onto a beta as the core drops the original.
 7. Ship a MIGRATION.md table: old prop → new prop (the `@deprecated` JSDoc tags
    already contain the mapping; generate the table from them).
 

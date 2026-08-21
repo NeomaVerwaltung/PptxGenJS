@@ -117,9 +117,12 @@ Auto-paging creates new slides automatically as table rows overflow the current 
 
 ::: warning DEPRECATED
 Built-in auto-paging estimates where text wraps instead of measuring it, which is why the
-char and line weight knobs exist. Both knobs are deprecated in vNEXT and log a one-time
-warning; auto-paging itself (and `tableToSlides()`) is planned for removal in v5.0, replaced
-by a measured paginator in `@neo-ma/pptxgenjs-std`. See `DEPRECATION-PLAN.md` F10.
+char and line weight knobs exist. `autoPage`, both knobs and `tableToSlides()` are deprecated
+in vNEXT, each logging a one-time warning, and **are removed in v5.0**.
+
+Migrate to [`paginateTable`](./std.md#paginatetable-a-table-across-slides-measured) in
+`@neo-ma/pptxgenjs-std/tables`, which measures each cell instead of estimating it. See
+`DEPRECATION-PLAN.md` F10.
 :::
 
 ### Auto-Paging Property Notes

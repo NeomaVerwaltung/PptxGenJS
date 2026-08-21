@@ -7,8 +7,10 @@ The `tableToSlides` method reproduces an HTML table across one or more slides (a
 
 ::: warning DEPRECATED
 `tableToSlides()` is built on the core's auto-paging engine, which estimates where text
-wraps rather than measuring it. Both are planned for removal in v5.0, replaced by a measured
-paginator and HTML importer in `@neo-ma/pptxgenjs-std`. See `DEPRECATION-PLAN.md` F10.
+wraps rather than measuring it. Both are deprecated in vNEXT and **are removed in v5.0**.
+
+Migrate to [`tableFromHtml`](./std.md#tablefromhtml-an-html-table-measured) in
+`@neo-ma/pptxgenjs-std/tables`. See `DEPRECATION-PLAN.md` F10.
 :::
 
 - Supported cell styling includes background colors, borders, fonts, padding, etc.

@@ -194,7 +194,7 @@ declare class PptxGenJS {
 	 * Reproduces an HTML table as a PowerPoint table - including column widths, style, etc. - creates 1 or more slides as needed
 	 * @param {string} eleId table HTML element ID
 	 * @param {TableToSlidesProps} props generation options
-	 * @see DEPRECATION-PLAN.md F10 - depends on built-in auto-paging, which is planned for removal in v5.0
+	 * @deprecated vNEXT - built on the estimating auto-pager; removed in v5.0. Migrate to `tableFromHtml` from @neo-ma/pptxgenjs-std/tables (see DEPRECATION-PLAN.md F10)
 	 */
 	tableToSlides(eleId: string, props?: PptxGenJS.TableToSlidesProps): void
 }
@@ -1769,7 +1769,7 @@ declare namespace PptxGenJS {
 		/**
 		 * Whether to enable auto-paging
 		 * - auto-paging creates new slides as content overflows a slide
-		 * @see DEPRECATION-PLAN.md F10 - built-in auto-paging is planned for removal in v5.0, replaced by a measured paginator in @neo-ma/pptxgenjs-std
+		 * @deprecated vNEXT - estimates where text wraps instead of measuring it; removed in v5.0. Migrate to `paginateTable` from @neo-ma/pptxgenjs-std/tables (see DEPRECATION-PLAN.md F10)
 		 * @default true
 		 */
 		autoPage?: boolean
@@ -1882,7 +1882,7 @@ declare namespace PptxGenJS {
 		/**
 		 * Whether to enable auto-paging
 		 * - auto-paging creates new slides as content overflows a slide
-		 * @see DEPRECATION-PLAN.md F10 - built-in auto-paging is planned for removal in v5.0, replaced by a measured paginator in @neo-ma/pptxgenjs-std
+		 * @deprecated vNEXT - estimates where text wraps instead of measuring it; removed in v5.0. Migrate to `paginateTable` from @neo-ma/pptxgenjs-std/tables (see DEPRECATION-PLAN.md F10)
 		 * @default false
 		 */
 		autoPage?: boolean

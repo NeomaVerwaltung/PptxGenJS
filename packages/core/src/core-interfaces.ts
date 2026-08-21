@@ -965,7 +965,7 @@ export interface TableToSlidesProps extends TableProps {
 	/**
 	 * Whether to enable auto-paging
 	 * - auto-paging creates new slides as content overflows a slide
-	 * @see DEPRECATION-PLAN.md F10 - built-in auto-paging is planned for removal in v5.0, replaced by a measured paginator in @neo-ma/pptxgenjs-std
+	 * @deprecated vNEXT - estimates where text wraps instead of measuring it; removed in v5.0. Migrate to `paginateTable` from @neo-ma/pptxgenjs-std/tables (see DEPRECATION-PLAN.md F10)
 	 * @default true
 	 */
 	autoPage?: boolean
@@ -1078,7 +1078,7 @@ export interface TableProps extends PositionProps, TextBaseProps, ObjectNameProp
 	/**
 	 * Whether to enable auto-paging
 	 * - auto-paging creates new slides as content overflows a slide
-	 * @see DEPRECATION-PLAN.md F10 - built-in auto-paging is planned for removal in v5.0, replaced by a measured paginator in @neo-ma/pptxgenjs-std
+	 * @deprecated vNEXT - estimates where text wraps instead of measuring it; removed in v5.0. Migrate to `paginateTable` from @neo-ma/pptxgenjs-std/tables (see DEPRECATION-PLAN.md F10)
 	 * @default false
 	 */
 	autoPage?: boolean

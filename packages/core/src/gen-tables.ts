@@ -472,6 +472,7 @@ function warnDeprecatedAutoPageWeights (tableRows: TableCell[][], tableProps: Ta
 	if (typeof tableProps.autoPageLineWeight === 'number' || cellHas('autoPageLineWeight')) {
 		warnDeprecatedOnce('autoPageLineWeight', '`autoPageLineWeight` is deprecated and is removed in v5.0 along with built-in table auto-paging - it tunes an inaccurate line-height estimate; a measured paginator ships in @neo-ma/pptxgenjs-std')
 	}
+	warnDeprecatedOnce('autoPage', 'table `autoPage` is deprecated and is removed in v5.0 - it estimates where text wraps instead of measuring it. Migrate to `paginateTable` from @neo-ma/pptxgenjs-std/tables before v5.0')
 }
 
 /**

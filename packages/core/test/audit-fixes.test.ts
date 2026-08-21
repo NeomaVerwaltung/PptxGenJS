@@ -73,6 +73,11 @@ test('F10: auto-paging weight knobs warn once, from table props or cell options'
 		// per-cell options are caller-supplied too, and are read before the engine propagates them
 		pptx.addSlide().addTable([[{ text: 'x', options: { autoPageLineWeight: 0.5 } }]], { x: 0.5, y: 0.5, w: 9, autoPage: true })
 
+		const autoPageWarns = warnings.filter(w => w.includes('table `autoPage`'))
+		assert.equal(autoPageWarns.length, 1, `expected one autoPage warning, got ${autoPageWarns.length}`)
+		assert.match(autoPageWarns[0], /paginateTable/, 'the warning must name the migration target')
+		assert.match(autoPageWarns[0], /before v5\.0/)
+
 		const charWarns = warnings.filter(w => w.includes('autoPageCharWeight'))
 		const lineWarns = warnings.filter(w => w.includes('autoPageLineWeight'))
 		assert.equal(charWarns.length, 1, `expected one autoPageCharWeight warning, got ${charWarns.length}`)
