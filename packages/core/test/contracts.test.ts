@@ -403,17 +403,17 @@ test('contract: modern transitions and millisecond durations carry a base fallba
 	)
 
 	// morph lives in p16 and falls back to fade
-	assert.match(morphXml, /<mc:Choice Requires="p16"><p:transition p14:dur="1200" advClick="0"><p16:morph\/><\/p:transition><\/mc:Choice>/, 'morph choice missing')
+	assert.match(morphXml, /<mc:Choice [^>]*Requires="p16"><p:transition p14:dur="1200" advClick="0"><p16:morph\/><\/p:transition><\/mc:Choice>/, 'morph choice missing')
 	assert.match(morphXml, /<mc:Fallback><p:transition advClick="0"><p:fade\/><\/p:transition><\/mc:Fallback>/, 'morph fallback missing')
 	assert.match(morphXml, /xmlns:p16="http:\/\/schemas\.microsoft\.com\/office\/powerpoint\/2016\/main"/, 'p16 namespace missing')
 	assert.match(morphXml, /xmlns:p14="http:\/\/schemas\.microsoft\.com\/office\/powerpoint\/2010\/main"/, 'p14 namespace missing for p14:dur')
 
 	// conveyor lives in p14 and falls back to push
-	assert.match(conveyorXml, /<mc:Choice Requires="p14"><p:transition p14:dur="900"><p14:conveyor dir="ru"\/><\/p:transition><\/mc:Choice><mc:Fallback><p:transition><p:push\/><\/p:transition><\/mc:Fallback>/, 'conveyor choice/fallback missing')
+	assert.match(conveyorXml, /<mc:Choice [^>]*Requires="p14"><p:transition p14:dur="900"><p14:conveyor dir="ru"\/><\/p:transition><\/mc:Choice><mc:Fallback><p:transition><p:push\/><\/p:transition><\/mc:Fallback>/, 'conveyor choice/fallback missing')
 
 	// `p14:dur` never appears in a fallback (its namespace is exactly what the fallback consumer lacks),
 	// and `spd` is what the fallback keeps instead
-	assert.match(pushXml, /<mc:Choice Requires="p14"><p:transition p14:dur="700"><p:push dir="u"\/><\/p:transition><\/mc:Choice>/, 'duration must be offered via a Choice')
+	assert.match(pushXml, /<mc:Choice [^>]*Requires="p14"><p:transition p14:dur="700"><p:push dir="u"\/><\/p:transition><\/mc:Choice>/, 'duration must be offered via a Choice')
 	assert.match(pushXml, /<mc:Fallback><p:transition spd="fast"><p:push dir="u"\/><\/p:transition><\/mc:Fallback>/, 'fallback must use spd, not p14:dur')
 	const fallbacks = [morphXml, conveyorXml, pushXml].map(xml => /<mc:Fallback>[\s\S]*?<\/mc:Fallback>/.exec(xml)?.[0] ?? '')
 	fallbacks.forEach(fb => { assert.doesNotMatch(fb, /p14:|p16:/, 'a fallback must not use extension markup') })
@@ -854,9 +854,9 @@ test('contract: zoom objects target slides and sections through mc:AlternateCont
 	assert.equal([...xml.matchAll(/<mc:AlternateContent/g)].length, 3, 'expected one AlternateContent per zoom')
 
 	// each kind lives in its own namespace, bound to `p16` inside the Choice
-	assert.match(xml, /<mc:Choice Requires="p16" xmlns:p16="http:\/\/schemas\.microsoft\.com\/office\/powerpoint\/2016\/slidezoom"[^>]*><p16:sldZm>/, 'slide zoom namespace/element wrong')
-	assert.match(xml, /<mc:Choice Requires="p16" xmlns:p16="http:\/\/schemas\.microsoft\.com\/office\/powerpoint\/2016\/sectionzoom"[^>]*><p16:sectionZm>/, 'section zoom namespace/element wrong')
-	assert.match(xml, /<mc:Choice Requires="p16" xmlns:p16="http:\/\/schemas\.microsoft\.com\/office\/powerpoint\/2016\/summaryzoom"[^>]*><p16:summaryZm>/, 'summary zoom namespace/element wrong')
+	assert.match(xml, /<mc:Choice [^>]*xmlns:p16="http:\/\/schemas\.microsoft\.com\/office\/powerpoint\/2016\/slidezoom"[^>]*Requires="p16"><p16:sldZm>/, 'slide zoom namespace/element wrong')
+	assert.match(xml, /<mc:Choice [^>]*xmlns:p16="http:\/\/schemas\.microsoft\.com\/office\/powerpoint\/2016\/sectionzoom"[^>]*Requires="p16"><p16:sectionZm>/, 'section zoom namespace/element wrong')
+	assert.match(xml, /<mc:Choice [^>]*xmlns:p16="http:\/\/schemas\.microsoft\.com\/office\/powerpoint\/2016\/summaryzoom"[^>]*Requires="p16"><p16:summaryZm>/, 'summary zoom namespace/element wrong')
 
 	// a slide zoom targets the target slide's own `p:sldId`, not its ordinal
 	const targetSldId = /<p:sldId id="(\d+)" r:id="rId4"\/>/.exec(presentation)?.[1]

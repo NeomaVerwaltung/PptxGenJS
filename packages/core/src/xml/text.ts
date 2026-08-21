@@ -4,6 +4,7 @@
 
 import { BULLET_TYPES, CRLF, DEF_BULLET_MARGIN, OOXML_EXT, PLACEHOLDER_TYPES, SLIDE_OBJECT_TYPES } from '../core-enums'
 import { ISlideObject, ObjectOptions, TableCell, TextProps, TextPropsOptions } from '../core-interfaces'
+import { alternateContent } from './markup-compat'
 import { createColorElement, createGlowElement, encodeXmlEntities, genXmlColorSelection, inch2Emu, resolveGlowOptions, valToPts, warnDeprecatedOnce } from '../gen-utils'
 
 function genXmlParagraphProperties (textObj: ISlideObject | TextProps, isDefault: boolean): string {
@@ -285,12 +286,7 @@ function genXmlTextRun (textObj: TextProps): string {
 	 * `mc:Fallback` plain run instead of silently dropping the math. */
 	const math = normalizeOmml(typeof textObj.options?.omml === 'string' ? textObj.options.omml : '')
 	if (math) {
-		return (
-			`<mc:AlternateContent xmlns:mc="${OMML_NS.mc}">` +
-			`<mc:Choice xmlns:a14="${OMML_NS.a14}" Requires="a14">${math}</mc:Choice>` +
-			(plainRun ? `<mc:Fallback>${plainRun}</mc:Fallback>` : '<mc:Fallback/>') +
-			'</mc:AlternateContent>'
-		)
+		return alternateContent({ namespaces: { a14: OMML_NS.a14 }, choice: math, fallback: plainRun })
 	}
 
 	return plainRun

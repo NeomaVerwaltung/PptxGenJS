@@ -94,3 +94,92 @@ test('profile: every extension in a generated package is wrapped as MS-PPTX 2.2 
 	}
 	assert.ok(seen >= 5, `expected the sample deck to exercise several extensions, saw ${seen}`)
 })
+
+test('profile: every mc:AlternateContent is well formed and offers a fallback', async () => {
+	// exercise every path that emits optional markup through the compatibility wrapper
+	const pptx = new pptxgen()
+	pptx.addSection({ title: 'MCE' })
+	const slide = pptx.addSlide({ sectionTitle: 'MCE', transition: { type: 'morph', duration: 1200 } })
+	slide.addZoom({ slideNumber: 2, x: 1, y: 1, w: 2, h: 1 })
+	slide.addSummaryZoom({ sectionTitles: ['MCE'], x: 4, y: 1, w: 3, h: 2 })
+	slide.addText([{ text: 'a/b', options: { omml: '<m:r><m:t>x</m:t></m:r>' } }], { x: 1, y: 3, w: 3, h: 1 })
+	pptx.addSlide({ sectionTitle: 'MCE', transition: { type: 'push', direction: 'up', duration: 700, speed: 'fast' } })
+	const zip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+
+	let seen = 0
+	for (const name of Object.keys(zip.files).filter(file => file.endsWith('.xml'))) {
+		const xml = await (zip.file(name) as JSZip.JSZipObject).async('string')
+		for (const block of xml.matchAll(/<mc:AlternateContent\b[\s\S]*?<\/mc:AlternateContent>/g)) {
+			seen++
+			const content = block[0]
+
+			// `mc` itself must be declared on the wrapper, or the whole block is unreadable
+			assert.match(content, /^<mc:AlternateContent xmlns:mc="http:\/\/schemas\.openxmlformats\.org\/markup-compatibility\/2006">/, `${name}: mc namespace not declared on AlternateContent`)
+
+			// ECMA-376 Part 3: a Choice must state what a consumer needs, and those prefixes must be
+			// in scope at the Choice - otherwise the condition cannot be evaluated
+			const choice = /<mc:Choice\b([^>]*)>/.exec(content)
+			assert.ok(choice, `${name}: AlternateContent without a Choice`)
+			const requires = /Requires="([^"]+)"/.exec(choice[1])
+			assert.ok(requires, `${name}: mc:Choice without a Requires attribute`)
+			const declared = [...choice[1].matchAll(/xmlns:(\w+)=/g)].map(match => match[1])
+			requires[1].split(/\s+/).forEach(prefix => {
+				assert.ok(declared.includes(prefix), `${name}: mc:Choice requires "${prefix}" but does not declare it`)
+			})
+
+			// without a fallback, a consumer that rejects the choice silently drops the content
+			assert.match(content, /<mc:Fallback(\/>|>)/, `${name}: AlternateContent without a Fallback`)
+
+			// the fallback exists for consumers that lack the optional namespaces, so it must not use them
+			const fallback = /<mc:Fallback>([\s\S]*)<\/mc:Fallback>/.exec(content)?.[1] ?? ''
+			declared.forEach(prefix => {
+				assert.doesNotMatch(fallback, new RegExp(`<${prefix}:|\\s${prefix}:`), `${name}: mc:Fallback uses the optional prefix "${prefix}"`)
+			})
+		}
+	}
+
+	assert.ok(seen >= 5, `expected the sample deck to exercise several AlternateContent blocks, saw ${seen}`)
+})
+
+test('profile: optional markup only appears inside a wrapper MS-PPTX 2.2 permits', async () => {
+	// Optional (non-ECMA-376) markup is legal in exactly three places: an `extLst` extension, an
+	// `mc:Choice`, or under an `mc:Ignorable` declaration on the part root. Anything else is markup a
+	// consumer cannot skip, which is how a package ends up needing repair.
+	const pptx = new pptxgen()
+	pptx.chartTrackingRefBased = true
+	pptx.guides = [{ orientation: 'vert', position: 3 }]
+	pptx.addSection({ title: 'Audit' })
+	const slide = pptx.addSlide({ sectionTitle: 'Audit', transition: { type: 'morph', duration: 900 } })
+	slide.creationId = true
+	slide.addTable([['a']], { x: 1, y: 1, w: 3 })
+	slide.addZoom({ slideNumber: 2, x: 5, y: 1, w: 2, h: 1 })
+	slide.addMedia({ type: 'video', data: 'video/mp4;base64,QQ==', x: 1, y: 3, w: 2, h: 2, autoplay: true })
+	slide.addText([{ text: 'x', options: { omml: '<m:r><m:t>x</m:t></m:r>' } }], { x: 4, y: 3, w: 3, h: 1 })
+	pptx.addSlide({ sectionTitle: 'Audit' })
+	const zip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+
+	/** Strip the regions where optional markup is allowed, so anything left is a violation */
+	const stripAllowed = (xml: string): string =>
+		xml
+			.replace(/<mc:AlternateContent\b[\s\S]*?<\/mc:AlternateContent>/g, '')
+			.replace(/<(\w+):extLst>[\s\S]*?<\/\1:extLst>/g, '')
+
+	/** Prefixes bound to a base ECMA-376 namespace, which every consumer understands */
+	const REQUIRED_PREFIXES = new Set(['a', 'p', 'r', 'c', 'm', 'w', 'x', 'mc', 'xdr', 'x14ac', 'x15', 'mv', 'o', 'v'])
+
+	for (const name of Object.keys(zip.files).filter(file => file.endsWith('.xml') && file.startsWith('ppt/'))) {
+		const xml = await (zip.file(name) as JSZip.JSZipObject).async('string')
+		const ignorable = /mc:Ignorable="([^"]+)"/.exec(xml)?.[1].split(/\s+/) ?? []
+		const remaining = stripAllowed(xml)
+
+		const offenders = [...new Set([...remaining.matchAll(/<(\w+):/g)].map(match => match[1]))]
+			.filter(prefix => !REQUIRED_PREFIXES.has(prefix) && !ignorable.includes(prefix))
+
+		assert.deepEqual(
+			offenders,
+			[],
+			`${name}: optional markup with prefix(es) "${offenders.join(', ')}" is neither in an extLst, ` +
+			'in an mc:Choice, nor covered by mc:Ignorable on the part root'
+		)
+	}
+})
