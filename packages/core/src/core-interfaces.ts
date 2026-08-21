@@ -122,6 +122,26 @@ export interface BorderProps {
 	pt?: number
 }
 // used by: image, object, text,
+export interface HyperlinkSoundProps {
+	/**
+	 * WAV audio data (base64), with a mime header
+	 * - one of `data` or `path` is required
+	 * @example 'audio/wav;base64,UklGRi...'
+	 */
+	data?: string
+	/**
+	 * WAV file path or URL
+	 * - one of `data` or `path` is required
+	 */
+	path?: string
+	/**
+	 * Sound name PowerPoint shows in the Action dialog
+	 * @default 'sound.wav'
+	 */
+	name?: string
+	/** relationship id resolved when the object is created @internal */
+	_sndRId?: number
+}
 export interface HyperlinkProps {
 	/**
 	 * Relationship id - set by the library during export
@@ -140,6 +160,21 @@ export interface HyperlinkProps {
 	 * Hyperlink Tooltip
 	 */
 	tooltip?: string
+	/**
+		 * Highlight the link when clicked
+		 * @default false
+		 */
+	highlightClick?: boolean
+	/**
+		 * Stop any playing sounds when the link is clicked
+		 * @default false
+		 */
+	stopSoundsOnClick?: boolean
+	/**
+		 * Sound played when the link is triggered (`a:snd`)
+		 * - must be WAV data; ECMA-376 20.1.2.2.32 allows no other format here
+		 */
+	sound?: HyperlinkSoundProps
 }
 // used by: chart, text, image
 export interface ShadowProps {
@@ -645,6 +680,12 @@ export interface ImageProps extends PositionProps, DataOrPathProps, ObjectNamePr
 	flipV?: boolean
 	hyperlink?: HyperlinkProps
 	/**
+	 * Mouse-over action, configured like `hyperlink` but triggered on hover
+	 * - PowerPoint's Insert > Action > Mouse Over tab
+	 * @example { hyperlinkHover: { slide: 3, tooltip: 'Jump to results' } }
+	 */
+	hyperlinkHover?: HyperlinkProps
+	/**
 	 * Image outline/border (a picture frame)
 	 * @example { color: '696969', width: 2 } // 2pt dim-gray border
 	 */
@@ -857,6 +898,12 @@ export interface ShapeProps extends PositionProps, ObjectNameProps {
 	 */
 	hyperlink?: HyperlinkProps
 	/**
+	 * Mouse-over action, configured like `hyperlink` but triggered on hover
+	 * - PowerPoint's Insert > Action > Mouse Over tab
+	 * @example { hyperlinkHover: { slide: 3, tooltip: 'Jump to results' } }
+	 */
+	hyperlinkHover?: HyperlinkProps
+	/**
 	 * Line options
 	 */
 	line?: ShapeLineProps
@@ -1064,6 +1111,12 @@ export interface TableCellProps extends TextBaseProps {
 	 */
 	fill?: ShapeFillProps
 	hyperlink?: HyperlinkProps
+	/**
+	 * Mouse-over action, configured like `hyperlink` but triggered on hover
+	 * - PowerPoint's Insert > Action > Mouse Over tab
+	 * @example { hyperlinkHover: { slide: 3, tooltip: 'Jump to results' } }
+	 */
+	hyperlinkHover?: HyperlinkProps
 	/**
 	 * Cell margin (inches)
 	 * @default 0
@@ -1302,6 +1355,12 @@ export interface TextPropsOptions extends PositionProps, DataOrPathProps, TextBa
 	flipV?: boolean
 	glow?: TextGlowProps
 	hyperlink?: HyperlinkProps
+	/**
+	 * Mouse-over action, configured like `hyperlink` but triggered on hover
+	 * - PowerPoint's Insert > Action > Mouse Over tab
+	 * @example { hyperlinkHover: { slide: 3, tooltip: 'Jump to results' } }
+	 */
+	hyperlinkHover?: HyperlinkProps
 	indentLevel?: number
 	isTextBox?: boolean
 	line?: ShapeLineProps
@@ -2014,6 +2073,12 @@ export interface ISlideObject {
 	image?: string
 	imageRid?: number
 	hyperlink?: HyperlinkProps
+	/**
+	 * Mouse-over action, configured like `hyperlink` but triggered on hover
+	 * - PowerPoint's Insert > Action > Mouse Over tab
+	 * @example { hyperlinkHover: { slide: 3, tooltip: 'Jump to results' } }
+	 */
+	hyperlinkHover?: HyperlinkProps
 	// media
 	media?: string
 	mtype?: MediaType

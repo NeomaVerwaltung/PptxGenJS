@@ -4,6 +4,7 @@
 
 import { BULLET_TYPES, CRLF, DEF_BULLET_MARGIN, OOXML_EXT, PLACEHOLDER_TYPES, SLIDE_OBJECT_TYPES } from '../core-enums'
 import { ISlideObject, ObjectOptions, TableCell, TextProps, TextPropsOptions } from '../core-interfaces'
+import { genXmlHyperlink } from './hyperlink'
 import { alternateContent } from './markup-compat'
 import { createColorElement, createGlowElement, encodeXmlEntities, genXmlColorSelection, inch2Emu, resolveGlowOptions, valToPts, warnDeprecatedOnce } from '../gen-utils'
 
@@ -183,23 +184,15 @@ function genXmlTextRunProperties (opts: ObjectOptions | TextPropsOptions, isDefa
 	if (opts.hyperlink) {
 		if (typeof opts.hyperlink !== 'object') throw new Error('ERROR: text `hyperlink` option should be an object. Ex: `hyperlink:{url:\'https://github.com\'}` ')
 		else if (!opts.hyperlink.url && !opts.hyperlink.slide) throw new Error('ERROR: \'hyperlink requires either `url` or `slide`\'')
-		else if (opts.hyperlink.url) {
-			// runProps += '<a:uFill>'+ genXmlColorSelection('0000FF') +'</a:uFill>'; // Breaks PPT2010! (Issue#74)
-			runProps += `<a:hlinkClick r:id="rId${opts.hyperlink._rId}" invalidUrl="" action="" tgtFrame="" tooltip="${opts.hyperlink.tooltip ? encodeXmlEntities(opts.hyperlink.tooltip) : ''
-			}" history="1" highlightClick="0" endSnd="0"${opts.color ? '>' : '/>'}`
-		} else if (opts.hyperlink.slide) {
-			runProps += `<a:hlinkClick r:id="rId${opts.hyperlink._rId}" action="ppaction://hlinksldjump" tooltip="${opts.hyperlink.tooltip ? encodeXmlEntities(opts.hyperlink.tooltip) : ''
-			}"${opts.color ? '>' : '/>'}`
-		}
-		if (opts.color) {
-			runProps += ' <a:extLst>'
-			runProps += `  <a:ext uri="${OOXML_EXT.hyperlinkColor.uri}">`
-			runProps += `   <ahyp:hlinkClr xmlns:ahyp="${OOXML_EXT.hyperlinkColor.ns}" val="tx"/>`
-			runProps += '  </a:ext>'
-			runProps += ' </a:extLst>'
-			runProps += '</a:hlinkClick>'
-		}
+		// A colored link keeps its run color instead of the theme's hyperlink color (issue #74: an
+		// `a:uFill` here breaks PPT2010, so the extension is used rather than an underline fill)
+		const linkColorExt = opts.color
+			? `<a:extLst><a:ext uri="${OOXML_EXT.hyperlinkColor.uri}"><ahyp:hlinkClr xmlns:ahyp="${OOXML_EXT.hyperlinkColor.ns}" val="tx"/></a:ext></a:extLst>`
+			: ''
+		runProps += genXmlHyperlink(opts.hyperlink, 'click', 'run', linkColorExt)
 	}
+	// `a:hlinkMouseOver` follows `a:hlinkClick` in CT_TextCharacterProperties
+	if (opts.hyperlinkHover?._rId) runProps += genXmlHyperlink(opts.hyperlinkHover, 'hover', 'run')
 
 	// END runProperties
 	runProps += `</${runPropsTag}>`

@@ -35,6 +35,7 @@ import {
 	ISlideObject,
 	ImageProps,
 	MediaProps,
+	HyperlinkProps,
 	SectionZoomProps,
 	SlideZoomProps,
 	SummaryZoomProps,
@@ -551,7 +552,13 @@ export function addImageDefinition(target: PresSlide | SlideLayout, opt: ImagePr
 
 			objHyperlink._rId = imageRelId
 			newObject.hyperlink = objHyperlink
+			// the action sound (if any) needs its own relationship
+			resolveHyperlinkRels(target, objHyperlink)
 		}
+	}
+	if (typeof opt.hyperlinkHover === 'object') {
+		resolveHyperlinkRels(target, opt.hyperlinkHover)
+		newObject.hyperlinkHover = opt.hyperlinkHover
 	}
 
 	// STEP 6: Add object to slide
@@ -812,9 +819,63 @@ function normalizeDeprecatedLineProps(
 	if (typeof opts.lineTail === 'string') { warnDeprecatedOnce('lineTail', '`lineTail` is deprecated - use `line.endArrowType`'); opts.line.endArrowType = opts.lineTail }
 }
 
+/**
+ * Create the relationships a hyperlink needs: the link target, and its action sound when set
+ * - `genXmlHyperlink` is pure, so both ids have to exist before the XML is generated
+ * @param {PresSlide | SlideLayout} target - slide the link belongs to
+ * @param {HyperlinkProps} link - link props, mutated with the resolved relationship ids
+ */
+export function resolveHyperlinkRels (target: PresSlide | SlideLayout, link?: HyperlinkProps): void {
+	if (!link || typeof link !== 'object') return
+
+	if (!link._rId) {
+		if (!link.url && !link.slide) {
+			console.warn('[pptxgenjs] a hyperlink requires either `url` or `slide` - link ignored')
+			return
+		}
+		const relId = getNewRelId(target)
+		target._rels.push({
+			type: SLIDE_OBJECT_TYPES.hyperlink,
+			data: link.slide ? 'slide' : 'dummy',
+			rId: relId,
+			Target: encodeXmlEntities(link.url ?? '') || link.slide?.toString() || '',
+		})
+		link._rId = relId
+	}
+
+	// ECMA-376 20.1.2.2.32 allows only WAV here, so anything else is dropped rather than linked
+	const sound = link.sound
+	if (sound && !sound._sndRId) {
+		const data = sound.data ?? ''
+		const path = sound.path ?? ''
+		if (!data && !path) {
+			console.warn('[pptxgenjs] hyperlink `sound` requires `data` or `path` - sound ignored')
+			link.sound = undefined
+			return
+		}
+		if (data && !data.toLowerCase().includes('base64,')) {
+			console.warn('[pptxgenjs] hyperlink `sound.data` lacks a base64 header - sound ignored')
+			link.sound = undefined
+			return
+		}
+		const rId = getNewRelId(target)
+		target._relsMedia.push({
+			path: path || 'preencoded.wav',
+			type: 'audio/wav',
+			extn: 'wav',
+			data,
+			rId,
+			Target: `../media/audio-${target._slideNum}-${target._relsMedia.length + 1}.wav`,
+		})
+		sound._sndRId = rId
+	}
+}
+
 export function addShapeDefinition(target: PresSlide | SlideLayout, shapeName: SHAPE_NAME, opts: ShapeProps): void {
 	const options = typeof opts === 'object' ? opts : {}
 	options.line = options.line || { type: 'none' }
+	resolveHyperlinkRels(target, options.hyperlink)
+	resolveHyperlinkRels(target, options.hyperlinkHover)
 	const newObject: ISlideObject = {
 		_type: SLIDE_OBJECT_TYPES.text,
 		shape: shapeName || SHAPE_TYPE.RECTANGLE,
@@ -1279,6 +1340,12 @@ export function addTextDefinition(target: PresSlide | SlideLayout, text: TextPro
 
 	// STEP 3: Create hyperlinks
 	createHyperlinkRels(target, newObject.text || '')
+	resolveHyperlinkRels(target, newObject.options?.hyperlinkHover)
+	newObject.text?.forEach(item => {
+		resolveHyperlinkRels(target, item.options?.hyperlinkHover)
+		// a click link already has its target rel; this adds its action sound
+		if (item.options?.hyperlink?.sound) resolveHyperlinkRels(target, item.options.hyperlink)
+	})
 
 	// LAST: Add object to Slide
 	target._slideObjects.push(newObject)

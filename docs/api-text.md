@@ -289,3 +289,37 @@ unparseable.
 
 Columns combine with autofit: PowerPoint flows text through the columns first, then applies the
 `fit` behaviour to the result.
+## Mouse-Over Actions
+
+`hyperlinkHover` takes the same props as `hyperlink` but fires on mouse-over — PowerPoint's
+Insert > Action > Mouse Over tab. It works on text runs, shapes, and images.
+
+```typescript
+slide.addShape(pptx.ShapeType.rect, {
+    x: 1, y: 1, w: 3, h: 1,
+    hyperlink: { url: 'https://example.com', tooltip: 'Open the site' },
+    hyperlinkHover: { slide: 4, tooltip: 'Preview the results slide' },
+});
+```
+
+### Hyperlink Props (`HyperlinkProps`)
+
+| Option              | Type                  | Default | Description                                       |
+| :------------------ | :-------------------- | :------ | :------------------------------------------------ |
+| `url`               | string                |         | external target (`url` or `slide` is required)    |
+| `slide`             | number                |         | slide number to jump to                           |
+| `tooltip`           | string                |         | tooltip text                                      |
+| `highlightClick`    | boolean               | `false` | highlight the link when clicked                   |
+| `stopSoundsOnClick` | boolean               | `false` | stop playing sounds when clicked                  |
+| `sound`             | `HyperlinkSoundProps` |         | sound played when the action fires                |
+
+### Action Sounds
+
+| Option | Type   | Default      | Description                                        |
+| :----- | :----- | :----------- | :------------------------------------------------- |
+| `data` | string |              | WAV data, base64 with a mime header (`data`/`path`) |
+| `path` | string |              | WAV file path or URL                               |
+| `name` | string | `sound.wav`  | name PowerPoint shows in the Action dialog          |
+
+`a:snd` accepts WAV only (ECMA-376 §20.1.2.2.32); other formats are rejected with a warning rather
+than linked. A link with neither `url` nor `slide` is dropped with a warning.
