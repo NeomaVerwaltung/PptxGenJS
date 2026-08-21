@@ -89,7 +89,9 @@ alternative is dropping the HTML-import feature outright.
 
 Blocked on: the std paginator does not exist yet. The weight knobs warn today (they have no
 future under any implementation); `autoPage` and `tableToSlides` carry a plan-doc pointer
-only, and their runtime warning turns on when the std replacement ships.
+only, and their runtime warning turns on when the std replacement ships. The knob
+`@deprecated` tags read `vNEXT` until a release sets them (RELEASING.md, pre-release
+verification step 4).
 
 ## Plan
 
