@@ -23,6 +23,16 @@
 			"types": "./dist/charts/index.d.ts",
 			"import": "./dist/charts/index.mjs",
 			"require": "./dist/charts/index.cjs"
+		},
+		"./text": {
+			"types": "./dist/text/index.d.ts",
+			"import": "./dist/text/index.mjs",
+			"require": "./dist/text/index.cjs"
+		},
+		"./tables": {
+			"types": "./dist/tables/index.d.ts",
+			"import": "./dist/tables/index.mjs",
+			"require": "./dist/tables/index.cjs"
 		}
 	},
 	"main": "dist/index.cjs",
@@ -55,8 +65,8 @@
 		"lint": "eslint src test",
 		"prepare": "npm run build",
 		"typecheck": "tsc --noEmit",
-		"test": "node --import tsx --test test/layout.test.ts test/charts.test.ts test/exports.test.ts test/peer-floor.test.ts",
-		"test:coverage": "node --import tsx --test --experimental-test-coverage test/layout.test.ts test/charts.test.ts test/exports.test.ts test/peer-floor.test.ts",
+		"test": "node --import tsx --test test/layout.test.ts test/charts.test.ts test/text.test.ts test/tables.test.ts test/exports.test.ts test/peer-floor.test.ts",
+		"test:coverage": "node --import tsx --test --experimental-test-coverage test/layout.test.ts test/charts.test.ts test/text.test.ts test/tables.test.ts test/exports.test.ts test/peer-floor.test.ts",
 		"check": "npm run lint && npm run typecheck && npm test"
 	},
 	"peerDependencies": {
