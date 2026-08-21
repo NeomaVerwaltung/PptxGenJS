@@ -6,6 +6,8 @@ const entries = {
 	index: 'src/index.ts',
 	'layout/index': 'src/layout/index.ts',
 	'charts/index': 'src/charts/index.ts',
+	'text/index': 'src/text/index.ts',
+	'tables/index': 'src/tables/index.ts',
 }
 
 // The helpers only compose the public API - `@neo-ma/pptxgenjs` is a peer used for types,

@@ -1,6 +1,6 @@
 # Deprecation & API-Cleanup Plan
 
-Audit date: 2026-07-23 (F1–F5) · 2026-08-20 (F6–F9) · Package version: 4.1.0
+Audit date: 2026-07-23 (F1–F5) · 2026-08-20 (F6–F9) · 2026-08-21 (F10) · Package version: 4.2.0
 
 ## Findings
 
@@ -65,6 +65,38 @@ nothing breaks, but part names leak state across presentations and make output
 non-reproducible across a process. Counting per presentation would fix it and renames
 parts.
 
+### F10 — Built-in table auto-paging guesses at text size, and the API admits it
+`parseTextToLines` (src/gen-tables.ts:16) decides where text wraps with a chars-per-line
+formula built on a magic constant: `FOCO = 2.3` (src/gen-tables.ts:21). It has no glyph
+metrics, so it treats every font as monospace and is wrong by whatever the actual advance
+widths are. The proof is in the public API: `autoPageCharWeight` and `autoPageLineWeight`
+exist *only* to let callers hand-tune that constant per deck (±1.0), and the value is
+propagated onto every cell internally at src/gen-tables.ts:362 (with the pagination-time
+line height at :357). A layout engine that ships its own fudge factor is not a layout
+engine.
+
+This is a std use case, not a core one: `getSlidesForTableRows` (src/gen-tables.ts:467) is
+plain data in, plain data out — rows + props + layout → row groups per slide. A std
+paginator can measure text properly (glyph-width tables / browser `measureText`) and drive
+`addSlide()` + `addTable()` through the public API, which is exactly what
+`packages/std/` is for per CLAUDE.md. The core keeps no advantage here; it only owns the
+code because upstream put it there.
+
+`tableToSlides()` (src/pptxgen.ts:973 → `genTableToSlides`, src/gen-tables.ts:498) consumes
+the same engine, so it cannot stay behind: it is DOM scraping plus `addTable`, which is
+also composition of public API. It moves to std with the paginator (assumed default); the
+alternative is dropping the HTML-import feature outright.
+
+Status: the replacement shipped. `@neo-ma/pptxgenjs-std/tables` provides `paginateTable`
+(measured pagination) and `tableFromHtml` (the HTML importer), both built on that package's
+`measureText`, so `autoPage`, `tableToSlides()` and the two weight knobs are all deprecated
+and warn once per process, each naming the helper to migrate to before v5.0. The
+`@deprecated` tags read `vNEXT` until a release sets them (RELEASING.md, pre-release
+verification step 4).
+
+Remaining before removal: std is `0.x`, so the migration target is beta until it reaches
+`1.0`. That gates deleting the code in v5.0 - not the warnings, which are live now.
+
 ## Plan
 
 ### Phase 1 — bug fix (now, patch release)
@@ -98,7 +130,13 @@ three `zip.generateAsync` calls behave the same. One-line change + one test.
 5. Issue #29 remainder: standardize `margin` on inches everywhere (SlideNumberProps is
    points today), remove `BorderProps.pt`, collapse the alignment vocab to the public
    string unions and internalize `TEXT_HALIGN`/`TEXT_VALIGN`.
-5. Ship a MIGRATION.md table: old prop → new prop (the `@deprecated` JSDoc tags
+6. F10: remove `autoPageCharWeight` / `autoPageLineWeight` from `TableToSlidesProps`,
+   `TableProps` and `TableCellProps`; delete `parseTextToLines`, `paginateTableRows` and
+   `getSlidesForTableRows` from src/gen-tables.ts along with the `autoPage*` props that
+   only feed them (`autoPage`, `autoPageRepeatHeader`, `autoPageSlideStartY`, `autoPageHeaderRows`; the `addHeaderToEach` / `newSlideStartY` aliases go with F4), and remove `tableToSlides()`. `addTable` keeps single-slide layout.
+   The migration target exists (`paginateTable`, `tableFromHtml`); the remaining gate is std
+   reaching `1.0`, so consumers are not moved onto a beta as the core drops the original.
+7. Ship a MIGRATION.md table: old prop → new prop (the `@deprecated` JSDoc tags
    already contain the mapping; generate the table from them).
 
 ### Phase 3b — output-behaviour cleanups (v5.0)

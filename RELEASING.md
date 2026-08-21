@@ -74,6 +74,9 @@ Confirm the following before publishing:
 1. The `version` field in the package's `package.json` is updated.
 2. For core: the version constant in `packages/core/src/pptxgen.ts` is updated.
 3. For core: the version in the `packages/core/types/index.d.ts` header is updated.
+4. No `vNEXT` placeholders remain: `grep -rn vNEXT packages docs`. Deprecations are marked
+   `@deprecated vNEXT` while unreleased, since the version that ships them is not known when
+   they are written. Replace every hit with the version being released.
 
 ## Release: GitHub (manual path)
 

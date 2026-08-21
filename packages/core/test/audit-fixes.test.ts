@@ -58,3 +58,33 @@ test('#31: compression option is honored for explicit outputTypes', async () => 
 	const deflated = (await pptx.write({ outputType: 'nodebuffer', compression: true })) as Buffer
 	assert.ok(deflated.length < stored.length, `expected deflated (${deflated.length}) < stored (${stored.length})`)
 })
+
+test('F10: auto-paging weight knobs warn once, from table props or cell options', () => {
+	const warnings: string[] = []
+	const realWarn = console.warn
+	console.warn = (msg: string) => warnings.push(String(msg))
+	try {
+		const pptx = new pptxgen()
+		const rows = [[{ text: 'The quick brown fox jumps over the lazy dog. '.repeat(20) }]]
+
+		pptx.addSlide().addTable(rows, { x: 0.5, y: 0.5, w: 9, autoPage: true, autoPageCharWeight: 0.5 })
+		// warn-once is process-global: a second use of the same knob must stay silent
+		pptx.addSlide().addTable(rows, { x: 0.5, y: 0.5, w: 9, autoPage: true, autoPageCharWeight: -0.5 })
+		// per-cell options are caller-supplied too, and are read before the engine propagates them
+		pptx.addSlide().addTable([[{ text: 'x', options: { autoPageLineWeight: 0.5 } }]], { x: 0.5, y: 0.5, w: 9, autoPage: true })
+
+		const autoPageWarns = warnings.filter(w => w.includes('table `autoPage`'))
+		assert.equal(autoPageWarns.length, 1, `expected one autoPage warning, got ${autoPageWarns.length}`)
+		assert.match(autoPageWarns[0], /paginateTable/, 'the warning must name the migration target')
+		assert.match(autoPageWarns[0], /before v5\.0/)
+
+		const charWarns = warnings.filter(w => w.includes('autoPageCharWeight'))
+		const lineWarns = warnings.filter(w => w.includes('autoPageLineWeight'))
+		assert.equal(charWarns.length, 1, `expected one autoPageCharWeight warning, got ${charWarns.length}`)
+		assert.equal(lineWarns.length, 1, `expected one autoPageLineWeight warning, got ${lineWarns.length}`)
+		assert.match(charWarns[0], /DEPRECATED/)
+		assert.match(charWarns[0], /v5\.0/)
+	} finally {
+		console.warn = realWarn
+	}
+})

@@ -42,8 +42,10 @@ import { waterfall } from "@neo-ma/pptxgenjs-std/charts";
 | Subpath | Contents |
 | --- | --- |
 | `@neo-ma/pptxgenjs-std` | every helper, re-exported |
-| `@neo-ma/pptxgenjs-std/layout` | `grid`, `gridFor` |
+| `@neo-ma/pptxgenjs-std/layout` | `grid`, `gridFor`, `row`, `column` |
 | `@neo-ma/pptxgenjs-std/charts` | `waterfall` |
+| `@neo-ma/pptxgenjs-std/text` | `measureText`, `fitText`, `registerFontMetrics` |
+| `@neo-ma/pptxgenjs-std/tables` | `paginateTable`, `tableFromHtml`, `cssColorToHex` |
 
 ## `grid` - placement without arithmetic
 
@@ -101,6 +103,34 @@ pres.layout = "LAYOUT_4x3";
 const at = gridFor(pres, { cols: 2, rows: 2 });
 ```
 
+### `row` and `column` - divide an area
+
+`grid` needs integer spans over a fixed cell count. `row` and `column` take any area and divide it,
+so nesting and uneven splits do not need a second grid:
+
+```typescript
+import { grid, row, column } from "@neo-ma/pptxgenjs-std";
+
+const at = grid();
+const [header, body] = column(at(0, 0, 12, 6), [1, 4]);
+const [left, right] = row(body, [1, 2]);
+
+slide.addText("Q3 review", { ...header, fontSize: 28 });
+slide.addChart("bar", data, left);
+slide.addTable(rows, right);
+```
+
+A number means equal slots, an array means weights - `row(area, 3)` and `row(area, [1, 1, 1])` are
+the same call. The third argument is the gap in inches, defaulting to `0.2`. Output is the same
+`{ x, y, w, h }` shape as the input, so slots nest without special handling, and the cross axis is
+left untouched. Out-of-range input throws:
+
+```typescript
+row(area, 0); // Error: row: slot count must be an integer >= 1 (got 0)
+row(area, [1, 0]); // Error: row: every weight must be > 0 (got [1, 0])
+row({ x: 0, y: 0, w: 4, h: 2 }, 5, 1); // Error: row: gap 1 leaves no room across 4
+```
+
 ## `waterfall` - bridge chart
 
 PowerPoint has no waterfall chart type reachable through ECMA-376 `c:barChart`. `waterfall` builds
@@ -150,6 +180,134 @@ waterfall(slide, { labels: [], values: [] }); // Error: waterfall: at least one 
 waterfall(slide, { labels: ["A"], values: [NaN] }); // Error: waterfall: values[0] is not a finite number
 ```
 
+## `measureText` - how big text actually is
+
+PowerPoint decides where text wraps; nothing in a `.pptx` records it. `measureText` computes it up
+front, so a caller can size a box to its content instead of guessing.
+
+```typescript
+import { measureText } from "@neo-ma/pptxgenjs-std";
+
+const { w, h, lines, source } = measureText(paragraph, { w: 4, fontSize: 14 });
+slide.addText(paragraph, { x: 1, y: 1, w: 4, h });
+```
+
+Every value is in inches, except `fontSize`, which is in points like the rest of the API. Omit `w`
+to measure the text as one unbroken line; `\n` always splits.
+
+### Where the numbers come from
+
+`source` on the result says which of three tiers answered, best first:
+
+| `source` | When | Accuracy |
+| --- | --- | --- |
+| `'canvas'` | a browser DOM is present | exact for the font the browser has |
+| `'metrics'` | the font's advance widths are bundled or registered | exact advance widths, no kerning |
+| `'estimate'` | neither | a flat per-character guess |
+
+Bundled metrics cover **Calibri** in all four styles, by way of
+[Carlito](https://github.com/googlefonts/carlito) - an OFL font that is metric-compatible with it,
+so the widths are Calibri's without shipping Calibri. Check `source === 'estimate'` when accuracy
+matters; that is the tier that behaves like the core's own auto-paging guess.
+
+::: warning
+PowerPoint substitutes a different font when the viewer's machine lacks yours, and re-wraps with the
+substitute's metrics. Treat any measurement as accurate for *this* font, not guaranteed on every
+machine. Pair it with `fit: 'shrink'` when overflow must not happen.
+:::
+
+### `registerFontMetrics` - teach it another font
+
+```typescript
+import { registerFontMetrics } from "@neo-ma/pptxgenjs-std";
+
+registerFontMetrics("Aptos", { widths: { " ": 0.22, a: 0.5 }, ascent: 0.94, descent: -0.27 });
+registerFontMetrics("Aptos Bold", { widths: { " ": 0.22, a: 0.54 } });
+```
+
+Widths are in ems, keyed by single character or codepoint. Register a style under its full name plus
+the suffix (`'Aptos Bold'`, `'Aptos Italic'`, `'Aptos Bold Italic'`) so `bold: true` finds it; a
+missing style falls back to the regular weight rather than to the estimate.
+
+`scripts/extract-font-metrics.mjs` in the repository generates a table from a `.ttf`, if hand-listing
+widths is not practical.
+
+### Options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `fontFace` | string | `'Calibri'` | Typeface name, matched case-insensitively |
+| `fontSize` | number | `12` | Font size in points |
+| `bold` / `italic` | boolean | `false` | Style, used to pick the metrics |
+| `w` | number | - | Wrap width in inches; omit for a single line |
+| `lineSpacingMultiple` | number | `1` | Line spacing as a multiple of single |
+
+## `fitText` - largest size that fits
+
+`fit: 'shrink'` makes PowerPoint shrink text at render time, but the chosen size is not readable
+back, so nothing else on the slide can react to it. `fitText` computes it instead:
+
+```typescript
+import { fitText } from "@neo-ma/pptxgenjs-std";
+
+const { fontSize, h, overflows } = fitText({ w: 4, h: 2 }, headline, { max: 40 });
+slide.addText(headline, { x: 1, y: 1, w: 4, h: 2, fontSize });
+```
+
+Whole points only, which is what the PowerPoint UI offers. `overflows` is `true` when even `min`
+does not fit - the text is too long for the box at any size in range, and you get `min` back rather
+than a silent overflow. `margin` (a number or a TRBL tuple, inches) is subtracted from the area
+first, for text boxes with inset.
+
+## `paginateTable` - a table across slides, measured
+
+The core's `autoPage` decides where rows break from a per-character constant, which is why it ships
+`autoPageCharWeight` for callers to tune by hand. `paginateTable` measures each cell with
+`measureText` instead, so the row heights it adds up are the ones PowerPoint will lay out.
+
+```typescript
+import { paginateTable } from "@neo-ma/pptxgenjs-std";
+
+const { slides, rowsPerSlide, estimated } = paginateTable(pres, rows, {
+    x: 0.5,
+    y: 0.5,
+    w: 9,
+    fontSize: 11,
+    repeatHeaderRows: 1,
+});
+```
+
+It creates the slides itself, so it takes the presentation rather than a slide. Everything other
+than the paging options is passed straight through to `addTable`, once per slide.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `repeatHeaderRows` | number | `0` | Leading rows repeated at the top of every slide |
+| `continueY` | number | the initial `y` | `y` for tables on slides after the first |
+| `masterName` | string | - | Master applied to every slide it creates |
+| `bottomMargin` | number | `0.5` | Usable-area bottom, from the slide bottom, inches |
+| `slideHeight` | number | from `presLayout` | Slide height override, inches |
+
+`estimated` on the result is `true` when any cell fell back to the guessing tier - the signal that
+the page breaks are approximate for the same reason the core's are.
+
+## `tableFromHtml` - an HTML table, measured
+
+The measured counterpart to the core's `tableToSlides`. It takes the table as an object rather than
+an element id, so it is not tied to a live document and can be driven by anything table-shaped.
+
+```typescript
+import { tableFromHtml } from "@neo-ma/pptxgenjs-std";
+
+tableFromHtml(pres, document.getElementById("report"), { x: 0.5, y: 0.5, w: 9, fontSize: 10 });
+```
+
+Cell fill, colour, weight, size, face and alignment come from `window.getComputedStyle` when a DOM
+is present. Pass `styleOf` to supply them from anything else - it receives each cell and returns the
+formatting to apply. `<th>` cells are bold, and leading rows made entirely of `<th>` become repeated
+headers unless `detectHeaderRows: false` or an explicit `repeatHeaderRows` says otherwise. `colspan`
+and `rowspan` carry over.
+
 ## Combining them
 
 `grid` returns exactly the shape `waterfall`'s options argument expects, so they compose directly:
@@ -167,7 +325,18 @@ accepts any object with a conforming `addChart`, and `gridFor` any object with a
 are generic over the value you pass, so `waterfall` returns your slide unchanged in type.
 
 ```typescript
-import type { GridProps, GridArea, WaterfallProps, ChartSlide } from "@neo-ma/pptxgenjs-std";
+import type {
+    GridProps,
+    GridArea,
+    Slots,
+    WaterfallProps,
+    ChartSlide,
+    MeasureProps,
+    Measurement,
+    FitTextProps,
+    PaginateTableProps,
+    TableFromHtmlProps,
+} from "@neo-ma/pptxgenjs-std";
 ```
 
 Types are exported from their category subpath as well, so `GridProps` is also available from

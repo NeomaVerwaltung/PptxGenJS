@@ -47,7 +47,7 @@ await pres.writeFile({ fileName: "out.pptx" })
 
 Separate package `@neo-ma/pptxgenjs-std`, published independently. Plain functions over the public API - no runtime dependency on the core, `@neo-ma/pptxgenjs` is a peer used for types only.
 
-- [Std Library](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/std.md): `grid`/`gridFor` (cell placement instead of absolute inches, throws when out of range) and `waterfall` (bridge chart via stacked bars)
+- [Std Library](https://raw.githubusercontent.com/NeomaVerwaltung/PptxGenJS/master/docs/std.md): `grid`/`gridFor` (cell placement instead of absolute inches, throws when out of range), `row`/`column` (divide an area by weights, nestable), `measureText`/`fitText` (real advance widths, so text can be sized to its box), `paginateTable`/`tableFromHtml` (measured multi-slide tables, the alternative to the core's estimating `autoPage`) and `waterfall` (bridge chart via stacked bars)
 
 ## Optional
 
