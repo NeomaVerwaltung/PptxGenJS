@@ -1578,6 +1578,18 @@ declare namespace PptxGenJS {
 
 	export interface ImageProps extends PositionProps, DataOrPathProps, ObjectNameProps {
 		/**
+		 * Glow effect
+		 */
+		glow?: TextGlowProps
+		/**
+		 * Soft-edge effect
+		 */
+		softEdge?: SoftEdgeProps
+		/**
+		 * Reflection effect
+		 */
+		reflection?: ReflectionProps
+		/**
 		 * Alt Text value ("How would you describe this object and its contents to someone who is blind?")
 		 * - PowerPoint: [right-click on an image] > "Edit Alt Text..."
 		 */
@@ -1753,6 +1765,18 @@ declare namespace PptxGenJS {
 	// shapes =========================================================================================
 
 	export interface ShapeProps extends PositionProps, ObjectNameProps {
+		/**
+		 * Glow effect
+		 */
+		glow?: TextGlowProps
+		/**
+		 * Soft-edge effect
+		 */
+		softEdge?: SoftEdgeProps
+		/**
+		 * Reflection effect
+		 */
+		reflection?: ReflectionProps
 		/**
 		 * Horizontal alignment
 		 * @default 'left'
@@ -2157,6 +2181,50 @@ declare namespace PptxGenJS {
 	export type TableRow = TableCell[]
 
 	// text ===========================================================================================
+	/**
+	 * Soft-edge effect (`a:softEdge`).
+	 * - MS-PPT > Format Shape/Picture > Effects > Soft Edges
+	 */
+	export interface SoftEdgeProps {
+		/**
+		 * Soft-edge radius (points)
+		 * @example 4
+		 */
+		radius: number
+	}
+	/**
+	 * Reflection effect (`a:reflection`).
+	 * - MS-PPT > Format Shape/Picture > Effects > Reflection
+	 */
+	export interface ReflectionProps {
+		/**
+		 * Reflection blur radius (points)
+		 * @default 0
+		 */
+		blur?: number
+		/**
+		 * Reflection distance from the shape (points)
+		 * @default 0
+		 */
+		distance?: number
+		/**
+		 * Reflection direction (degrees)
+		 * - range: 0-359
+		 * @default 0
+		 */
+		direction?: number
+		/**
+		 * Starting opacity
+		 * - range: 0.0-1.0
+		 * @default 0.5
+		 */
+		opacity?: number
+		/**
+		 * Vertical scale multiplier
+		 * @default -1
+		 */
+		scaleY?: number
+	}
 	export interface TextGlowProps {
 		/**
 		 * Border color (hex format)
