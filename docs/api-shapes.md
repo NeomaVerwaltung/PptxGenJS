@@ -174,3 +174,31 @@ one rather than appearing alongside it. An invalid `compound`, `join`, or dash s
 warning; usable stops in a partly-invalid pattern still apply.
 
 These options also drive `a:uLn` via the text `underlineLine` option — see the text docs.
+
+## Locks and Non-Visual Properties
+
+Every object accepts editing locks and the non-visual properties PowerPoint shows in the selection and
+alt-text panes. All are optional; the locks the library has always written (`noChangeAspect` on
+pictures, `noGrp` on table frames) are unchanged and caller locks are added to them.
+
+```javascript
+slide.addShape(pptx.ShapeType.rect, {
+    x: 1, y: 1, w: 3, h: 1,
+    objectName: 'Logo frame', title: 'Company logo', hidden: false,
+    lock: { noMove: true, noResize: true, noTextEdit: true },
+})
+```
+
+| Option   | Type   | Description                                                    |
+| :------- | :----- | :------------------------------------------------------------- |
+| `title`  | string | alt-text **title**, distinct from `altText` (the description)   |
+| `hidden` | boolean | hide the object; it stays in the file and in the selection pane |
+| `lock`   | object | editing locks — see below                                      |
+
+Locks: `noGroup`, `noSelect`, `noRotate`, `noChangeAspect`, `noMove`, `noResize`, `noEditPoints`,
+`noAdjustHandles`, `noChangeArrowheads`, `noChangeShapeType`, `noTextEdit`, plus `noCrop` and
+`preferRelativeResize` for pictures.
+
+Not every lock applies to every object — `a:spLocks`, `a:picLocks`, and `a:graphicFrameLocks` permit
+different sets. A lock the object's element does not accept is dropped with a warning rather than
+written, since an unexpected attribute is a schema violation.
