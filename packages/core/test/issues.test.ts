@@ -645,3 +645,48 @@ test('#137/#136/#153: presentation, view and document properties reach their par
 	assert.ok(bareView.includes('<a:sx n="136" d="100"/>') && bareView.includes('<p:gridSpacing cx="76200" cy="76200"/>'), 'default viewProps.xml changed')
 	assert.ok(!bareView.includes('lastView=') && !bareView.includes('showComments='), 'default viewProps.xml gained attributes')
 })
+
+test('#147: table cells emit diagonal borders, 3-D cells, overflow and rtl column order', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addTable(
+		[[
+			{ text: 'diag', options: { borderDiagonalDown: { color: 'FF0000', width: 2 }, borderDiagonalUp: { type: 'dash' }, cell3D: { material: 'clear' }, fill: { color: 'EEEEEE' } } },
+			{ text: '3d', options: { cell3D: { bevel: { preset: 'circle', width: 0.05, height: 0.05 }, material: 'metal', lightRig: { rig: 'threePt', dir: 't' } } } },
+			{ text: 'ovf', options: { horzOverflow: 'overflow', anchorCtr: true, textDirection: 'vert270' } },
+			{ text: 'mat', options: { cell3D: { material: 'matte' } } },
+		]],
+		{ x: 0.5, y: 0.5, w: 9, rtl: true }
+	)
+	const xml = await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')
+	const cells = xml.match(/<a:tcPr[\s\S]*?<\/a:tcPr>/g) ?? []
+	assert.equal(cells.length, 4, `expected four cells, got ${cells.length}`)
+
+	assert.ok(xml.includes('<a:tblPr rtl="1"'), 'a:tblPr@rtl missing - CT_TableProperties owns rtl, not a:tbl')
+	assert.ok(cells[0].includes('<a:lnTlToBr w="25400" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>'), `lnTlToBr wrong: ${cells[0]}`)
+	assert.ok(cells[0].includes('<a:lnBlToTr') && cells[0].includes('<a:prstDash val="sysDash"/>'), 'lnBlToTr missing or not dashed')
+	// CT_TableCellProperties fixes the child sequence, so the first cell carries every one of them
+	const seq = ['<a:lnL', '<a:lnR', '<a:lnT', '<a:lnB', '<a:lnTlToBr', '<a:lnBlToTr', '<a:cell3D', '<a:solidFill><a:srgbClr val="EEEEEE"/>'].map(tag => cells[0].indexOf(tag))
+	assert.ok(seq.every(idx => idx > -1), `a tcPr child is missing: ${seq.join(',')}`)
+	assert.deepEqual(seq, [...seq].sort((a, b) => a - b), `CT_TableCellProperties child order violated: ${seq.join(',')}`)
+
+	assert.ok(cells[1].includes('<a:cell3D prstMaterial="metal"><a:bevel w="45720" h="45720" prst="circle"/><a:lightRig rig="threePt" dir="t"/></a:cell3D>'), `cell3D wrong: ${cells[1]}`)
+	assert.ok(cells[1].indexOf('<a:cell3D') > cells[1].indexOf('<a:lnB'), 'cell3D must follow the border elements')
+	// `a:bevel` is required by CT_Cell3D, so it is written even when only the material is given
+	assert.ok(cells[3].includes('<a:cell3D prstMaterial="matte"><a:bevel/></a:cell3D>'), `material-only cell3D wrong: ${cells[3]}`)
+
+	assert.ok(cells[2].includes('vert="vert270"') && cells[2].includes('anchorCtr="1"') && cells[2].includes('horzOverflow="overflow"'), `cell attrs wrong: ${cells[2]}`)
+
+	// `rig` and `dir` are both required on CT_LightRig, so a partial rig is dropped
+	const partial = new pptxgen()
+	partial.addSlide().addTable([[{ text: 'y', options: { cell3D: { lightRig: { rig: 'threePt' } as never } } }]], { x: 1, y: 1, w: 4 })
+	const partialXml = await readPart(await writeZip(partial), 'ppt/slides/slide1.xml')
+	assert.ok(partialXml.includes('<a:cell3D><a:bevel/></a:cell3D>'), 'incomplete lightRig was emitted')
+
+	// a table that asks for none of it is unchanged: no new element, no new attribute
+	const bare = new pptxgen()
+	bare.addSlide().addTable([['a', 'b']], { x: 1, y: 1, w: 4 })
+	const bareXml = await readPart(await writeZip(bare), 'ppt/slides/slide1.xml')
+	for (const tag of ['<a:lnTlToBr', '<a:lnBlToTr', '<a:cell3D', 'horzOverflow=', 'anchorCtr=', 'rtl=']) {
+		assert.ok(!bareXml.includes(tag), `default table gained ${tag}`)
+	}
+})

@@ -67,6 +67,16 @@ test('office: LibreOffice opens and converts a generated presentation', async ()
 			line: { type: 'gradient', width: 2, gradient: { type: 'radial', stops: [{ color: '00FF00', position: 0 }, { color: '000000', position: 100 }] } },
 		})
 		gradientSlide.addTable([[{ text: 'gradient cell', options: { fill: { type: 'gradient', gradient: { stops: [{ color: '111111', position: 0 }, { color: '888888', position: 100 }] } } } }]], { x: 0.5, y: 3, w: 4 })
+		// diagonal cell borders, 3-D cells and vertical cell text - the round-trip fixture for #147
+		const cellSlide = pptx.addSlide()
+		cellSlide.addTable(
+			[[
+				{ text: 'diagonals', options: { borderDiagonalDown: { color: 'FF0000', width: 2 }, borderDiagonalUp: { type: 'dash', color: '0000FF' } } },
+				{ text: 'bevelled', options: { cell3D: { bevel: { preset: 'circle', width: 0.05, height: 0.05 }, material: 'metal', lightRig: { rig: 'threePt', dir: 't' } } } },
+				{ text: 'rotated', options: { textDirection: 'vert270', anchorCtr: true, horzOverflow: 'overflow' } },
+			]],
+			{ x: 0.5, y: 0.5, w: 8, h: 1.5, rtl: true, border: [{ type: 'solid', color: '999999', width: 1 }, { type: 'solid', color: '999999', width: 1 }, { type: 'solid', color: '999999', width: 1 }, { type: 'solid', color: '999999', width: 1 }] }
+		)
 		pptx.addSlide({ transition: { type: 'morph', duration: 1200 } }).addText('modern transition', { x: 0.5, y: 0.5, w: 5, h: 0.5 })
 		await writeFile(presentationPath, (await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
 

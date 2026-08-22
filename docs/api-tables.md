@@ -100,6 +100,62 @@ slide.addTable(rows, { w: 9, rowH: 1, align: "left", fontFace: "Arial" });
 | `pt`    | string | `1`     | border thickness | any positive number                                                               |
 | `color` | string | `black` | cell border      | hex color code or [scheme color constant](#scheme-colors). Ex: `{color:'0088CC'}` |
 
+### Diagonal Cell Borders
+
+`border` covers the four edges. The two diagonals are separate props, and unlike the edges they are
+written only when set.
+
+```typescript
+slide.addTable([[{ text: 'n/a', options: {
+    borderDiagonalDown: { color: 'FF0000', width: 2 },  // top-left to bottom-right
+    borderDiagonalUp: { type: 'dash' },                 // bottom-left to top-right
+} }]], { x: 1, y: 1, w: 6 });
+```
+
+Both take the same `BorderProps` shape as `border`.
+
+### 3-D Cells (`cell3D`)
+
+```typescript
+slide.addTable([[{ text: 'raised', options: {
+    cell3D: {
+        bevel: { preset: 'circle', width: 0.05, height: 0.05 },
+        material: 'metal',
+        lightRig: { rig: 'threePt', dir: 't' },
+    },
+} }]], { x: 1, y: 1, w: 6 });
+```
+
+| Option     | Type   | Default   | Description                                                              |
+| :--------- | :----- | :-------- | :----------------------------------------------------------------------- |
+| `bevel`    | object |           | `preset`, `width` and `height` (inches) - see the bevel presets below     |
+| `material` | string | `plastic` | surface material: `matte`, `plastic`, `metal`, `warmMatte`, `powder`, `dkEdge`, `softEdge`, `clear`, `flat`, `softmetal`, `translucentPowder`, or a `legacy*` value |
+| `lightRig` | object |           | `rig` (e.g. `threePt`, `balanced`, `soft`, `glow`) and `dir` (`tl`, `t`, `tr`, `l`, `r`, `bl`, `b`, `br`) |
+
+Bevel presets: `relaxedInset`, `circle` (default), `slope`, `cross`, `angle`, `softRound`, `convex`,
+`coolSlant`, `divot`, `riblet`, `hardEdge`, `artDeco`.
+
+Both `rig` and `dir` are required by the OOXML schema, so a `lightRig` carrying only one of them is
+dropped rather than written as an element PowerPoint would refuse to open. The bevel element itself is
+required, so setting `cell3D` at all writes one - with schema defaults when no `bevel` is given.
+
+### Cell Text Layout
+
+| Option          | Type    | Default | Description                                                            |
+| :-------------- | :------ | :------ | :--------------------------------------------------------------------- |
+| `textDirection` | string  | `horz`  | rotate text in the cell: `horz`, `vert`, `vert270`, `eaVert`, `mongolianVert`, `wordArtVert` |
+| `anchorCtr`     | boolean | `false` | center text both horizontally and vertically                           |
+| `horzOverflow`  | string  | `clip`  | `clip` or `overflow` - whether text wider than the cell is cut off      |
+
+### Right-to-Left Tables
+
+`rtl` on the table reverses column order for the whole table. It is independent of per-cell
+`textDirection`.
+
+```typescript
+slide.addTable(rows, { x: 1, y: 1, w: 8, rtl: true });
+```
+
 ## Table Auto-Paging
 
 Auto-paging creates new slides automatically as table rows overflow the current slide.
