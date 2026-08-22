@@ -3,8 +3,8 @@
  */
 
 import { COMMENT, CRLF, DEF_GUIDE_COLOR, EMU, LAYOUT_IDX_SERIES_BASE, OOXML_EXT, SLDNUMFLDID, SLIDE_OBJECT_TYPES } from '../core-enums'
-import { EmbeddedFont, GuideProps, IPresentationProps, PresSlide, SectionProps, SlideLayout, SlideShowProps } from '../core-interfaces'
-import { createColorElement, encodeXmlEntities, getUuid } from '../gen-utils'
+import { DocumentProps, EmbeddedFont, GuideProps, IPresentationProps, PresSlide, SectionProps, SlideLayout, SlideShowProps } from '../core-interfaces'
+import { createColorElement, encodeXmlEntities, getUuid, inch2Emu } from '../gen-utils'
 import { makeXmlEmbeddedFontLst } from '../gen-fonts'
 import { genXmlSlideExtLst, slideObjectToXml } from './slide'
 import { genXmlTiming } from './animation'
@@ -116,17 +116,32 @@ export function makeXmlRootRels (): string {
  * @param {string} company - "Company" metadata
  * @returns XML
  */
-export function makeXmlApp (slides: PresSlide[], company: string): string {
+/**
+ * Count text paragraphs across the deck for `app.xml`
+ * - derived rather than exposed: the value is a fact about the deck, not a caller preference
+ * @param {PresSlide[]} slides - presentation slides
+ * @returns {number} paragraph count
+ */
+function countParagraphs (slides: PresSlide[]): number {
+	return slides.reduce((total, slide) => total + (slide._slideObjects ?? []).reduce((count, obj) => {
+		if (obj._type !== SLIDE_OBJECT_TYPES.text && obj._type !== SLIDE_OBJECT_TYPES.placeholder) return count
+		return count + Math.max(1, (obj.text ?? []).length)
+	}, 0), 0)
+}
+
+export function makeXmlApp (slides: PresSlide[], company: string, props?: DocumentProps): string {
 	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${CRLF}<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
-	<TotalTime>0</TotalTime>
+	${props?.template ? `<Template>${encodeXmlEntities(props.template)}</Template>` : ''}
+	${props?.manager ? `<Manager>${encodeXmlEntities(props.manager)}</Manager>` : ''}
+	<TotalTime>${typeof props?.totalEditTime === 'number' && isFinite(props.totalEditTime) && props.totalEditTime >= 0 ? Math.round(props.totalEditTime) : 0}</TotalTime>
 	<Words>0</Words>
 	<Application>Microsoft Office PowerPoint</Application>
 	<PresentationFormat>On-screen Show (16:9)</PresentationFormat>
-	<Paragraphs>0</Paragraphs>
+	<Paragraphs>${countParagraphs(slides)}</Paragraphs>
 	<Slides>${slides.length}</Slides>
-	<Notes>${slides.length}</Notes>
-	<HiddenSlides>0</HiddenSlides>
-	<MMClips>0</MMClips>
+	<Notes>${slides.filter(slide => (slide._slideObjects ?? []).some(obj => obj._type === SLIDE_OBJECT_TYPES.notes)).length}</Notes>
+	<HiddenSlides>${slides.filter(slide => slide.hidden).length}</HiddenSlides>
+	<MMClips>${slides.reduce((sum, slide) => sum + (slide._slideObjects ?? []).filter(obj => obj._type === SLIDE_OBJECT_TYPES.media).length, 0)}</MMClips>
 	<ScaleCrop>false</ScaleCrop>
 	<HeadingPairs>
 		<vt:vector size="6" baseType="variant">
@@ -149,6 +164,7 @@ export function makeXmlApp (slides: PresSlide[], company: string): string {
 	<Company>${encodeXmlEntities(company)}</Company>
 	<LinksUpToDate>false</LinksUpToDate>
 	<SharedDoc>false</SharedDoc>
+	${props?.hyperlinkBase ? `<HyperlinkBase>${encodeXmlEntities(props.hyperlinkBase)}</HyperlinkBase>` : ''}
 	<HyperlinksChanged>false</HyperlinksChanged>
 	<AppVersion>16.0000</AppVersion>
 	</Properties>`
@@ -162,11 +178,19 @@ export function makeXmlApp (slides: PresSlide[], company: string): string {
  * @param {string} revision - metadata value
  * @returns XML
  */
-export function makeXmlCore (title: string, subject: string, author: string, revision: string): string {
+export function makeXmlCore (title: string, subject: string, author: string, revision: string, props?: DocumentProps): string {
 	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 	<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 		<dc:title>${encodeXmlEntities(title)}</dc:title>
 		<dc:subject>${encodeXmlEntities(subject)}</dc:subject>
+		${props?.description ? `<dc:description>${encodeXmlEntities(props.description)}</dc:description>` : ''}
+		${props?.keywords ? `<cp:keywords>${encodeXmlEntities(props.keywords)}</cp:keywords>` : ''}
+		${props?.category ? `<cp:category>${encodeXmlEntities(props.category)}</cp:category>` : ''}
+		${props?.contentStatus ? `<cp:contentStatus>${encodeXmlEntities(props.contentStatus)}</cp:contentStatus>` : ''}
+		${props?.version ? `<cp:version>${encodeXmlEntities(props.version)}</cp:version>` : ''}
+		${props?.language ? `<dc:language>${encodeXmlEntities(props.language)}</dc:language>` : ''}
+		${props?.identifier ? `<dc:identifier>${encodeXmlEntities(props.identifier)}</dc:identifier>` : ''}
+		${props?.lastPrinted ? `<cp:lastPrinted>${encodeXmlEntities(props.lastPrinted)}</cp:lastPrinted>` : ''}
 		<dc:creator>${encodeXmlEntities(author)}</dc:creator>
 		<cp:lastModifiedBy>${encodeXmlEntities(author)}</cp:lastModifiedBy>
 		<cp:revision>${revision}</cp:revision>
@@ -377,8 +401,27 @@ export function makeXmlPresentation (pres: IPresentationProps): string {
 	strXml += `<p:notesMasterIdLst><p:notesMasterId r:id="rId${pres.slides.length + 2}"/></p:notesMasterIdLst>`
 
 	// STEP 4: Add sizes
-	strXml += `<p:sldSz cx="${pres.presLayout.width}" cy="${pres.presLayout.height}"/>`
+	// `@type` records which preset the dimensions match; omitted when the caller does not say
+	strXml += `<p:sldSz cx="${pres.presLayout.width}" cy="${pres.presLayout.height}"${pres.slideSizeType ? ` type="${pres.slideSizeType}"` : ''}/>`
 	strXml += `<p:notesSz cx="${pres.presLayout.height}" cy="${pres.presLayout.width}"/>`
+
+	// STEP 4.5: CT_Presentation sequence puts these between `notesSz` and `embeddedFontLst`
+	if (pres.photoAlbum) {
+		const album = pres.photoAlbum
+		let attrs = ''
+		if (album.blackWhite === true) attrs += ' bw="1"'
+		if (album.showCaptions === true) attrs += ' showCaptions="1"'
+		if (album.layout) attrs += ` layout="${album.layout}"`
+		if (album.frame) attrs += ` frame="${album.frame}"`
+		strXml += `<p:photoAlbum${attrs}/>`
+	}
+	// `invalStChars` and `invalEndChars` are required on CT_Kinsoku, so a partial value is dropped
+	// rather than emitted as an element PowerPoint would refuse to open
+	if (pres.kinsoku?.invalidStartChars && pres.kinsoku.invalidEndChars) {
+		const kin = pres.kinsoku
+		const lang = kin.lang ? ` lang="${encodeXmlEntities(kin.lang)}"` : ''
+		strXml += `<p:kinsoku${lang} invalStChars="${encodeXmlEntities(kin.invalidStartChars)}" invalEndChars="${encodeXmlEntities(kin.invalidEndChars)}"/>`
+	}
 
 	// STEP 5: Add embedded fonts (SPEC: `embeddedFontLst` precedes `defaultTextStyle`)
 	strXml += makeXmlEmbeddedFontLst(pres.embeddedFonts ?? [], firstFontRelId(pres.slides.length), encodeXmlEntities)
@@ -392,6 +435,21 @@ export function makeXmlPresentation (pres: IPresentationProps): string {
 			`</a:defRPr></a:lvl${idy}pPr>`
 	}
 	strXml += '</p:defaultTextStyle>'
+
+	// `prnPr` and `clrMru` follow `defaultTextStyle` in the CT_Presentation sequence
+	if (pres.printProps) {
+		const prn = pres.printProps
+		let attrs = ''
+		if (prn.what) attrs += ` prnWhat="${prn.what}"`
+		if (prn.colorMode) attrs += ` clrMode="${prn.colorMode}"`
+		if (prn.hiddenSlides === true) attrs += ' hiddenSlides="1"'
+		if (prn.scaleToFitPaper === true) attrs += ' scaleToFitPaper="1"'
+		if (prn.frameSlides === true) attrs += ' frameSlides="1"'
+		strXml += `<p:prnPr${attrs}/>`
+	}
+	if (Array.isArray(pres.recentColors) && pres.recentColors.length > 0) {
+		strXml += `<p:clrMru>${pres.recentColors.map(color => createColorElement(color)).join('')}</p:clrMru>`
+	}
 
 	// STEP 6: Add Sections and guides (if any)
 	const sectionExts: string[] = []
@@ -542,6 +600,33 @@ export function makeXmlTableStyles (): string {
  * Creates `ppt/viewProps.xml`
  * @return {string} XML
  */
-export function makeXmlViewProps (): string {
-	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${CRLF}<p:viewPr xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:normalViewPr horzBarState="maximized"><p:restoredLeft sz="15611"/><p:restoredTop sz="94610"/></p:normalViewPr><p:slideViewPr><p:cSldViewPr snapToGrid="0" snapToObjects="1"><p:cViewPr varScale="1"><p:scale><a:sx n="136" d="100"/><a:sy n="136" d="100"/></p:scale><p:origin x="216" y="312"/></p:cViewPr><p:guideLst/></p:cSldViewPr></p:slideViewPr><p:notesTextViewPr><p:cViewPr><p:scale><a:sx n="1" d="1"/><a:sy n="1" d="1"/></p:scale><p:origin x="0" y="0"/></p:cViewPr></p:notesTextViewPr><p:gridSpacing cx="76200" cy="76200"/></p:viewPr>`
+export function makeXmlViewProps (pres?: IPresentationProps): string {
+	const view = pres?.viewProps ?? {}
+	// Defaults reproduce the literal prior versions wrote, so unset options change nothing
+	const zoom = typeof view.zoom === 'number' && isFinite(view.zoom) && view.zoom > 0 ? Math.round(view.zoom) : 136
+	const grid = typeof view.gridSpacing === 'number' && isFinite(view.gridSpacing) && view.gridSpacing > 0 ? inch2Emu(view.gridSpacing) : 76200
+	const snapGrid = view.snapToGrid === true ? '1' : '0'
+	const snapObj = view.snapToObjects === false ? '0' : '1'
+	const showGuides = view.showGuides === true ? ' showGuides="1"' : ''
+	const showComments = view.showComments === false ? ' showComments="0"' : ''
+	const lastView = view.lastView ? ` lastView="${view.lastView}"` : ''
+
+	// `p:guideLst` is the classic guide list, distinct from the MS-PPTX `p15:sldGuideLst` extension
+	const guides = (view.guides ?? [])
+		.filter(guide => (guide?.orientation === 'horz' || guide?.orientation === 'vert') && typeof guide.position === 'number' && isFinite(guide.position) && guide.position >= 0)
+		.map(guide => `<p:guide${guide.orientation === 'vert' ? ' orient="vert"' : ''} pos="${Math.round(guide.position * 96)}"/>`)
+		.join('')
+
+	return (
+		`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${CRLF}` +
+		`<p:viewPr xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"${lastView}${showComments}>` +
+		'<p:normalViewPr horzBarState="maximized"><p:restoredLeft sz="15611"/><p:restoredTop sz="94610"/></p:normalViewPr>' +
+		`<p:slideViewPr><p:cSldViewPr snapToGrid="${snapGrid}" snapToObjects="${snapObj}"${showGuides}>` +
+		`<p:cViewPr varScale="1"><p:scale><a:sx n="${zoom}" d="100"/><a:sy n="${zoom}" d="100"/></p:scale><p:origin x="216" y="312"/></p:cViewPr>` +
+		(guides ? `<p:guideLst>${guides}</p:guideLst>` : '<p:guideLst/>') +
+		'</p:cSldViewPr></p:slideViewPr>' +
+		'<p:notesTextViewPr><p:cViewPr><p:scale><a:sx n="1" d="1"/><a:sy n="1" d="1"/></p:scale><p:origin x="0" y="0"/></p:cViewPr></p:notesTextViewPr>' +
+		`<p:gridSpacing cx="${grid}" cy="${grid}"/>` +
+		'</p:viewPr>'
+	)
 }
