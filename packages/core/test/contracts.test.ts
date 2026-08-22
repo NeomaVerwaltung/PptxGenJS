@@ -1503,3 +1503,89 @@ test('contract: objects without locks keep the output they always had', async ()
 	assert.match(xml, /<p:cNvPicPr><a:picLocks noChangeAspect="1"\/><\/p:cNvPicPr>/, 'default picture lock changed')
 	assert.match(xml, /<a:graphicFrameLocks noGrp="1"\/>/, 'default frame lock changed')
 })
+
+test('contract: text fields emit a:fld with a cached value', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addText([
+		{ text: '22/08/2026', options: { field: 'datetime1' } },
+		{ text: ' page ' },
+		{ text: '1', options: { field: 'slidenum' } },
+	], { x: 1, y: 1, w: 4, h: 1 })
+	const fldZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	await assertPptxPackageContracts(fldZip)
+	const xml = await readPart(fldZip, 'ppt/slides/slide1.xml')
+
+	assert.doesNotMatch(xml, /NaN|undefined/, 'field options must not leak invalid values')
+	// the cached `a:t` is what a consumer that does not refresh renders
+	assert.match(xml, /<a:fld id="\{[0-9a-f]{8}-0000-0000-0000-[0-9a-f]{12}\}" type="datetime1"><a:rPr[^>]*>[\s\S]*?<a:t>22\/08\/2026<\/a:t><\/a:fld>/, 'datetime field missing')
+	assert.match(xml, /<a:fld id="\{[0-9a-f-]+\}" type="slidenum">[\s\S]*?<a:t>1<\/a:t><\/a:fld>/, 'slide-number field missing')
+	// fields sit alongside ordinary runs in the same paragraph
+	assert.match(xml, /<\/a:fld><a:r>[\s\S]*?<a:t> page <\/a:t><\/a:r><a:fld/, 'a field must coexist with plain runs')
+	// ids are GUIDs and unique per field
+	const ids = [...xml.matchAll(/<a:fld id="(\{[^"]+\})"/g)].map(match => match[1])
+	assert.equal(new Set(ids).size, 2, 'each field needs its own id')
+
+	// an unknown type degrades to plain text rather than emitting an invalid enum
+	const warnings: string[] = []
+	const origWarn = console.warn
+	console.warn = (msg: string) => warnings.push(String(msg))
+	let badXml = ''
+	try {
+		const bad = new pptxgen()
+		bad.addSlide().addText([{ text: 'x', options: { field: 'lunchtime' as unknown as 'slidenum' } }], { x: 1, y: 1, w: 2, h: 1 })
+		badXml = await readPart(await JSZip.loadAsync((await bad.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+	} finally {
+		console.warn = origWarn
+	}
+	assert.ok(warnings.some(w => w.includes('unknown text field "lunchtime"')), 'unknown field type must warn')
+	assert.doesNotMatch(badXml, /a:fld/, 'an unknown field type must not be emitted')
+	assert.match(badXml, /<a:t>x<\/a:t>/, 'the text still renders as a plain run')
+})
+
+test('contract: bullets support colour, size, font, and pictures', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addText('picture bullet', { x: 1, y: 1, w: 4, h: 1, bullet: { image: HOVER_PNG, color: 'FF0000', size: 150 } })
+	slide.addText('char bullet', { x: 1, y: 3, w: 4, h: 1, bullet: { characterCode: '25BA', fontFace: 'Wingdings', sizePts: 14 } })
+	slide.addText('numbered', { x: 1, y: 5, w: 4, h: 1, bullet: { type: 'number', color: '0000FF' } })
+	const buZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	await assertPptxPackageContracts(buZip)
+	const xml = await readPart(buZip, 'ppt/slides/slide1.xml')
+
+	// a picture bullet replaces the character/number bullet and needs an image relationship
+	assert.match(xml, /<a:buClr><a:srgbClr val="FF0000"\/><\/a:buClr><a:buSzPct val="150000"\/><a:buBlip><a:blip r:embed="rId\d+"\/><\/a:buBlip>/, 'picture bullet missing')
+	const rid = /<a:blip r:embed="(rId\d+)"\/><\/a:buBlip>/.exec(xml)?.[1]
+	assert.ok(rid, 'picture bullet has no relationship')
+	assert.match(await readPart(buZip, 'ppt/slides/_rels/slide1.xml.rels'), new RegExp(`<Relationship Id="${rid}" Type="[^"]*\\/image"`), 'bullet image relationship missing')
+	// `a:buSzPts` is in 100ths of a point and replaces `a:buSzPct`
+	assert.match(xml, /<a:buSzPts val="1400"\/><a:buFont typeface="Wingdings"\/><a:buChar char="&#x25BA;"\/>/, 'char bullet font/size missing')
+	// numbered bullets keep the major-latin fallback when no face is given
+	assert.match(xml, /<a:buClr><a:srgbClr val="0000FF"\/><\/a:buClr><a:buSzPct val="100000"\/><a:buFont typeface="\+mj-lt"\/><a:buAutoNum/, 'numbered bullet changed')
+})
+
+test('contract: rtlCol follows rtlMode, and kumimoji is settable', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addText('rtl', { x: 1, y: 1, w: 4, h: 1, columns: 2, rtlMode: true, kumimoji: true })
+	slide.addText('ltr', { x: 1, y: 3, w: 4, h: 1, columns: 2 })
+	slide.addText('override', { x: 1, y: 5, w: 4, h: 1, rtlMode: true, rtlColumns: false })
+	const xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+
+	// an RTL text box flows its columns right-to-left; an LTR one is unchanged
+	assert.match(xml, /<a:bodyPr wrap="square" numCol="2" rtlCol="1"/, 'rtlCol must follow rtlMode')
+	assert.match(xml, /<a:bodyPr wrap="square" numCol="2" rtlCol="0"/, 'a non-RTL box must stay rtlCol="0"')
+	assert.match(xml, /kumimoji="1"/, 'kumimoji missing')
+	// an explicit rtlColumns wins over rtlMode
+	assert.equal([...xml.matchAll(/rtlCol="0"/g)].length, 2, 'the explicit override must produce rtlCol="0"')
+})
+
+test('contract: text without fields, bullet extras, or RTL is unchanged', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addText('plain', { x: 1, y: 1, w: 3, h: 1, bullet: { characterCode: '2022' } })
+	const xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+
+	assert.doesNotMatch(xml, /a:fld|a:buClr|a:buBlip|a:buSzPts|kumimoji/, 'nothing new may appear unasked')
+	// the historical bullet output: 100% size, no font, then the char
+	assert.match(xml, /<a:buSzPct val="100000"\/><a:buChar char="&#x2022;"\/>/, 'default bullet output changed')
+	assert.match(xml, /rtlCol="0"/, 'default rtlCol changed')
+})

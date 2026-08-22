@@ -2,12 +2,37 @@
  * OOXML text and placeholder rendering.
  */
 
-import { BULLET_TYPES, CRLF, DEF_BULLET_MARGIN, OOXML_EXT, PLACEHOLDER_TYPES, SLIDE_OBJECT_TYPES } from '../core-enums'
-import { ISlideObject, ObjectOptions, ParagraphProps, TableCell, TextBodyProps, TextProps, TextPropsOptions, TextRunProps } from '../core-interfaces'
+import { BULLET_TYPES, CRLF, DEF_BULLET_MARGIN, OOXML_EXT, PLACEHOLDER_TYPES, SLIDE_OBJECT_TYPES, TEXT_FIELD_TYPES } from '../core-enums'
+import { Color, ISlideObject, ObjectOptions, ParagraphProps, TableCell, TextBodyProps, TextProps, TextPropsOptions, TextRunProps } from '../core-interfaces'
 import { genXmlHyperlink } from './hyperlink'
 import { genXmlLine } from './line'
 import { alternateContent } from './markup-compat'
 import { convertRotationDegrees, createColorElement, createGlowElement, encodeXmlEntities, genXmlColorSelection, inch2Emu, resolveGlowOptions, valToPts, warnDeprecatedOnce } from '../gen-utils'
+
+/**
+ * Build the `a:buClr` / `a:buSzPct` / `a:buSzPts` / `a:buFont` prefix shared by every bullet kind
+ * - the size defaults to 100% because that is what every branch emitted before
+ * @param {object} bullet - bullet options
+ * @returns {string} XML string
+ */
+function genXmlBulletPrefix (bullet: { color?: Color, size?: number, sizePts?: number, fontFace?: string }): string {
+	let xml = ''
+	if (bullet.color) xml += `<a:buClr>${createColorElement(bullet.color)}</a:buClr>`
+
+	// `a:buSzPct` and `a:buSzPts` are the same choice, so only one may appear
+	if (typeof bullet.sizePts === 'number' && isFinite(bullet.sizePts) && bullet.sizePts > 0) {
+		xml += `<a:buSzPts val="${Math.round(bullet.sizePts * 100)}"/>`
+	} else {
+		const pct = typeof bullet.size === 'number' && isFinite(bullet.size) ? Math.min(400, Math.max(25, bullet.size)) : 100
+		if (typeof bullet.size === 'number' && (bullet.size < 25 || bullet.size > 400)) {
+			console.warn(`[pptxgenjs] bullet \`size\` must be between 25 and 400 percent - "${String(bullet.size)}" clamped`)
+		}
+		xml += `<a:buSzPct val="${Math.round(pct * 1000)}"/>`
+	}
+
+	if (bullet.fontFace) xml += `<a:buFont typeface="${encodeXmlEntities(bullet.fontFace)}"/>`
+	return xml
+}
 
 function genXmlParagraphProperties (textObj: ISlideObject | TextProps, isDefault: boolean): string {
 	let strXmlBullet = ''
@@ -78,11 +103,19 @@ function genXmlParagraphProperties (textObj: ISlideObject | TextProps, isDefault
 		if (typeof options.bullet === 'object') {
 			if (options.bullet?.indent) bulletMarL = valToPts(options.bullet.indent)
 
-			if (options.bullet.type && options.bullet.type.toString().toLowerCase() === 'number') {
+			const buPrefix = genXmlBulletPrefix(options.bullet)
+			const buIndent = ` marL="${options.indentLevel && options.indentLevel > 0 ? bulletMarL + bulletMarL * options.indentLevel : bulletMarL}" indent="-${bulletMarL}"`
+
+			if (options.bullet.image && options.bullet._imageRId) {
+				// `a:buBlip` replaces the character or number bullet entirely
+				paragraphPropXml += buIndent
+				strXmlBullet = `${buPrefix}<a:buBlip><a:blip r:embed="rId${options.bullet._imageRId}"/></a:buBlip>`
+			} else if (options.bullet.type && options.bullet.type.toString().toLowerCase() === 'number') {
 				// NOTE: only `type: 'number'` is a distinct branch; any other `type` (e.g. 'bullet') falls through to the char-bullet cases below (issue #1432)
 				paragraphPropXml += ` marL="${options.indentLevel && options.indentLevel > 0 ? bulletMarL + bulletMarL * options.indentLevel : bulletMarL
 				}" indent="-${bulletMarL}"`
-				strXmlBullet = `<a:buSzPct val="100000"/><a:buFont typeface="+mj-lt"/><a:buAutoNum type="${options.bullet.style || 'arabicPeriod'}" startAt="${options.bullet.numberStartAt || options.bullet.startAt || '1'
+				// auto-numbered bullets fall back to the major latin face when none is given
+				strXmlBullet = `${buPrefix}${options.bullet.fontFace ? '' : '<a:buFont typeface="+mj-lt"/>'}<a:buAutoNum type="${options.bullet.style || 'arabicPeriod'}" startAt="${options.bullet.numberStartAt || options.bullet.startAt || '1'
 				}"/>`
 			} else if (options.bullet.characterCode) {
 				let bulletCode = `&#x${options.bullet.characterCode};`
@@ -95,7 +128,7 @@ function genXmlParagraphProperties (textObj: ISlideObject | TextProps, isDefault
 
 				paragraphPropXml += ` marL="${options.indentLevel && options.indentLevel > 0 ? bulletMarL + bulletMarL * options.indentLevel : bulletMarL
 				}" indent="-${bulletMarL}"`
-				strXmlBullet = '<a:buSzPct val="100000"/><a:buChar char="' + bulletCode + '"/>'
+				strXmlBullet = `${buPrefix}<a:buChar char="${bulletCode}"/>`
 			} else if (options.bullet.code) {
 				// @deprecated `bullet.code` v3.3.0
 				let bulletCode = `&#x${options.bullet.code};`
@@ -108,7 +141,7 @@ function genXmlParagraphProperties (textObj: ISlideObject | TextProps, isDefault
 
 				paragraphPropXml += ` marL="${options.indentLevel && options.indentLevel > 0 ? bulletMarL + bulletMarL * options.indentLevel : bulletMarL
 				}" indent="-${bulletMarL}"`
-				strXmlBullet = '<a:buSzPct val="100000"/><a:buChar char="' + bulletCode + '"/>'
+				strXmlBullet = `${buPrefix}<a:buChar char="${bulletCode}"/>`
 			} else {
 				paragraphPropXml += ` marL="${options.indentLevel && options.indentLevel > 0 ? bulletMarL + bulletMarL * options.indentLevel : bulletMarL
 				}" indent="-${bulletMarL}"`
@@ -179,6 +212,7 @@ function genXmlTextRunProperties (opts: ObjectOptions | TextPropsOptions, isDefa
 	if (['none', 'small', 'all'].includes(String(run.capitalization))) runProps += ` cap="${String(run.capitalization)}"`
 	if (run.normalizeHeight === true) runProps += ' normalizeH="1"'
 	if (run.noProof === true) runProps += ' noProof="1"'
+	if (opts.kumimoji === true) runProps += ' kumimoji="1"'
 	// `dirty` was hardcoded to 0; it stays the default so existing output does not change
 	runProps += ` dirty="${run.dirty === true ? '1' : '0'}">`
 	// Color / Font / Highlight / Outline are children of <a:rPr>, so add them now before closing the runProperties tag
@@ -273,6 +307,20 @@ function normalizeOmml (omml: string): string {
 	return `<a14:m>${math}</a14:m>`
 }
 
+/**
+ * A stable GUID for a field, derived from its type and cached value
+ * - `a:fld@id` must be a GUID; deriving it keeps repeated exports byte-identical
+ * @param {string} type - field type
+ * @param {string} cached - cached value
+ * @returns {string} braced GUID
+ */
+function fieldGuid (type: string, cached: string): string {
+	let hash = 0
+	for (const char of `${type}:${cached}`) hash = (hash * 31 + char.charCodeAt(0)) >>> 0
+	const hex = hash.toString(16).padStart(8, '0')
+	return `{${hex}-0000-0000-0000-${hex}0000}`
+}
+
 function genXmlTextRun (textObj: TextProps): string {
 	// NOTE: Dont create full rPr runProps for empty [lineBreak] runs
 	// Why? The size of the lineBreak wont match (eg: below it will be 18px instead of the correct 36px)
@@ -301,6 +349,23 @@ function genXmlTextRun (textObj: TextProps): string {
 			<a:endParaRPr lang="en-US" dirty="0"/>
 		</a:p>
 	*/
+
+	/* A field is a run the consumer refreshes on open (ECMA-376 21.1.2.2.4). The `a:t` child holds
+	 * the cached value so a consumer that does not refresh still renders something. `id` must be a
+	 * GUID; it is derived from the field type and text so repeated exports stay reproducible. */
+	const field = textObj.options?.field
+	if (field) {
+		if (!TEXT_FIELD_TYPES.has(field)) {
+			console.warn(`[pptxgenjs] unknown text field "${String(field)}" - run emitted as plain text instead`)
+		} else {
+			return (
+				`<a:fld id="${fieldGuid(field, textObj.text ?? '')}" type="${field}">` +
+				genXmlTextRunProperties(textObj.options ?? {}, false) +
+				`<a:t>${encodeXmlEntities(textObj.text ?? '')}</a:t>` +
+				'</a:fld>'
+			)
+		}
+	}
 
 	// Return paragraph with text run
 	const plainRun = textObj.text ? `<a:r>${genXmlTextRunProperties(textObj.options ?? {}, false)}<a:t>${encodeXmlEntities(textObj.text)}</a:t></a:r>` : ''
@@ -352,7 +417,9 @@ function genXmlBodyProperties (slideObject: ISlideObject | TableCell): string {
 		// C: Columns, then rtl, after margins
 		if (slideObject.options._bodyProp.numCol) bodyProperties += ` numCol="${slideObject.options._bodyProp.numCol}"`
 		if (slideObject.options._bodyProp.spcCol) bodyProperties += ` spcCol="${slideObject.options._bodyProp.spcCol}"`
-		bodyProperties += ' rtlCol="0"'
+		// `rtlCol` follows the deck's RTL mode unless overridden, so RTL columns flow correctly
+		const rtlCols = typeof body.rtlColumns === 'boolean' ? body.rtlColumns : slideObject.options?.rtlMode === true
+		bodyProperties += ` rtlCol="${rtlCols ? '1' : '0'}"`
 
 		// D: Add anchorPoints
 		if (slideObject.options._bodyProp.anchor) bodyProperties += ' anchor="' + slideObject.options._bodyProp.anchor + '"' // VALS: [t,ctr,b]

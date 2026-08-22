@@ -1471,6 +1471,30 @@ declare namespace PptxGenJS {
 			 */
 			type?: 'bullet' | 'number'
 			/**
+			 * Bullet colour, independent of the run's text colour (`a:buClr`)
+			 */
+			color?: Color
+			/**
+			 * Bullet size as a percent of the text size (`a:buSzPct`)
+			 * - range: 25-400
+			 * @default 100
+			 */
+			size?: number
+			/**
+			 * Bullet size in points (`a:buSzPts`), instead of a percent
+			 */
+			sizePts?: number
+			/**
+			 * Typeface for the bullet glyph (`a:buFont`)
+			 * - needed for Wingdings-style character bullets
+			 */
+			fontFace?: string
+			/**
+			 * Picture bullet (`a:buBlip`) - base64 image data with a mime header
+			 * - takes precedence over a character or number bullet
+			 */
+			image?: string
+			/**
 			 * Bullet character code (unicode)
 			 * @since v3.3.0
 			 * @example '25BA' // 'BLACK RIGHT-POINTING POINTER' (U+25BA)
@@ -2392,7 +2416,18 @@ declare namespace PptxGenJS {
 	 * Text-body attributes beyond wrap/insets/anchor (`a:bodyPr`, ECMA-376 21.1.2.1.1)
 	 * - every one is optional and omitted when unset, so default output does not change
 	 */
+	export type TextFieldType =
+		// ECMA-376 21.1.2.2.4 a:fld@type
+		| 'slidenum' | 'datetime' | 'datetimeFigureOut'
+		| 'datetime1' | 'datetime2' | 'datetime3' | 'datetime4' | 'datetime5' | 'datetime6' | 'datetime7'
+		| 'datetime8' | 'datetime9' | 'datetime10' | 'datetime11' | 'datetime12' | 'datetime13'
+		| 'headerfooter' | 'hdr' | 'ftr'
 	export interface TextBodyProps {
+		/**
+		 * Lay columns out right-to-left (`a:bodyPr@rtlCol`)
+		 * - defaults to the presentation's `rtlMode`, so an RTL deck flows its columns correctly
+		 */
+		rtlColumns?: boolean
 		/**
 		 * Keep text upright when the shape is rotated
 		 * @default false
@@ -2631,6 +2666,17 @@ declare namespace PptxGenJS {
 		 * @default 0
 		 */
 		columnSpacing?: number
+		/**
+		 * Render this run as a field the consumer refreshes, rather than literal text (`a:fld`)
+		 * - the run's `text` becomes the cached value, so consumers that do not refresh still show something
+		 * @example { text: '22/08/2026', options: { field: 'datetime1' } }
+		 */
+		field?: TextFieldType
+		/**
+		 * Horizontal-in-vertical numerals for East Asian vertical text (`a:rPr@kumimoji`)
+		 * @default false
+		 */
+		kumimoji?: boolean
 		/**
 		 * Office Math (OMML) markup for this run
 		 * - the run is emitted as a math zone instead of a plain text run; `text` becomes the
