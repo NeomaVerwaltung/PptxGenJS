@@ -1626,6 +1626,7 @@ export interface OptsChartData {
 	dataLabels?: string[]
 }
 // Used internally, probably shouldn't be used by end users
+/** @internal - internal model, not part of the published API */
 export interface IOptsChartData extends OptsChartData {
 	labels?: string[][]
 }
@@ -2090,9 +2091,11 @@ export interface IChartOpts
 	 */
 	altText?: string
 }
+/** @internal - internal model, not part of the published API */
 export interface IChartOptsLib extends IChartOpts {
 	_type?: CHART_NAME | IChartMulti[] // TODO: v3.4.0 - move to `IChartOpts`, remove `IChartOptsLib`
 }
+/** @internal - internal model, not part of the published API */
 export interface ISlideRelChart extends OptsChartData {
 	type: CHART_NAME | IChartMulti[]
 	opts: IChartOptsLib
@@ -2107,6 +2110,7 @@ export interface ISlideRelChart extends OptsChartData {
 // Core
 // ====
 // PRIVATE vvv
+/** @internal - internal model, not part of the published API */
 export interface ISlideRel {
 	type: SLIDE_OBJECT_TYPES
 	Target: string
@@ -2118,6 +2122,7 @@ export interface ISlideRel {
 	globalId?: number
 	rId: number
 }
+/** @internal - internal model, not part of the published API */
 export interface ISlideRelMedia {
 	type: string
 	opts?: MediaProps
@@ -2131,6 +2136,7 @@ export interface ISlideRelMedia {
 	rId: number
 	Target: string
 }
+/** @internal - internal model, not part of the published API */
 export interface ISlideObject {
 	_type: SLIDE_OBJECT_TYPES
 	options?: ObjectOptions
@@ -2324,6 +2330,7 @@ export interface IContentPart {
 	relationshipType: string
 	rId: number
 }
+/** @internal - internal model, not part of the published API */
 export interface SlideBaseProps {
 	/** content parts to write for this slide @internal */
 	_contentParts?: IContentPart[]
@@ -2352,6 +2359,7 @@ export interface SlideBaseProps {
 	 */
 	bkgd?: string | BackgroundProps
 }
+/** @internal - internal model, not part of the published API */
 export interface SlideLayout extends SlideBaseProps {
 	_slide?: {
 		_bkgdImgRid?: number
@@ -2800,6 +2808,7 @@ export interface PresentationProps {
 	notesGuides?: GuideProps[]
 }
 // PRIVATE interface
+/** @internal - internal model, not part of the published API */
 export interface IPresentationProps extends PresentationProps {
 	/** fonts registered with `addFont()` @internal */
 	embeddedFonts?: EmbeddedFont[]

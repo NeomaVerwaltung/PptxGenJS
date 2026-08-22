@@ -152,6 +152,32 @@ and F9 are cosmetic. Group them in the major so consumers absorb one XML change,
 8. F8: emit `p14:modId` for every shape, using the same derivation tables use.
 9. F9: count chart parts per presentation.
 
+### Phase 3c — generate the published types (v5.0)
+`types/index.d.ts` is hand-written and duplicates `src/core-interfaces.ts` by ~3,500 lines.
+It is not redundant — it is a *curated* surface, hiding `_`-prefixed props and internal-only
+interfaces, and it matches upstream's hand-written shape, which the compatibility policy
+depends on. But nothing linked the two, and they drifted silently: `ReflectionProps` and
+`SoftEdgeProps` were never declared at all, so `reflection` and `softEdge` were settable at
+runtime and unreachable from TypeScript. `test/types-parity.test.ts` now fails on that class
+of gap, using `@internal` and the `_` prefix to decide what is public.
+
+Generating the file instead would remove the duplication. Three steps, in order:
+
+10. Tag remaining internals `@internal` — the internal-only interfaces are done; the 42
+    `_`-prefixed props rely on the naming convention and should be tagged for `stripInternal`.
+11. Enable `stripInternal` and roll the emitted declarations into one file. `declaration: true`
+    and `declarationDir: ./out/defs` are already configured; the output is currently discarded
+    because `exports.types` points at the hand-written file. Needs `@microsoft/api-extractor`
+    (which also emits a committed API report, making public-surface changes reviewable) or
+    `rollup-plugin-dts`.
+12. Emit the `export as namespace PptxGenJS` + merged `declare namespace PptxGenJS` wrapper by
+    codegen. **This is the blocker, and why the whole item is a major.** Consumers reach option
+    types through class/namespace declaration merging — `PptxGenJS.TableRow`,
+    `PptxGenJS.TableCellProps` (std uses this form in 3 files, 17 times). Neither api-extractor
+    nor rollup-plugin-dts emits that idiom, so without codegen the migration forces
+    `import type { TableRow }` on every TypeScript consumer, which is breaking. Because codegen
+    is deterministic, a test can assert generated == committed.
+
 ### The rule for changing a default
 `chartTrackingRefBased` moved from opt-in to on-by-default in a minor (PR #107) on this
 test: **the change is not breaking if slides stay visually intact.** A presentation-level
