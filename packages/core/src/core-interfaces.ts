@@ -87,7 +87,72 @@ export interface BackgroundProps extends DataOrPathProps, ShapeFillProps {
  */
 export type HexColor = string
 export type ThemeColor = 'tx1' | 'tx2' | 'bg1' | 'bg2' | 'accent1' | 'accent2' | 'accent3' | 'accent4' | 'accent5' | 'accent6'
-export type Color = HexColor | ThemeColor
+export type SchemeColorValue =
+	| 'bg1' | 'tx1' | 'bg2' | 'tx2' | 'dk1' | 'lt1' | 'dk2' | 'lt2'
+	| 'accent1' | 'accent2' | 'accent3' | 'accent4' | 'accent5' | 'accent6'
+	| 'hlink' | 'folHlink' | 'phClr'
+/**
+ * Color transforms (ECMA-376 20.1.2.3, `EG_ColorTransform`)
+ * - percentages are 0-100; offsets are -100-100; `hueOff` is in degrees
+ * - any number of transforms may be combined on one color
+ */
+export interface ColorTransformProps {
+	/** lighten toward white (percent) */
+	tint?: number
+	/** darken toward black (percent) */
+	shade?: number
+	/** opacity (percent); 100 is opaque */
+	alpha?: number
+	/** shift opacity (percent, -100 to 100) */
+	alphaOff?: number
+	/** scale opacity (percent) */
+	alphaMod?: number
+	/** scale luminance (percent) */
+	lumMod?: number
+	/** shift luminance (percent, -100 to 100) */
+	lumOff?: number
+	/** scale saturation (percent) */
+	satMod?: number
+	/** shift saturation (percent, -100 to 100) */
+	satOff?: number
+	/** scale hue (percent) */
+	hueMod?: number
+	/** shift hue (degrees, -360 to 360) */
+	hueOff?: number
+	/** use the complement */
+	complement?: boolean
+	/** use the inverse */
+	inverse?: boolean
+	/** convert to grayscale */
+	grayscale?: boolean
+	/** apply gamma */
+	gamma?: boolean
+	/** apply inverse gamma */
+	inverseGamma?: boolean
+}
+/**
+ * A color given as an object, so transforms and the non-hex DrawingML color kinds are reachable
+ * - exactly one specification field identifies the color; that is what distinguishes a color
+ *   object from a fill object at runtime
+ * @example { hex: 'FF0000', alpha: 50 }
+ * @example { scheme: 'accent1', lumMod: 60, lumOff: 40 }
+ * @example { preset: 'cornflowerBlue' }
+ * @example { hsl: { hue: 210, sat: 80, lum: 50 }, shade: 25 }
+ */
+export type ColorProps =
+	/** 6-digit hex, as the string form accepts (`a:srgbClr`) */
+	| ({ hex: HexColor } & ColorTransformProps)
+	/** theme slot (`a:schemeClr`) */
+	| ({ scheme: SchemeColorValue } & ColorTransformProps)
+	/** system color such as `windowText`, with an optional last-known value (`a:sysClr`) */
+	| ({ system: string, lastColor?: HexColor } & ColorTransformProps)
+	/** one of the 140 preset color names (`a:prstClr`) */
+	| ({ preset: string } & ColorTransformProps)
+	/** hue/saturation/luminance; hue in degrees, the rest percent (`a:hslClr`) */
+	| ({ hsl: { hue: number, sat: number, lum: number } } & ColorTransformProps)
+	/** linear-gamma RGB percentages (`a:scrgbClr`) */
+	| ({ scrgb: { r: number, g: number, b: number } } & ColorTransformProps)
+export type Color = HexColor | ThemeColor | ColorProps
 export type Margin = number | [number, number, number, number]
 export type HAlign = 'left' | 'center' | 'right' | 'justify'
 export type VAlign = 'top' | 'middle' | 'bottom'
@@ -1641,7 +1706,7 @@ export interface OptsChartGridLine {
 	 * Gridline color (hex)
 	 * @example 'FF3399'
 	 */
-	color?: HexColor
+	color?: Color
 	/**
 	 * Gridline size (points)
 	 */

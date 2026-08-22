@@ -59,3 +59,46 @@ export enum SchemeColor {
     "accent6" = "accent6",
 }
 ```
+
+## The Full Colour Model
+
+Anywhere a colour is accepted, you can pass a 6-digit hex string, a theme slot name, or an object
+that reaches the rest of the DrawingML colour model (ECMA-376 §20.1.2.3).
+
+```typescript
+slide.addShape(pptx.ShapeType.rect, { x: 1, y: 1, w: 3, h: 1, fill: { color: 'FF0000' } });                       // unchanged
+slide.addShape(pptx.ShapeType.rect, { x: 1, y: 3, w: 3, h: 1, fill: { color: { scheme: 'accent1', lumMod: 60, lumOff: 40 } } });
+slide.addText('linked', { x: 1, y: 5, w: 3, h: 1, color: { scheme: 'hlink' } });
+```
+
+### Specifying a colour
+
+Exactly one of these identifies the colour:
+
+| Field    | Emits         | Example                                    |
+| :------- | :------------ | :----------------------------------------- |
+| `hex`    | `a:srgbClr`   | `{ hex: 'FF0000' }`                        |
+| `scheme` | `a:schemeClr` | `{ scheme: 'accent1' }`                    |
+| `system` | `a:sysClr`    | `{ system: 'windowText', lastColor: '000000' }` |
+| `preset` | `a:prstClr`   | `{ preset: 'cornflowerBlue' }` (140 names) |
+| `hsl`    | `a:hslClr`    | `{ hsl: { hue: 210, sat: 80, lum: 50 } }`  |
+| `scrgb`  | `a:scrgbClr`  | `{ scrgb: { r: 100, g: 50, b: 0 } }`       |
+
+Theme slots now include `dk1`, `dk2`, `lt1`, `lt2`, `hlink`, `folHlink`, and `phClr` alongside
+`tx1`/`tx2`/`bg1`/`bg2`/`accent1`–`accent6`.
+
+### Transforms
+
+Any number can be combined with any colour. Percentages are given as 0–100 and converted to the
+1000ths DrawingML expects; `hueOff` is in degrees.
+
+| Transform | Range | Notes |
+| :-- | :-- | :-- |
+| `tint`, `shade`, `alpha` | 0–100 | lighten, darken, opacity |
+| `alphaMod`, `lumMod`, `satMod`, `hueMod` | 0–∞ | **scales**, so values above 100 are valid (themes use `satMod: 170`) |
+| `alphaOff`, `lumOff`, `satOff` | −100–100 | signed shifts |
+| `hueOff` | −360–360 | degrees |
+| `complement`, `inverse`, `grayscale`, `gamma`, `inverseGamma` | boolean | emitted as empty elements |
+
+An unknown `scheme`, `system`, or `preset` name falls back to the default text colour with a warning:
+each is a schema enum, and an unrecognised token makes the element unparseable.

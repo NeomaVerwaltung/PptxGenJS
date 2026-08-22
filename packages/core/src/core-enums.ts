@@ -120,6 +120,54 @@ export const OOXML_EXT = {
 } as const
 export const LAYOUT_IDX_SERIES_BASE = 2147483649
 /** ECMA-376 20.1.10.51 ST_PresetPatternVal - the 54 preset fill patterns */
+/** ECMA-376 20.1.10.42 ST_SchemeColorVal - every slot `a:schemeClr@val` accepts */
+export const SCHEME_COLOR_VALUES = new Set([
+	'bg1', 'tx1', 'bg2', 'tx2', 'dk1', 'lt1', 'dk2', 'lt2',
+	'accent1', 'accent2', 'accent3', 'accent4', 'accent5', 'accent6',
+	'hlink', 'folHlink', 'phClr',
+])
+
+/** ECMA-376 20.1.10.58 ST_SystemColorVal - `a:sysClr@val` */
+export const SYSTEM_COLOR_VALUES = new Set([
+	'scrollBar', 'background', 'activeCaption', 'inactiveCaption', 'menu', 'window', 'windowFrame',
+	'menuText', 'windowText', 'captionText', 'activeBorder', 'inactiveBorder', 'appWorkspace',
+	'highlight', 'highlightText', 'btnFace', 'btnShadow', 'grayText', 'btnText',
+	'inactiveCaptionText', 'btnHighlight', '3dDkShadow', '3dLight', 'infoText', 'infoBk',
+	'hotLight', 'gradientActiveCaption', 'gradientInactiveCaption', 'menuHighlight', 'menuBar',
+])
+
+/** ECMA-376 20.1.10.48 ST_PresetColorVal - the 140 named preset colors for `a:prstClr@val` */
+export const PRESET_COLOR_VALUES = new Set([
+	'aliceBlue', 'antiqueWhite', 'aqua', 'aquamarine', 'azure', 'beige', 'bisque', 'black',
+	'blanchedAlmond', 'blue', 'blueViolet', 'brown', 'burlyWood', 'cadetBlue', 'chartreuse',
+	'chocolate', 'coral', 'cornflowerBlue', 'cornsilk', 'crimson', 'cyan', 'darkBlue', 'darkCyan',
+	'darkGoldenrod', 'darkGray', 'darkGrey', 'darkGreen', 'darkKhaki', 'darkMagenta',
+	'darkOliveGreen', 'darkOrange', 'darkOrchid', 'darkRed', 'darkSalmon', 'darkSeaGreen',
+	'darkSlateBlue', 'darkSlateGray', 'darkSlateGrey', 'darkTurquoise', 'darkViolet', 'deepPink',
+	'deepSkyBlue', 'dimGray', 'dimGrey', 'dkBlue', 'dkCyan', 'dkGoldenrod', 'dkGray', 'dkGrey',
+	'dkGreen', 'dkKhaki', 'dkMagenta', 'dkOliveGreen', 'dkOrange', 'dkOrchid', 'dkRed', 'dkSalmon',
+	'dkSeaGreen', 'dkSlateBlue', 'dkSlateGray', 'dkSlateGrey', 'dkTurquoise', 'dkViolet',
+	'dodgerBlue', 'firebrick', 'floralWhite', 'forestGreen', 'fuchsia', 'gainsboro', 'ghostWhite',
+	'gold', 'goldenrod', 'gray', 'grey', 'green', 'greenYellow', 'honeydew', 'hotPink',
+	'indianRed', 'indigo', 'ivory', 'khaki', 'lavender', 'lavenderBlush', 'lawnGreen',
+	'lemonChiffon', 'lightBlue', 'lightCoral', 'lightCyan', 'lightGoldenrodYellow', 'lightGray',
+	'lightGrey', 'lightGreen', 'lightPink', 'lightSalmon', 'lightSeaGreen', 'lightSkyBlue',
+	'lightSlateGray', 'lightSlateGrey', 'lightSteelBlue', 'lightYellow', 'lime', 'limeGreen',
+	'linen', 'ltBlue', 'ltCoral', 'ltCyan', 'ltGoldenrodYellow', 'ltGray', 'ltGrey', 'ltGreen',
+	'ltPink', 'ltSalmon', 'ltSeaGreen', 'ltSkyBlue', 'ltSlateGray', 'ltSlateGrey', 'ltSteelBlue',
+	'ltYellow', 'magenta', 'maroon', 'medAquamarine', 'medBlue', 'medOrchid', 'medPurple',
+	'medSeaGreen', 'medSlateBlue', 'medSpringGreen', 'medTurquoise', 'medVioletRed',
+	'mediumAquamarine', 'mediumBlue', 'mediumOrchid', 'mediumPurple', 'mediumSeaGreen',
+	'mediumSlateBlue', 'mediumSpringGreen', 'mediumTurquoise', 'mediumVioletRed', 'midnightBlue',
+	'mintCream', 'mistyRose', 'moccasin', 'navajoWhite', 'navy', 'oldLace', 'olive', 'oliveDrab',
+	'orange', 'orangeRed', 'orchid', 'paleGoldenrod', 'paleGreen', 'paleTurquoise',
+	'paleVioletRed', 'papayaWhip', 'peachPuff', 'peru', 'pink', 'plum', 'powderBlue', 'purple',
+	'red', 'rosyBrown', 'royalBlue', 'saddleBrown', 'salmon', 'sandyBrown', 'seaGreen', 'seaShell',
+	'sienna', 'silver', 'skyBlue', 'slateBlue', 'slateGray', 'slateGrey', 'snow', 'springGreen',
+	'steelBlue', 'tan', 'teal', 'thistle', 'tomato', 'turquoise', 'violet', 'wheat', 'white',
+	'whiteSmoke', 'yellow', 'yellowGreen',
+])
+
 export const PATTERN_TYPES = new Set([
 	'pct5', 'pct10', 'pct20', 'pct25', 'pct30', 'pct40', 'pct50', 'pct60', 'pct70', 'pct75', 'pct80', 'pct90',
 	'horz', 'vert', 'ltHorz', 'ltVert', 'dkHorz', 'dkVert', 'narHorz', 'narVert', 'dashHorz', 'dashVert',
