@@ -9,7 +9,7 @@
 
 import { MS_PPTX_NS } from '../core-enums'
 import { alternateContent } from './markup-compat'
-import { PresSlide, SlideTransitionProps } from '../core-interfaces'
+import { SlideTransitionProps } from '../core-interfaces'
 
 /** Which directional attribute an inner transition element accepts (ECMA-376 19.3.1.50) */
 type DirKind = 'none' | 'side' | 'orient' | 'eight' | 'corner' | 'inout' | 'split' | 'wheel' | 'thruBlk'
@@ -167,7 +167,7 @@ function transitionAttributes (props: SlideTransitionProps, modern: boolean): st
  * @param {PresSlide} slide - slide object
  * @returns {string} XML string
  */
-export function genXmlTransition (slide: PresSlide): string {
+export function genXmlTransition (slide: { transition?: SlideTransitionProps }): string {
 	const props = slide.transition
 	if (!props?.type) return ''
 

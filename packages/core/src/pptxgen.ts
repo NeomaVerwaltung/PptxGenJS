@@ -1061,6 +1061,15 @@ export default class PptxGenJS implements IPresentationProps {
 			_slideObjects: [],
 			background: propsClone.background || null,
 			bkgd: propsClone.bkgd || null,
+			// layout metadata: `makeXmlLayout` reads these off the layout, not the caller's props
+			layoutType: propsClone.layoutType,
+			matchingName: propsClone.matchingName,
+			preserve: propsClone.preserve,
+			showMasterShapes: propsClone.showMasterShapes,
+			showMasterPlaceholderAnimation: propsClone.showMasterPlaceholderAnimation,
+			userDrawn: propsClone.userDrawn,
+			colorMapOverride: propsClone.colorMapOverride,
+			transition: propsClone.transition,
 		}
 
 		// STEP 1: Create the Slide Master/Layout

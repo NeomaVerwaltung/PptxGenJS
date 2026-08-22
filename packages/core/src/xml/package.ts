@@ -2,8 +2,8 @@
  * OOXML package-part rendering.
  */
 
-import { COMMENT, CRLF, DEF_GUIDE_COLOR, EMU, LAYOUT_IDX_SERIES_BASE, OOXML_EXT, SLDNUMFLDID, SLIDE_OBJECT_TYPES } from '../core-enums'
-import { DocumentProps, EmbeddedFont, GuideProps, IPresentationProps, PresSlide, SectionProps, SlideLayout, SlideShowProps } from '../core-interfaces'
+import { COMMENT, CRLF, DEF_COLOR_MAP, DEF_GUIDE_COLOR, EMU, LAYOUT_IDX_SERIES_BASE, OOXML_EXT, SLDNUMFLDID, SLIDE_OBJECT_TYPES } from '../core-enums'
+import { ColorMapOverrideProps, DocumentProps, EmbeddedFont, GuideProps, IPresentationProps, PresSlide, SectionProps, SlideLayout, SlideShowProps } from '../core-interfaces'
 import { createColorElement, encodeXmlEntities, getUuid, inch2Emu } from '../gen-utils'
 import { makeXmlEmbeddedFontLst } from '../gen-fonts'
 import { genXmlSlideExtLst, slideObjectToXml } from './slide'
@@ -302,10 +302,26 @@ export function makeXmlNotesSlide (slide: PresSlide): string {
  * @return {string} XML
  */
 export function makeXmlLayout (layout: SlideLayout): string {
+	// `preserve` has always been written as "1", so it stays on unless the caller turns it off
+	let attrs = layout.preserve === false ? '' : ' preserve="1"'
+	if (layout.layoutType) attrs += ` type="${layout.layoutType}"`
+	if (layout.matchingName) attrs += ` matchingName="${encodeXmlEntities(layout.matchingName)}"`
+	// both default to true in the schema, so only the "off" case is written
+	if (layout.showMasterShapes === false) attrs += ' showMasterSp="0"'
+	if (layout.showMasterPlaceholderAnimation === false) attrs += ' showMasterPhAnim="0"'
+	if (layout.userDrawn === true) attrs += ' userDrawn="1"'
+
+	// CT_ColorMapping requires all twelve attributes, so a partial override is filled from the
+	// identity map - which is exactly what inheriting `a:masterClrMapping` means
+	const clrMapOvr = layout.colorMapOverride
+		? `<p:clrMapOvr><a:overrideClrMapping${Object.entries(DEF_COLOR_MAP).map(([slot, fallback]) => ` ${slot}="${layout.colorMapOverride?.[slot as keyof ColorMapOverrideProps] ?? fallback}"`).join('')}/></p:clrMapOvr>`
+		: '<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>'
+
+	// CT_SlideLayout sequence: cSld, clrMapOvr, transition, timing, hf, extLst
 	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-		<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" preserve="1">
+		<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"${attrs}>
 		${slideObjectToXml(layout)}
-		<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sldLayout>`
+		${clrMapOvr}${genXmlTransition(layout)}</p:sldLayout>`
 }
 
 /**

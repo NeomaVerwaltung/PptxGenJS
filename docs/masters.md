@@ -28,6 +28,53 @@ View > Slide Master, and such edits affect all Slides created with that layout.
 | `objects`     | array            |       | Objects for Slide | object with type and options.                                         |
 | `slideNumber` | SlideNumberProps |       | Slide numbers     | (see [SlideNumber Props](#slidenumber-props-slidenumberprops))        |
 
+### Layout Metadata
+
+These describe the layout part itself rather than its contents. All are optional, and unset means the
+layout part is byte-identical to what earlier versions wrote.
+
+```typescript
+pptx.defineSlideMaster({
+    title: 'SECTION HEADER',
+    layoutType: 'secHead',
+    matchingName: 'Section Header',
+    colorMapOverride: { bg1: 'dk1', tx1: 'lt1' },
+    objects: [/* ... */],
+});
+```
+
+| Option                           | Type    | Default | Description                                                     |
+| :------------------------------- | :------ | :------ | :-------------------------------------------------------------- |
+| `layoutType`                     | string  | `cust`  | which placeholder arrangement the layout describes (`@type`)     |
+| `matchingName`                   | string  |         | name shown in PowerPoint's New Slide gallery                     |
+| `preserve`                       | boolean | `true`  | keep the layout even when no slide uses it                       |
+| `showMasterShapes`               | boolean | `true`  | draw the master's shapes behind slides using this layout          |
+| `showMasterPlaceholderAnimation` | boolean | `true`  | play the master's placeholder animations                         |
+| `userDrawn`                      | boolean | `false` | mark the layout as author-drawn rather than generated             |
+| `colorMapOverride`               | object  |         | remap the theme's colour slots for this layout only              |
+| `transition`                     | object  |         | transition for slides using this layout                          |
+
+`layoutType` is what PowerPoint's New Slide gallery groups by, and what its Reset Layout command
+trusts. It *describes* the placeholder arrangement — PowerPoint takes it at face value, so a
+`secHead` layout whose placeholders look nothing like a section header will reset oddly. Common
+values: `title`, `obj`, `secHead`, `twoObj`, `titleOnly`, `blank`, `objTx`, `picTx`, `vertTx`,
+`vertTitleAndTx`, `cust`. The full set is the 36 values of `ST_SlideLayoutType`.
+
+`matchingName` unset writes nothing; PowerPoint then falls back to the layout name taken from `title`.
+
+#### Colour Map Override
+
+By default a layout inherits the master's colour mapping. `colorMapOverride` remaps individual slots —
+useful for a dark section layout inside a light deck:
+
+```typescript
+colorMapOverride: { bg1: 'dk1', tx1: 'lt1' }
+```
+
+Slots are `bg1`, `tx1`, `bg2`, `tx2`, `accent1`–`accent6`, `hlink`, `folHlink`; each takes `dk1`,
+`lt1`, `dk2`, `lt2`, `accent1`–`accent6`, `hlink` or `folHlink`. The OOXML schema requires all twelve,
+so anything you leave out is filled from the identity map — exactly what inheriting would have done.
+
 ### Background Props (`BackgroundProps`)
 
 | Option         | Type   | Default  | Description  | Possible Values                                                                                      |
@@ -99,6 +146,26 @@ name when adding text or other objects.
 | `chart` | chart       |
 | `table` | table       |
 | `media` | audio/video |
+
+### Placeholder Metadata
+
+Beyond position and type, a placeholder can carry the OOXML metadata PowerPoint reads when it lays a
+new slide out:
+
+| Option      | Type    | Default | Description                                                      |
+| :---------- | :------ | :------ | :--------------------------------------------------------------- |
+| `orient`    | string  | `horz`  | text direction inside the placeholder — `horz` or `vert`           |
+| `sz`        | string  | `full`  | how much of the layout it covers — `full`, `half` or `quarter`      |
+| `userDrawn` | boolean | `false` | author-placed rather than inherited layout furniture               |
+
+```typescript
+objects: [
+    { placeholder: { options: { name: 'side', type: 'body', x: 6, y: 1, w: 3, h: 4, orient: 'vert', sz: 'half' } } },
+];
+```
+
+`sz` matches the OOXML attribute name, as `orient` does — `size` is already taken elsewhere in the
+options surface.
 
 ### Placeholder Example
 

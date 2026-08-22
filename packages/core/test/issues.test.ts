@@ -822,3 +822,71 @@ test('#141: shapes and pictures emit p:style theme references', async () => {
 	assert.ok(!bareXml.includes('<p:style>'), 'default shape gained a p:style')
 	assert.ok(bareXml.includes('<a:noFill/>'), 'default shape lost its noFill')
 })
+
+test('#149: slide layout and placeholder metadata', async () => {
+	const pptx = new pptxgen()
+	// one layout carrying every piece of metadata, so the CT_SlideLayout order is exercised
+	pptx.defineSlideMaster({
+		title: 'SECTION',
+		layoutType: 'secHead',
+		matchingName: 'Section Header',
+		showMasterShapes: false,
+		showMasterPlaceholderAnimation: false,
+		userDrawn: true,
+		colorMapOverride: { bg1: 'dk1', tx1: 'lt1' },
+		transition: { type: 'fade', duration: 500 },
+		objects: [{ placeholder: { options: { name: 'ttl', type: 'title', x: 1, y: 1, w: 6, h: 1, orient: 'vert', sz: 'half', userDrawn: true }, text: 'Section' } }],
+	})
+	pptx.defineSlideMaster({ title: 'PLAIN', preserve: false, objects: [{ placeholder: { options: { name: 'b', type: 'body', x: 1, y: 1, w: 6, h: 1 } } }] })
+	pptx.addSlide({ masterName: 'SECTION' })
+
+	const zip = await writeZip(pptx)
+	const section = (zip.file(/slideLayout\d+\.xml/) ?? []).length
+	assert.ok(section >= 2, `expected layout parts, got ${section}`)
+
+	// find the layout carrying our metadata rather than assuming a part number
+	let layout = ''
+	for (const file of zip.file(/ppt\/slideLayouts\/slideLayout\d+\.xml/) ?? []) {
+		const xml = await file.async('string')
+		if (xml.includes('type="secHead"')) layout = xml
+	}
+	assert.ok(layout, 'no layout carried the metadata')
+
+	assert.ok(layout.includes(' preserve="1" type="secHead" matchingName="Section Header" showMasterSp="0" showMasterPhAnim="0" userDrawn="1">'), `p:sldLayout attrs wrong: ${/<p:sldLayout[^>]*>/.exec(layout)?.[0] ?? ''}`)
+	// CT_ColorMapping requires all twelve attributes: the two given are used, the rest come from the identity map
+	assert.ok(layout.includes('<a:overrideClrMapping bg1="dk1" tx1="lt1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>'), `clrMapOvr wrong: ${/<p:clrMapOvr>[\s\S]*?<\/p:clrMapOvr>/.exec(layout)?.[0] ?? ''}`)
+
+	// CT_SlideLayout sequence: cSld, clrMapOvr, transition
+	const seq = ['<p:cSld', '</p:cSld>', '<p:clrMapOvr>', 'mc:AlternateContent'].map(tag => layout.indexOf(tag))
+	assert.ok(seq.every(idx => idx > -1), `a p:sldLayout child is missing: ${seq.join(',')}`)
+	assert.deepEqual(seq, [...seq].sort((a, b) => a - b), `CT_SlideLayout child order violated: ${seq.join(',')}`)
+
+	// `p:ph` attributes and `p:nvPr@userDrawn`
+	assert.ok(/<p:ph\s+idx="\d+"\s+type="title"\s+orient="vert"\s+sz="half"\s+hasCustomPrompt="1"/.test(layout.replace(/\s+/g, ' ')), `p:ph wrong: ${/<p:ph[\s\S]*?\/>/.exec(layout)?.[0] ?? ''}`)
+	assert.ok(layout.includes('<p:nvPr userDrawn="1">'), 'p:nvPr@userDrawn missing')
+
+	// `preserve: false` is the only way to turn off an attribute that has always been written
+	let plain = ''
+	for (const file of zip.file(/ppt\/slideLayouts\/slideLayout\d+\.xml/) ?? []) {
+		const xml = await file.async('string')
+		if (xml.includes('name="PLAIN"')) plain = xml
+	}
+	assert.ok(plain, 'no PLAIN layout')
+	assert.ok(!/<p:sldLayout[^>]*preserve=/.test(plain), 'preserve:false was ignored')
+
+	// a layout that asks for none of it is unchanged, including the inherited colour mapping
+	const bare = new pptxgen()
+	bare.defineSlideMaster({ title: 'BARE', objects: [{ placeholder: { options: { name: 'b', type: 'body', x: 1, y: 1, w: 6, h: 1 } } }] })
+	bare.addSlide({ masterName: 'BARE' })
+	const bareZip = await writeZip(bare)
+	for (const file of bareZip.file(/ppt\/slideLayouts\/slideLayout\d+\.xml/) ?? []) {
+		const xml = await file.async('string')
+		const tag = /<p:sldLayout[^>]*>/.exec(xml)?.[0] ?? ''
+		assert.ok(tag.includes('preserve="1"'), `${file.name} lost preserve="1"`)
+		for (const attr of ['type=', 'matchingName=', 'showMasterSp=', 'showMasterPhAnim=', 'userDrawn=']) {
+			assert.ok(!tag.includes(attr), `${file.name} gained ${attr}`)
+		}
+		assert.ok(xml.includes('<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>'), `${file.name} lost the inherited colour mapping`)
+		assert.ok(!xml.includes('orient=') && !xml.includes(' sz="half"') && !xml.includes('userDrawn='), `${file.name} gained placeholder metadata`)
+	}
+})
