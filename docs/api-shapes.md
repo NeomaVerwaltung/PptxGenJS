@@ -142,6 +142,62 @@ A picture fill without usable image data is dropped with a warning rather than w
 
 Both fill types work on shapes and table cells.
 
+## Group Fill
+
+`fill: { type: 'group' }` emits `a:grpFill` — the shape inherits its parent group's fill instead of
+defining its own. It is legal anywhere a fill is, but only has a visible effect on a shape inside a
+group shape.
+
+## Effects
+
+`glow`, `shadow`, `reflection` and `softEdge` are joined by two more DrawingML effects. All of them go
+into one `a:effectLst`, in the order the schema fixes (blur, fill overlay, glow, shadow, reflection,
+soft edge) regardless of the order you set them in.
+
+```typescript
+slide.addShape(pptx.ShapeType.rect, {
+    x: 1, y: 1, w: 3, h: 2, fill: { color: 'CCCCCC' },
+    blur: { radius: 4, grow: false },
+    fillOverlay: { blend: 'mult', fill: { color: 'FF0000', transparency: 40 } },
+});
+```
+
+| Option        | Type   | Description                                                                    |
+| :------------ | :----- | :----------------------------------------------------------------------------- |
+| `blur`        | object | `radius` (points, required) and `grow` (default `true`) — whether the blur may extend past the shape's bounds |
+| `fillOverlay` | object | `blend` (`over`, `mult`, `screen`, `darken`, `lighten`) and `fill` — a second fill blended over the shape's own |
+
+Both `blend` and `fill` are required by the schema, so a `fillOverlay` missing either is dropped
+rather than written as an element PowerPoint would refuse to open.
+
+### Preset Shadows
+
+Besides `outer` and `inner`, `shadow.type` accepts `preset` — PowerPoint's twenty built-in shadows.
+`preset` is required in that case; without it the shadow is dropped.
+
+```typescript
+slide.addShape(pptx.ShapeType.rect, { x: 1, y: 1, w: 3, h: 2, shadow: { type: 'preset', preset: 'shdw7', color: '333333' } });
+```
+
+Preset names are `shdw1` through `shdw20`. `offset` and `angle` still apply; `blur` and `opacity` do
+not (the preset defines them).
+
+### Composed Effect Graphs (`effectDag`)
+
+`a:effectLst` and `a:effectDag` are alternatives in the OOXML schema. Setting `effectDag` emits the
+same effects inside an `a:effectDag` instead of an `a:effectLst`:
+
+```typescript
+slide.addShape(pptx.ShapeType.rect, { x: 1, y: 1, w: 3, h: 2, glow: { size: 6, color: 'FFFF00', opacity: 0.6 }, effectDag: { type: 'sib' } });
+```
+
+| Option | Type   | Default | Description                                                    |
+| :----- | :----- | :------ | :------------------------------------------------------------- |
+| `type` | string | `sib`   | `sib` (applies to siblings) or `tree` (applies to the subtree)  |
+
+The graph is flat: nested `a:cont` containers and named `a:effect` references are not emitted.
+PowerPoint's UI never produces them, so there is nothing to round-trip against.
+
 ## Line Properties
 
 `line` accepts the full `CT_LineProperties` model (ECMA-376 §20.1.2.1). Everything below is optional

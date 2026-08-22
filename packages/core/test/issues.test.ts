@@ -690,3 +690,78 @@ test('#147: table cells emit diagonal borders, 3-D cells, overflow and rtl colum
 		assert.ok(!bareXml.includes(tag), `default table gained ${tag}`)
 	}
 })
+
+test('#138: blur, fillOverlay, prstShdw, effectDag, blip alpha effects and group fill', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	// one shape carrying every CT_EffectList child, so the fixed sequence is actually exercised
+	slide.addShape('rect', {
+		x: 0.5, y: 0.5, w: 2, h: 1, fill: { color: 'CCCCCC' },
+		blur: { radius: 4, grow: false },
+		fillOverlay: { blend: 'mult', fill: { color: 'FF0000', transparency: 50 } },
+		glow: { size: 5, color: '00FF00', opacity: 0.4 },
+		shadow: { type: 'outer', color: '000000' },
+		reflection: { blur: 2 },
+		softEdge: { radius: 3 },
+	})
+	slide.addShape('rect', { x: 3, y: 0.5, w: 2, h: 1, shadow: { type: 'preset', preset: 'shdw7', color: '333333' } })
+	slide.addShape('rect', { x: 5.5, y: 0.5, w: 2, h: 1, glow: { size: 4, color: 'FF0000', opacity: 0.5 }, effectDag: { type: 'tree' } })
+	slide.addShape('rect', { x: 0.5, y: 2, w: 2, h: 1, fill: { type: 'group' } })
+	// a preset shadow with no preset name, and a fill overlay with no fill: both dropped
+	slide.addShape('rect', { x: 3, y: 2, w: 2, h: 1, shadow: { type: 'preset', color: '333333' } })
+	slide.addShape('rect', { x: 5.5, y: 2, w: 2, h: 1, fillOverlay: { blend: 'over' } as never })
+	// `@blend` is required, so a fill overlay with a fill but no blend mode is dropped too
+	slide.addShape('rect', { x: 8, y: 2, w: 1, h: 1, fillOverlay: { fill: { color: '00FF00' } } as never })
+	slide.addImage({ data: PNG_4x2, x: 0.5, y: 3.5, w: 1, h: 0.5, transparency: 20, alphaEffects: { replace: 60, invert: true, floor: true, ceiling: true } })
+	// ST_PositiveFixedPercentage caps at 100%
+	slide.addImage({ data: PNG_4x2, x: 2, y: 3.5, w: 1, h: 0.5, alphaEffects: { replace: 150 } })
+
+	const xml = await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')
+	const lists = xml.match(/<a:effectLst>[\s\S]*?<\/a:effectLst>/g) ?? []
+	assert.ok(lists.length >= 2, `expected effect lists, got ${lists.length}`)
+
+	// CT_EffectList fixes the sequence: blur, fillOverlay, glow, innerShdw, outerShdw, prstShdw, reflection, softEdge
+	const all = lists[0]
+	assert.ok(all.includes('<a:blur rad="50800" grow="0"/>'), `blur wrong: ${all}`)
+	assert.ok(all.includes('<a:fillOverlay blend="mult"><a:solidFill><a:srgbClr val="FF0000"><a:alpha val="50000"/></a:srgbClr></a:solidFill></a:fillOverlay>'), `fillOverlay wrong: ${all}`)
+	const seq = ['<a:blur', '<a:fillOverlay', '<a:glow', '<a:outerShdw', '<a:reflection', '<a:softEdge'].map(tag => all.indexOf(tag))
+	assert.ok(seq.every(idx => idx > -1), `an effect is missing: ${seq.join(',')}`)
+	assert.deepEqual(seq, [...seq].sort((a, b) => a - b), `CT_EffectList child order violated: ${seq.join(',')}`)
+
+	// prstShdw sits in the shadow slot, after outerShdw's position in the sequence
+	assert.ok(xml.includes('<a:prstShdw prst="shdw7" dist="50800" dir="16200000"><a:srgbClr val="333333"><a:alpha val="75000"/></a:srgbClr></a:prstShdw>'), 'prstShdw missing')
+	// a preset shadow with no preset name is dropped: `@prst` is required on CT_PresetShadowEffect
+	assert.equal((xml.match(/<a:prstShdw/g) ?? []).length, 1, 'a preset shadow without a preset name was emitted')
+	// `@blend` and a fill are both required on CT_FillOverlayEffect
+	assert.equal((xml.match(/<a:fillOverlay/g) ?? []).length, 1, 'a fill overlay missing its blend mode or its fill was emitted')
+	assert.ok(!xml.includes('blend="undefined"'), 'a fill overlay was emitted without a blend mode')
+
+	// effectLst and effectDag are alternatives in EG_EffectProperties, never both
+	const dag = /<a:effectDag[\s\S]*?<\/a:effectDag>/.exec(xml)?.[0] ?? ''
+	assert.ok(dag.startsWith('<a:effectDag type="tree">') && dag.includes('<a:glow'), `effectDag wrong: ${dag}`)
+	const dagShape = /<p:sp>(?:(?!<\/p:sp>)[\s\S])*<a:effectDag[\s\S]*?<\/p:sp>/.exec(xml)?.[0] ?? ''
+	assert.ok(dagShape && !dagShape.includes('<a:effectLst>'), 'a shape emitted both an effectDag and an effectLst')
+
+	assert.ok(xml.includes('<a:grpFill/>'), 'group fill missing')
+
+	const blips = xml.match(/<a:blip [\s\S]*?<\/a:blip>/g) ?? []
+	assert.ok(blips[0].includes('<a:alphaModFix amt="80000"/><a:alphaRepl a="60000"/><a:alphaInv/><a:alphaFloor/><a:alphaCeiling/>'), `blip alpha effects wrong: ${blips[0]}`)
+	assert.ok(blips[1].includes('<a:alphaRepl a="100000"/>'), `alphaRepl not clamped: ${blips[1]}`)
+	// the alpha effects belong on the blip, never in the shape effect list
+	for (const list of lists) assert.ok(!/alphaRepl|alphaInv|alphaFloor|alphaCeiling/.test(list), 'an alpha effect leaked into a:effectLst')
+
+	// image effects declared on ImageProps were dropped by the addImage options rebuild
+	const imgOnly = new pptxgen()
+	imgOnly.addSlide().addImage({ data: PNG_4x2, x: 1, y: 1, w: 1, h: 0.5, glow: { size: 5, color: 'FF0000', opacity: 0.5 }, softEdge: { radius: 3 }, reflection: { blur: 2 } })
+	const picXml = await readPart(await writeZip(imgOnly), 'ppt/slides/slide1.xml')
+	const pic = /<p:pic>[\s\S]*?<\/p:pic>/.exec(picXml)?.[0] ?? ''
+	assert.ok(pic.includes('<a:glow') && pic.includes('<a:softEdge') && pic.includes('<a:reflection'), `image effects never reached the pic: ${pic}`)
+
+	// a shape asking for none of it is unchanged
+	const bare = new pptxgen()
+	bare.addSlide().addShape('rect', { x: 1, y: 1, w: 2, h: 1, fill: { color: 'CCCCCC' } })
+	const bareXml = await readPart(await writeZip(bare), 'ppt/slides/slide1.xml')
+	for (const tag of ['<a:blur', '<a:fillOverlay', '<a:prstShdw', '<a:effectDag', '<a:grpFill', '<a:alphaRepl']) {
+		assert.ok(!bareXml.includes(tag), `default shape gained ${tag}`)
+	}
+})

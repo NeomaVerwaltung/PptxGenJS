@@ -98,6 +98,28 @@ The `sizing` option provides cropping and scaling an image to a specified area. 
 - In case of the `crop` option, if the specified area reaches out of the image, then the covered empty space will be a part of the image.
 - When the `sizing` property is used, its `w` and `h` values represent the effective image size. For example, in the following snippet, width and height of the image will both equal to 2 inches and its top-left corner will be located at `[1 inch, 1 inch]`:
 
+## Effects
+
+Images take the same effects as shapes — `shadow`, `glow`, `softEdge`, `reflection`, `blur`,
+`fillOverlay` and `effectDag`. See [Shape Effects](./api-shapes.md#effects).
+
+### Alpha Effects (`alphaEffects`)
+
+Alpha effects act on the image's own pixels rather than on the shape around it, so they are written
+onto `a:blip` alongside `transparency`. They are not shape effects and cannot appear in an
+`a:effectLst`.
+
+```typescript
+slide.addImage({ path: 'logo.png', x: 1, y: 1, w: 2, h: 1, alphaEffects: { invert: true } });
+```
+
+| Option    | Type    | Description                                                            |
+| :-------- | :------ | :--------------------------------------------------------------------- |
+| `replace` | number  | replace every alpha value with this one (percent, 0-100)               |
+| `invert`  | boolean | invert the alpha channel (`a:alphaInv`)                                |
+| `floor`   | boolean | force any alpha below 100% to fully transparent (`a:alphaFloor`)       |
+| `ceiling` | boolean | force any alpha above 0% to fully opaque (`a:alphaCeiling`)            |
+
 ## Shadow Properties (`ShadowProps`)
 
 The `ShadowProps` property adds a shadow to an image.

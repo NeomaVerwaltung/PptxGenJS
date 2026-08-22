@@ -14,7 +14,7 @@ import {
 	SHAPE_TYPE,
 	SLIDE_OBJECT_TYPES,
 } from '../core-enums'
-import { BorderProps, ISlideObject, ObjectOptions, PresSlide, ReflectionProps, ShadowProps, SectionProps, SlideLayout, SoftEdgeProps, TableCell, TableCellProps, TableProps, TextGlowProps } from '../core-interfaces'
+import { BlurProps, BorderProps, EffectDagProps, FillOverlayProps, ImageAlphaEffectProps, ISlideObject, ObjectOptions, PresSlide, ReflectionProps, ShadowProps, SectionProps, SlideLayout, SoftEdgeProps, TableCell, TableCellProps, TableProps, TextGlowProps } from '../core-interfaces'
 import {
 	convertRotationDegrees,
 	createColorElement,
@@ -134,15 +134,21 @@ function shapeModId (objectIndex: number): number {
  * @return {string} shadow XML
  */
 function genXmlShadowElement (shadow: ShadowProps): string {
-	const type = shadow.type === 'inner' ? 'inner' : 'outer'
-	const blur = valToPts(shadow.blur ?? 8)
 	const offset = valToPts(shadow.offset ?? 4)
 	const angle = Math.round((shadow.angle ?? 270) * 60000)
 	const opacity = Math.round((shadow.opacity ?? 0.75) * 100000)
 	const color = shadow.color || DEF_TEXT_SHADOW.color
+	const colorXml = `<a:srgbClr val="${color}"><a:alpha val="${opacity}"/></a:srgbClr>`
+
+	// `a:prstShdw` requires `@prst`, so a preset shadow with no preset name is dropped rather than
+	// emitted as an element PowerPoint would refuse to open
+	if (shadow.type === 'preset') return shadow.preset ? `<a:prstShdw prst="${shadow.preset}" dist="${offset}" dir="${angle}">${colorXml}</a:prstShdw>` : ''
+
+	const type = shadow.type === 'inner' ? 'inner' : 'outer'
+	const blur = valToPts(shadow.blur ?? 8)
 	const attrs = type === 'outer' ? 'sx="100000" sy="100000" kx="0" ky="0" algn="bl" rotWithShape="0"' : ''
 
-	return `<a:${type}Shdw ${attrs} blurRad="${blur}" dist="${offset}" dir="${angle}"><a:srgbClr val="${color}"><a:alpha val="${opacity}"/></a:srgbClr></a:${type}Shdw>`
+	return `<a:${type}Shdw ${attrs} blurRad="${blur}" dist="${offset}" dir="${angle}">${colorXml}</a:${type}Shdw>`
 }
 
 /**
@@ -168,14 +174,83 @@ function genXmlReflectionElement (reflection: ReflectionProps): string {
  * @param {object} opts - supported effect options
  * @return {string} effect-list XML, or an empty string when no effects are set
  */
-function genXmlEffectLst (opts: { shadow?: ShadowProps, glow?: TextGlowProps, softEdge?: SoftEdgeProps, reflection?: ReflectionProps }): string {
+/**
+ * Create one blur child for an `a:effectLst`.
+ * @param {BlurProps} blur - blur options
+ * @return {string} blur XML
+ */
+function genXmlBlurElement (blur: BlurProps): string {
+	const grow = blur.grow === false ? ' grow="0"' : ''
+	return `<a:blur rad="${valToPts(blur.radius)}"${grow}/>`
+}
+
+/**
+ * Create one fill-overlay child for an `a:effectLst`.
+ * - `@blend` is required and CT_FillOverlayEffect requires a fill, so a partial value yields nothing
+ * @param {FillOverlayProps} overlay - fill-overlay options
+ * @return {string} fill-overlay XML
+ */
+function genXmlFillOverlayElement (overlay: FillOverlayProps): string {
+	if (!overlay.blend || !overlay.fill) return ''
+	const fill = genXmlColorSelection(overlay.fill)
+	return fill ? `<a:fillOverlay blend="${overlay.blend}">${fill}</a:fillOverlay>` : ''
+}
+
+/** Effect options shared by shapes and images */
+interface EffectOptions {
+	shadow?: ShadowProps
+	glow?: TextGlowProps
+	softEdge?: SoftEdgeProps
+	reflection?: ReflectionProps
+	blur?: BlurProps
+	fillOverlay?: FillOverlayProps
+	effectDag?: EffectDagProps
+}
+
+/**
+ * Create one ordered DrawingML effect list for a shape or image.
+ * - the child order is fixed by CT_EffectList: blur, fillOverlay, glow, innerShdw, outerShdw,
+ *   prstShdw, reflection, softEdge
+ * - `a:effectLst` and `a:effectDag` are alternatives in EG_EffectProperties, so `effectDag`
+ *   replaces the list rather than adding to it
+ * @param {EffectOptions} opts - supported effect options
+ * @return {string} effect-list XML, or an empty string when no effects are set
+ */
+function genXmlEffectLst (opts: EffectOptions): string {
 	const effects: string[] = []
+	if (opts.blur) effects.push(genXmlBlurElement(opts.blur))
+	if (opts.fillOverlay) effects.push(genXmlFillOverlayElement(opts.fillOverlay))
 	const glow = resolveGlowOptions(opts.glow)
 	if (glow) effects.push(createGlowElement(glow))
 	if (opts.shadow && opts.shadow.type !== 'none') effects.push(genXmlShadowElement(opts.shadow))
 	if (opts.reflection) effects.push(genXmlReflectionElement(opts.reflection))
 	if (opts.softEdge) effects.push(genXmlSoftEdgeElement(opts.softEdge))
-	return effects.length ? `<a:effectLst>${effects.join('')}</a:effectLst>` : ''
+
+	const xml = effects.join('')
+	if (!xml) return ''
+	// A flat `a:effectDag` holds the same children as the list; nested `a:cont` and named
+	// `a:effect` references are not emitted (see docs/api-shapes.md)
+	if (opts.effectDag) return `<a:effectDag type="${opts.effectDag.type === 'tree' ? 'tree' : 'sib'}">${xml}</a:effectDag>`
+	return `<a:effectLst>${xml}</a:effectLst>`
+}
+
+/**
+ * Alpha effects for an image's `a:blip`.
+ * - CT_Blip takes its effect children in any order, so these follow the existing `a:alphaModFix`
+ * @param {number | undefined} transparency - image transparency (percent)
+ * @param {ImageAlphaEffectProps | undefined} alpha - alpha effect options
+ * @return {string} blip effect XML
+ */
+function genXmlBlipEffects (transparency?: number, alpha?: ImageAlphaEffectProps): string {
+	let xml = transparency ? `<a:alphaModFix amt="${Math.round((100 - transparency) * 1000)}"/>` : ''
+	if (!alpha) return xml
+	// `a:alphaRepl` requires `@a`, so a non-numeric value is dropped
+	// `@a` is ST_PositiveFixedPercentage, so the percent is clamped to 0-100 before scaling
+	if (typeof alpha.replace === 'number' && isFinite(alpha.replace)) xml += `<a:alphaRepl a="${Math.round(Math.min(100, Math.max(0, alpha.replace)) * 1000)}"/>`
+	if (alpha.invert === true) xml += '<a:alphaInv/>'
+	if (alpha.floor === true) xml += '<a:alphaFloor/>'
+	if (alpha.ceiling === true) xml += '<a:alphaCeiling/>'
+	return xml
 }
 
 interface SlideObjectContext {
@@ -713,7 +788,7 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 					(slide._relsMedia || []).filter(rel => rel.rId === slideItemObj.imageRid)[0].extn === 'svg'
 				) {
 					strSlideXml += `<a:blip r:embed="rId${(slideItemObj.imageRid ?? 0) - 1}">`
-					strSlideXml += slideItemObj.options.transparency ? ` <a:alphaModFix amt="${Math.round((100 - slideItemObj.options.transparency) * 1000)}"/>` : ''
+					strSlideXml += genXmlBlipEffects(slideItemObj.options.transparency, slideItemObj.options.alphaEffects)
 					strSlideXml += ' <a:extLst>'
 					strSlideXml += `  <a:ext uri="${OOXML_EXT.svgBlip.uri}">`
 					strSlideXml += `   <asvg:svgBlip xmlns:asvg="${OOXML_EXT.svgBlip.ns}" r:embed="rId${slideItemObj.imageRid}"/>`
@@ -722,7 +797,7 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 					strSlideXml += '</a:blip>'
 				} else {
 					strSlideXml += `<a:blip r:embed="rId${slideItemObj.imageRid}">`
-					strSlideXml += slideItemObj.options.transparency ? `<a:alphaModFix amt="${Math.round((100 - slideItemObj.options.transparency) * 1000)}"/>` : ''
+					strSlideXml += genXmlBlipEffects(slideItemObj.options.transparency, slideItemObj.options.alphaEffects)
 					strSlideXml += '</a:blip>'
 				}
 				if (sizing?.type) {

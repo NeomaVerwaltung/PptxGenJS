@@ -586,6 +586,10 @@ export function genXmlColorSelection (props: Color | ShapeFillProps | ShapeLineP
 					outText += `<a:solidFill>${createColorElement(colorVal, internalElements)}</a:solidFill>`
 				}
 				break
+			case 'group':
+				// inherit the group shape's fill; only meaningful on a shape inside a group
+				outText += '<a:grpFill/>'
+				break
 			case 'image':
 				// without a relationship the `a:blip` would dangle, which PowerPoint reports as damage
 				if (image?._rId) {
