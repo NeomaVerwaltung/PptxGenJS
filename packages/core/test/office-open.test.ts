@@ -104,6 +104,12 @@ test('office: LibreOffice opens and converts a generated presentation', async ()
 			objects: [{ placeholder: { options: { name: 'secTitle', type: 'title', x: 0.5, y: 2, w: 9, h: 1.5 }, text: 'Section' } }],
 		})
 		pptx.addSlide({ masterName: 'SECTION HEADER' }).addText('section', { placeholder: 'secTitle' })
+		// media source elements - the round-trip fixture for #150. The linked target is external, so it
+		// need not exist: the deck only has to open.
+		const mediaSlide = pptx.addSlide()
+		mediaSlide.addMedia({ type: 'video', link: 'clip.mp4', x: 0.5, y: 0.5, w: 3, h: 2, contentType: 'video/mp4' })
+		mediaSlide.addMedia({ type: 'audioCd', audioCd: { start: { track: 1 }, end: { track: 1, time: 30 } }, x: 4.5, y: 0.5, w: 2, h: 2 })
+		mediaSlide.addMedia({ type: 'wav', data: 'audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=', x: 0.5, y: 3, w: 2, h: 1.5 })
 		pptx.addSlide({ transition: { type: 'morph', duration: 1200 } }).addText('modern transition', { x: 0.5, y: 0.5, w: 5, h: 0.5 })
 		await writeFile(presentationPath, (await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
 

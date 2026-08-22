@@ -1019,7 +1019,29 @@ export interface ReflectionProps {
 }
 
 // image / media ==================================================================================
-export type MediaType = 'audio' | 'online' | 'video'
+export type MediaType = 'audio' | 'online' | 'video' | 'audioCd' | 'wav'
+
+/**
+ * A point on an audio CD (`a:st`/`a:end`, ECMA-376 Part 1 §20.1.3.4 CT_AudioCDTime)
+ */
+export interface AudioCdTimeProps {
+	/** CD track number (0-255) - required by the schema */
+	track: number
+	/**
+	 * Offset into the track, in seconds
+	 * @default 0
+	 */
+	time?: number
+}
+
+/**
+ * CD audio source (`a:audioCd`, ECMA-376 Part 1 §20.1.3.3 CT_AudioCD)
+ * - references the listener's CD drive, so it embeds nothing and needs no relationship
+ */
+export interface AudioCdProps {
+	start: AudioCdTimeProps
+	end: AudioCdTimeProps
+}
 
 export interface ImageProps extends PositionProps, DataOrPathProps, ObjectNameProps {
 	/**
@@ -1234,6 +1256,26 @@ export interface MediaProps extends PositionProps, DataOrPathProps, ObjectNamePr
 	 * @example { animation: { type: 'fadeIn', trigger: 'afterPrevious', duration: 800 } }
 	 */
 	animation?: AnimationProps
+	/**
+	 * MIME type of the referenced media (`a:audioFile@contentType`, `a:videoFile@contentType`)
+	 * @example 'video/mp4'
+	 */
+	contentType?: string
+	/**
+	 * CD audio track range - required when `type` is `audioCd`
+	 * @example { start: { track: 1 }, end: { track: 1, time: 30 } }
+	 */
+	audioCd?: AudioCdProps
+	/**
+	 * Mark the media frame as a photo (`p:nvPr@isPhoto`)
+	 * @default false
+	 */
+	isPhoto?: boolean
+	/**
+	 * Mark the media frame as author-placed rather than layout furniture (`p:nvPr@userDrawn`)
+	 * @default false
+	 */
+	userDrawn?: boolean
 }
 
 // shapes =========================================================================================
@@ -2679,6 +2721,12 @@ export interface ISlideRelMedia {
 	data?: string | ArrayBuffer
 	/** used to indicate that a media file has already been read/enocded (PERF) */
 	isDuplicate?: boolean
+	/**
+	 * Media referenced rather than embedded: the relationship is written `TargetMode="External"`
+	 * and no part is added to the package
+	 * @internal
+	 */
+	isLinked?: boolean
 	isSvgPng?: boolean
 	svgSize?: { w: number, h: number }
 	rId: number
@@ -2722,6 +2770,12 @@ export interface ISlideObject {
 	media?: string
 	mtype?: MediaType
 	mediaRid?: number
+	/**
+	 * rId of the media frame's preview image - the media source kinds push different numbers of
+	 * relationships, so the cover cannot be derived from `mediaRid`
+	 * @internal
+	 */
+	_coverRid?: number
 	shape?: SHAPE_NAME
 }
 // PRIVATE ^^^
@@ -2930,6 +2984,14 @@ export interface ObjectOptions extends ImageProps, PositionProps, ShapeProps, Ta
 	sz?: 'full' | 'half' | 'quarter'
 	/** author-placed rather than layout furniture (`p:nvPr@userDrawn`) */
 	userDrawn?: boolean
+	/** media frame marked as a photo (`p:nvPr@isPhoto`) @internal */
+	isPhoto?: boolean
+	/** MIME type of referenced media (`a:audioFile@contentType`) @internal */
+	contentType?: string
+	/** CD audio track range (`a:audioCd`) @internal */
+	audioCd?: AudioCdProps
+	/** media referenced rather than embedded @internal */
+	isLinked?: boolean
 	/** image added without `w`/`h`: size it from the image itself during export @internal */
 	_sizeFromImage?: boolean
 

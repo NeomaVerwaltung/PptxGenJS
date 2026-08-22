@@ -27,14 +27,17 @@ function slideObjectRelationsToXml (slide: PresSlide | SlideLayout, defaultRels:
 	;(slide._relsMedia || []).forEach((rel: ISlideRelMedia) => {
 		const relRid = rel.rId.toString()
 		lastRid = Math.max(lastRid, rel.rId)
+		// Linked media points outside the package, so the same relationship types are written with
+		// `TargetMode="External"` and no part is added
+		const externalAttr = rel.isLinked ? ' TargetMode="External"' : ''
 		if (rel.type.toLowerCase().includes('image')) {
 			strXml += '<Relationship Id="rId' + relRid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="' + rel.Target + '"/>'
 		} else if (rel.type.toLowerCase().includes('audio')) {
-			if (strXml.includes(' Target="' + rel.Target + '"')) strXml += '<Relationship Id="rId' + relRid + '" Type="http://schemas.microsoft.com/office/2007/relationships/media" Target="' + rel.Target + '"/>'
-			else strXml += '<Relationship Id="rId' + relRid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/audio" Target="' + rel.Target + '"/>'
+			if (strXml.includes(' Target="' + rel.Target + '"')) strXml += '<Relationship Id="rId' + relRid + '" Type="http://schemas.microsoft.com/office/2007/relationships/media" Target="' + rel.Target + '"' + externalAttr + '/>'
+			else strXml += '<Relationship Id="rId' + relRid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/audio" Target="' + rel.Target + '"' + externalAttr + '/>'
 		} else if (rel.type.toLowerCase().includes('video')) {
-			if (strXml.includes(' Target="' + rel.Target + '"')) strXml += '<Relationship Id="rId' + relRid + '" Type="http://schemas.microsoft.com/office/2007/relationships/media" Target="' + rel.Target + '"/>'
-			else strXml += '<Relationship Id="rId' + relRid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/video" Target="' + rel.Target + '"/>'
+			if (strXml.includes(' Target="' + rel.Target + '"')) strXml += '<Relationship Id="rId' + relRid + '" Type="http://schemas.microsoft.com/office/2007/relationships/media" Target="' + rel.Target + '"' + externalAttr + '/>'
+			else strXml += '<Relationship Id="rId' + relRid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/video" Target="' + rel.Target + '"' + externalAttr + '/>'
 		} else if (rel.type.toLowerCase().includes('online')) {
 			if (strXml.includes(' Target="' + rel.Target + '"')) strXml += '<Relationship Id="rId' + relRid + '" Type="http://schemas.microsoft.com/office/2007/relationships/image" Target="' + rel.Target + '"/>'
 			else strXml += '<Relationship Id="rId' + relRid + '" Target="' + rel.Target + '" TargetMode="External" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/video"/>'
