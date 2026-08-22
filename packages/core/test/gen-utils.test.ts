@@ -248,3 +248,74 @@ test('debugLog: silent unless PPTXGENJS_DEBUG or NODE_DEBUG is set', () => {
 		if (NODE_DEBUG === undefined) delete process.env.NODE_DEBUG; else process.env.NODE_DEBUG = NODE_DEBUG
 	}
 })
+
+test('createColorElement: the string forms are unchanged', () => {
+	// the whole point of the object form is that it is additive
+	assert.equal(createColorElement('FF0000'), '<a:srgbClr val="FF0000"/>')
+	assert.equal(createColorElement('#ff0000'), '<a:srgbClr val="FF0000"/>')
+	assert.equal(createColorElement('accent1'), '<a:schemeClr val="accent1"/>')
+	assert.equal(createColorElement('FF0000', '<a:alpha val="50000"/>'), '<a:srgbClr val="FF0000"><a:alpha val="50000"/></a:srgbClr>')
+})
+
+test('createColorElement: every DrawingML color kind', () => {
+	assert.equal(createColorElement({ hex: 'FF0000' }), '<a:srgbClr val="FF0000"/>')
+	assert.equal(createColorElement({ scheme: 'accent1' }), '<a:schemeClr val="accent1"/>')
+	// slots the string form could not reach
+	assert.equal(createColorElement({ scheme: 'hlink' }), '<a:schemeClr val="hlink"/>')
+	assert.equal(createColorElement({ scheme: 'folHlink' }), '<a:schemeClr val="folHlink"/>')
+	assert.equal(createColorElement({ scheme: 'phClr' }), '<a:schemeClr val="phClr"/>')
+	assert.equal(createColorElement({ scheme: 'dk1' }), '<a:schemeClr val="dk1"/>')
+	assert.equal(createColorElement({ system: 'windowText' }), '<a:sysClr val="windowText"/>')
+	assert.equal(createColorElement({ system: 'windowText', lastColor: '#000000' }), '<a:sysClr val="windowText" lastClr="000000"/>')
+	assert.equal(createColorElement({ preset: 'cornflowerBlue' }), '<a:prstClr val="cornflowerBlue"/>')
+	// hue is ST_PositiveFixedAngle (60000ths of a degree); sat/lum are percentages
+	assert.equal(createColorElement({ hsl: { hue: 210, sat: 80, lum: 50 } }), '<a:hslClr hue="12600000" sat="80000" lum="50000"/>')
+	assert.equal(createColorElement({ scrgb: { r: 100, g: 50, b: 0 } }), '<a:scrgbClr r="100000" g="50000" b="0"/>')
+})
+
+test('createColorElement: transforms and their unit ranges', () => {
+	assert.equal(createColorElement({ hex: 'FF0000', alpha: 50 }), '<a:srgbClr val="FF0000"><a:alpha val="50000"/></a:srgbClr>')
+	assert.equal(createColorElement({ scheme: 'accent1', lumMod: 60, lumOff: 40 }), '<a:schemeClr val="accent1"><a:lumMod val="60000"/><a:lumOff val="40000"/></a:schemeClr>')
+	// the `*Mod` transforms scale and are unbounded above - real themes use satMod="170000"
+	assert.equal(createColorElement({ scheme: 'accent1', satMod: 170 }), '<a:schemeClr val="accent1"><a:satMod val="170000"/></a:schemeClr>')
+	// the `*Off` transforms are signed and clamped to +/-100
+	assert.equal(createColorElement({ hex: '00FF00', lumOff: -25, satOff: 200 }), '<a:srgbClr val="00FF00"><a:satOff val="100000"/><a:lumOff val="-25000"/></a:srgbClr>')
+	// hueOff is an angle in degrees
+	assert.equal(createColorElement({ hex: '00FF00', hueOff: -30 }), '<a:srgbClr val="00FF00"><a:hueOff val="-1800000"/></a:srgbClr>')
+	// boolean transforms are empty elements
+	assert.equal(createColorElement({ hex: '00FF00', inverse: true, grayscale: true, complement: true, gamma: true, inverseGamma: true }),
+		'<a:srgbClr val="00FF00"><a:inv/><a:gray/><a:comp/><a:gamma/><a:invGamma/></a:srgbClr>')
+	// alpha is a positive fixed percentage, so it clamps at 100
+	assert.equal(createColorElement({ hex: '00FF00', alpha: 150, tint: -20 }), '<a:srgbClr val="00FF00"><a:tint val="0"/><a:alpha val="100000"/></a:srgbClr>')
+})
+
+test('createColorElement: unknown names fall back rather than emit invalid enums', () => {
+	const orig = console.warn
+	const warnings: string[] = []
+	console.warn = (msg: string) => warnings.push(String(msg))
+	try {
+		// each of these is an enum: an unknown token makes the element unparseable
+		assert.equal(createColorElement({ scheme: 'nope' as unknown as 'accent1' }), `<a:srgbClr val="${DEF_FONT_COLOR}"/>`)
+		assert.equal(createColorElement({ system: 'chartreuse' }), `<a:srgbClr val="${DEF_FONT_COLOR}"/>`)
+		assert.equal(createColorElement({ preset: 'ultraviolet' }), `<a:srgbClr val="${DEF_FONT_COLOR}"/>`)
+		assert.equal(createColorElement({ hex: 'ZZZ' }), `<a:srgbClr val="${DEF_FONT_COLOR}"/>`)
+		// a non-hex lastClr is dropped, but the system color still works
+		assert.equal(createColorElement({ system: 'windowText', lastColor: 'nope' }), '<a:sysClr val="windowText"/>')
+	} finally {
+		console.warn = orig
+	}
+	assert.equal(warnings.length, 4, 'each rejected name warns once')
+	assert.ok(warnings.some(w => w.includes('is not a theme color slot')))
+	assert.ok(warnings.some(w => w.includes('is not a system color')))
+	assert.ok(warnings.some(w => w.includes('is not a preset color name')))
+})
+
+test('genXmlColorSelection: a color object is a solid fill, a fill object is not', () => {
+	// the six specification fields discriminate a color from a fill at runtime
+	assert.equal(genXmlColorSelection({ scheme: 'accent1', lumMod: 75 }), '<a:solidFill><a:schemeClr val="accent1"><a:lumMod val="75000"/></a:schemeClr></a:solidFill>')
+	assert.equal(genXmlColorSelection({ preset: 'gold' }), '<a:solidFill><a:prstClr val="gold"/></a:solidFill>')
+	// a fill object still takes the fill path
+	assert.equal(genXmlColorSelection({ type: 'solid', color: 'FF0000' }), '<a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>')
+	// and a color object works as a fill's `color`
+	assert.equal(genXmlColorSelection({ type: 'solid', color: { scheme: 'accent2', shade: 50 } }), '<a:solidFill><a:schemeClr val="accent2"><a:shade val="50000"/></a:schemeClr></a:solidFill>')
+})

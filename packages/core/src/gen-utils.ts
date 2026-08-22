@@ -2,8 +2,8 @@
  * PptxGenJS: Utility Methods
  */
 
-import { DEF_FONT_COLOR, DEF_TEXT_GLOW, EMU, ONEPT, PATTERN_TYPES, REGEX_HEX_COLOR, SCHEME_COLORS, SchemeColor, TILE_ALIGNMENTS } from './core-enums'
-import { PresLayout, TextGlowProps, PresSlide, SlideLayout, ShapeFillProps, Color, ShapeLineProps, Coord, ShadowProps, ShapeGradientProps, ShapeGradientStopProps, ShapeImageFillProps, ShapePatternProps } from './core-interfaces'
+import { DEF_FONT_COLOR, DEF_TEXT_GLOW, EMU, ONEPT, PATTERN_TYPES, PRESET_COLOR_VALUES, REGEX_HEX_COLOR, SCHEME_COLORS, SCHEME_COLOR_VALUES, SYSTEM_COLOR_VALUES, SchemeColor, TILE_ALIGNMENTS } from './core-enums'
+import { Color, ColorProps, ColorTransformProps, Coord, PresLayout, PresSlide, ShadowProps, ShapeFillProps, ShapeGradientProps, ShapeGradientStopProps, ShapeImageFillProps, ShapeLineProps, ShapePatternProps, SlideLayout, TextGlowProps } from './core-interfaces'
 
 /** debug namespace, used for both the log prefix and the `NODE_DEBUG` section name */
 const DEBUG_NS = 'pptxgenjs'
@@ -289,8 +289,116 @@ export function rgbToHex (r: number, g: number, b: number): string {
  * @param {string} innerElements - additional elements that adjust the color and are enclosed by the color element
  * @returns {string} XML string
  */
-export function createColorElement (colorStr: string | SCHEME_COLORS | undefined, innerElements?: string): string {
-	let colorVal = (colorStr || '').replace('#', '')
+/**
+ * DrawingML stores percentages in 1000ths of a percent
+ * - `CT_PositiveFixedPercentage` (tint, shade, alpha) is 0-100
+ * - `CT_FixedPercentage` (the `*Off` transforms) is -100 to 100
+ * - `CT_PositivePercentage` (the `*Mod` transforms) is a *scale* and is unbounded above:
+ *   real themes carry values such as `satMod val="170000"`
+ */
+function pct (value: number, min = 0, max = 100): string {
+	const clamped = Math.min(max, Math.max(min, isFinite(value) ? value : 0))
+	return String(Math.round(clamped * 1000))
+}
+
+/**
+ * Whether a value is a color object rather than a fill object
+ * - the six specification fields are unique to `ColorProps`, so their presence is a sound
+ *   discriminator against `ShapeFillProps`/`ShapeLineProps`
+ * @param {unknown} value - candidate
+ * @returns {boolean} whether it specifies a color
+ */
+export function isColorProps (value: unknown): value is ColorProps {
+	if (!value || typeof value !== 'object') return false
+	return ['hex', 'scheme', 'system', 'preset', 'hsl', 'scrgb'].some(key => key in value)
+}
+
+/**
+ * Create the color transform children shared by every color element (ECMA-376 20.1.2.3)
+ * - transforms may be combined; order is not significant, so a stable order is used
+ * @param {ColorTransformProps} props - transform props
+ * @returns {string} XML string
+ */
+function createColorTransforms (props: ColorTransformProps): string {
+	let xml = ''
+
+	// scaling percentages are positive; offsets are signed
+	if (typeof props.tint === 'number') xml += `<a:tint val="${pct(props.tint)}"/>`
+	if (typeof props.shade === 'number') xml += `<a:shade val="${pct(props.shade)}"/>`
+	if (props.inverse === true) xml += '<a:inv/>'
+	if (props.grayscale === true) xml += '<a:gray/>'
+	if (typeof props.alpha === 'number') xml += `<a:alpha val="${pct(props.alpha)}"/>`
+	if (typeof props.alphaOff === 'number') xml += `<a:alphaOff val="${pct(props.alphaOff, -100, 100)}"/>`
+	if (typeof props.alphaMod === 'number') xml += `<a:alphaMod val="${pct(props.alphaMod, 0, Number.MAX_SAFE_INTEGER)}"/>`
+	if (typeof props.hueMod === 'number') xml += `<a:hueMod val="${pct(props.hueMod, 0, Number.MAX_SAFE_INTEGER)}"/>`
+	// ST_Angle: 60000ths of a degree
+	if (typeof props.hueOff === 'number') xml += `<a:hueOff val="${Math.round(Math.min(360, Math.max(-360, isFinite(props.hueOff) ? props.hueOff : 0)) * 60000)}"/>`
+	if (typeof props.satMod === 'number') xml += `<a:satMod val="${pct(props.satMod, 0, Number.MAX_SAFE_INTEGER)}"/>`
+	if (typeof props.satOff === 'number') xml += `<a:satOff val="${pct(props.satOff, -100, 100)}"/>`
+	if (typeof props.lumMod === 'number') xml += `<a:lumMod val="${pct(props.lumMod, 0, Number.MAX_SAFE_INTEGER)}"/>`
+	if (typeof props.lumOff === 'number') xml += `<a:lumOff val="${pct(props.lumOff, -100, 100)}"/>`
+	if (props.complement === true) xml += '<a:comp/>'
+	if (props.gamma === true) xml += '<a:gamma/>'
+	if (props.inverseGamma === true) xml += '<a:invGamma/>'
+
+	return xml
+}
+
+/**
+ * Create the color element for a `ColorProps` object
+ * - an unknown scheme/system/preset name would make the element unparseable, so it falls back
+ * @param {ColorProps} props - color props
+ * @param {string} extra - additional transform XML from internal callers
+ * @returns {string} XML string
+ */
+function createColorPropsElement (props: ColorProps, extra: string): string {
+	const inner = createColorTransforms(props) + extra
+	const wrap = (tag: string, attrs: string): string => (inner ? `<a:${tag} ${attrs}>${inner}</a:${tag}>` : `<a:${tag} ${attrs}/>`)
+
+	if ('hex' in props) {
+		const hex = String(props.hex ?? '').replace('#', '')
+		if (!REGEX_HEX_COLOR.test(hex)) {
+			console.warn(`[pptxgenjs] "${hex}" is not a 6-digit hex color - "${DEF_FONT_COLOR}" used instead`)
+			return wrap('srgbClr', `val="${DEF_FONT_COLOR}"`)
+		}
+		return wrap('srgbClr', `val="${hex.toUpperCase()}"`)
+	}
+	if ('scheme' in props) {
+		if (!SCHEME_COLOR_VALUES.has(props.scheme)) {
+			console.warn(`[pptxgenjs] "${String(props.scheme)}" is not a theme color slot - "${DEF_FONT_COLOR}" used instead`)
+			return wrap('srgbClr', `val="${DEF_FONT_COLOR}"`)
+		}
+		return wrap('schemeClr', `val="${props.scheme}"`)
+	}
+	if ('system' in props) {
+		if (!SYSTEM_COLOR_VALUES.has(props.system)) {
+			console.warn(`[pptxgenjs] "${String(props.system)}" is not a system color - "${DEF_FONT_COLOR}" used instead`)
+			return wrap('srgbClr', `val="${DEF_FONT_COLOR}"`)
+		}
+		const last = props.lastColor && REGEX_HEX_COLOR.test(props.lastColor.replace('#', '')) ? ` lastClr="${props.lastColor.replace('#', '').toUpperCase()}"` : ''
+		return wrap('sysClr', `val="${props.system}"${last}`)
+	}
+	if ('preset' in props) {
+		if (!PRESET_COLOR_VALUES.has(props.preset)) {
+			console.warn(`[pptxgenjs] "${String(props.preset)}" is not a preset color name - "${DEF_FONT_COLOR}" used instead`)
+			return wrap('srgbClr', `val="${DEF_FONT_COLOR}"`)
+		}
+		return wrap('prstClr', `val="${props.preset}"`)
+	}
+	if ('hsl' in props) {
+		// `hue` is ST_PositiveFixedAngle (0-21599999); sat/lum are percentages
+		const hue = Math.round(((((props.hsl.hue % 360) + 360) % 360) || 0) * 60000)
+		return wrap('hslClr', `hue="${isFinite(hue) ? hue : 0}" sat="${pct(props.hsl.sat)}" lum="${pct(props.hsl.lum)}"`)
+	}
+	// scrgb: linear-gamma percentages
+	return wrap('scrgbClr', `r="${pct(props.scrgb.r)}" g="${pct(props.scrgb.g)}" b="${pct(props.scrgb.b)}"`)
+}
+
+export function createColorElement (colorStr: Color | SCHEME_COLORS | undefined, innerElements?: string): string {
+	// The object form covers the whole DrawingML color model; the string forms are unchanged
+	if (isColorProps(colorStr)) return createColorPropsElement(colorStr, innerElements ?? '')
+
+	let colorVal = (colorStr ?? '').replace('#', '')
 
 	if (
 		!REGEX_HEX_COLOR.test(colorVal) &&
@@ -436,7 +544,7 @@ function createImageFillElement (image: ShapeImageFillProps): string {
  */
 export function genXmlColorSelection (props: Color | ShapeFillProps | ShapeLineProps | undefined): string {
 	let fillType = 'solid'
-	let colorVal = ''
+	let colorVal: Color = ''
 	let internalElements = ''
 	let outText = ''
 	let gradient: ShapeGradientProps | undefined
@@ -444,7 +552,9 @@ export function genXmlColorSelection (props: Color | ShapeFillProps | ShapeLineP
 	let image: ShapeImageFillProps | undefined
 
 	if (props) {
-		if (typeof props === 'string') colorVal = props
+		// A bare color - string or object - is a solid fill of that color; only a fill object
+		// carries `type`/`gradient`/`pattern`/`image`
+		if (typeof props === 'string' || isColorProps(props)) colorVal = props
 		else {
 			if (props.type) fillType = props.type
 			if (props.gradient) gradient = props.gradient
