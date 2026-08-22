@@ -502,8 +502,36 @@ export interface ShapeLineProps extends ShapeFillProps {
 	 * @since v3.3.0
 	 */
 	endArrowType?: 'none' | 'arrow' | 'diamond' | 'oval' | 'stealth' | 'triangle'
-	// FUTURE: beginArrowSize (1-9)
-	// FUTURE: endArrowSize (1-9)
+	/**
+	 * Compound line type (`a:ln@cmpd`)
+	 * @default 'sng'
+	 */
+	compound?: 'sng' | 'dbl' | 'thickThin' | 'thinThick' | 'tri'
+	/**
+	 * How line segments join at a corner (`a:round` / `a:bevel` / `a:miter`)
+	 * @default 'round'
+	 */
+	join?: 'round' | 'bevel' | 'miter'
+	/**
+	 * `join: 'miter'` only: how far the miter may extend, as a percent of line width (`a:miter@lim`)
+	 * @default 800
+	 */
+	miterLimit?: number
+	/**
+	 * Custom dash pattern (`a:custDash`), overriding `dashType`
+	 * - each stop is a dash length and the gap after it, as a percent of line width
+	 * @example [{ dash: 400, space: 300 }, { dash: 100, space: 300 }]
+	 */
+	customDash?: Array<{ dash: number, space: number }>
+	/**
+	 * Arrow head size (`a:headEnd@w` / `@len`)
+	 * - `beginArrowType` selects the shape; these size it
+	 */
+	beginArrowSize?: { width?: 'sm' | 'med' | 'lg', length?: 'sm' | 'med' | 'lg' }
+	/**
+	 * Arrow tail size (`a:tailEnd@w` / `@len`)
+	 */
+	endArrowSize?: { width?: 'sm' | 'med' | 'lg', length?: 'sm' | 'med' | 'lg' }
 
 	/**
 	 * Dash type
