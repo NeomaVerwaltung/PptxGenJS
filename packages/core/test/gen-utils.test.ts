@@ -27,6 +27,7 @@ import {
 } from '../src/gen-utils'
 import { PresLayout, PresSlide, ShadowProps } from '../src/core-interfaces'
 import { DEF_FONT_COLOR } from '../src/core-enums'
+import { genXmlLine } from '../src/xml/line'
 
 // 10in x 7.5in layout expressed in EMU
 const LAYOUT = { name: 'TEST', width: 9144000, height: 6858000 } as PresLayout
@@ -318,4 +319,55 @@ test('genXmlColorSelection: a color object is a solid fill, a fill object is not
 	assert.equal(genXmlColorSelection({ type: 'solid', color: 'FF0000' }), '<a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>')
 	// and a color object works as a fill's `color`
 	assert.equal(genXmlColorSelection({ type: 'solid', color: { scheme: 'accent2', shade: 50 } }), '<a:solidFill><a:schemeClr val="accent2"><a:shade val="50000"/></a:schemeClr></a:solidFill>')
+})
+
+test('genXmlLine: preset dash, compound, joins, and arrow sizing', () => {
+	// unchanged for existing callers
+	assert.equal(genXmlLine({ width: 2, color: 'FF0000', dashType: 'dash' }),
+		'<a:ln w="25400"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill><a:prstDash val="dash"/></a:ln>')
+	assert.equal(genXmlLine({ width: 3, color: '000000', compound: 'thickThin' }),
+		'<a:ln w="38100" cmpd="thickThin"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>')
+	// join is a choice of three elements; miter carries its limit as a percent of line width
+	assert.equal(genXmlLine({ color: '000000', join: 'round' }), '<a:ln><a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:round/></a:ln>')
+	assert.equal(genXmlLine({ color: '000000', join: 'bevel' }), '<a:ln><a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:bevel/></a:ln>')
+	assert.equal(genXmlLine({ color: '000000', join: 'miter', miterLimit: 400 }), '<a:ln><a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:miter lim="400000"/></a:ln>')
+	// miter defaults to the schema's 800%
+	assert.equal(genXmlLine({ color: '000000', join: 'miter' }), '<a:ln><a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:miter lim="800000"/></a:ln>')
+	assert.equal(genXmlLine({ color: '000000', beginArrowType: 'arrow', beginArrowSize: { width: 'lg', length: 'lg' }, endArrowType: 'triangle', endArrowSize: { width: 'sm' } }),
+		'<a:ln><a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:headEnd type="arrow" w="lg" len="lg"/><a:tailEnd type="triangle" w="sm"/></a:ln>')
+})
+
+test('genXmlLine: a custom dash replaces the preset one', () => {
+	// `a:custDash` and `a:prstDash` are the same choice in CT_LineProperties, so only one may appear
+	assert.equal(genXmlLine({ color: '000000', dashType: 'dash', customDash: [{ dash: 400, space: 300 }, { dash: 100, space: 300 }] }),
+		'<a:ln><a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:custDash><a:ds d="400000" sp="300000"/><a:ds d="100000" sp="300000"/></a:custDash></a:ln>')
+})
+
+test('genXmlLine: the same content model serves a:uLn', () => {
+	assert.equal(genXmlLine({ width: 1, color: 'FF0000', dashType: 'dot' as 'dash' }, 'a:uLn'),
+		'<a:uLn w="12700"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill><a:prstDash val="dot"/></a:uLn>')
+})
+
+test('genXmlLine: invalid line options are dropped with a warning', () => {
+	const orig = console.warn
+	const warnings: string[] = []
+	console.warn = (msg: string) => warnings.push(String(msg))
+	let compound = ''
+	let dash = ''
+	let join = ''
+	try {
+		compound = genXmlLine({ color: '000000', compound: 'quad' as 'sng' })
+		dash = genXmlLine({ color: '000000', customDash: [{ dash: -1, space: 100 }, { dash: 200, space: 100 }] })
+		join = genXmlLine({ color: '000000', join: 'sharp' as 'miter' })
+	} finally {
+		console.warn = orig
+	}
+	assert.ok(warnings.some(w => w.includes('`compound` must be one of')), 'bad compound must warn')
+	assert.ok(warnings.some(w => w.includes('each `customDash` stop needs')), 'bad dash stop must warn')
+	assert.ok(warnings.some(w => w.includes('`join` must be')), 'bad join must warn')
+	assert.doesNotMatch(compound, /cmpd=/, 'an invalid compound must not be emitted')
+	// the one usable stop survives; the bad one does not
+	assert.match(dash, /<a:custDash><a:ds d="200000" sp="100000"\/><\/a:custDash>/, 'valid dash stops must survive')
+	assert.doesNotMatch(join, /a:round|a:bevel|a:miter/, 'an invalid join must not be emitted')
+	assert.doesNotMatch(compound + dash + join, /NaN/, 'no NaN attributes')
 })

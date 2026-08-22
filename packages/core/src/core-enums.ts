@@ -168,6 +168,12 @@ export const PRESET_COLOR_VALUES = new Set([
 	'whiteSmoke', 'yellow', 'yellowGreen',
 ])
 
+/** ECMA-376 20.1.10.23 ST_CompoundLine - `a:ln@cmpd` */
+export const COMPOUND_TYPES = new Set(['sng', 'dbl', 'thickThin', 'thinThick', 'tri'])
+
+/** ECMA-376 20.1.10.34/35 ST_LineEndWidth and ST_LineEndLength - arrow sizing */
+export const ARROW_SIZES = new Set(['sm', 'med', 'lg'])
+
 export const PATTERN_TYPES = new Set([
 	'pct5', 'pct10', 'pct20', 'pct25', 'pct30', 'pct40', 'pct50', 'pct60', 'pct70', 'pct75', 'pct80', 'pct90',
 	'horz', 'vert', 'ltHorz', 'ltVert', 'dkHorz', 'dkVert', 'narHorz', 'narVert', 'dashHorz', 'dashVert',

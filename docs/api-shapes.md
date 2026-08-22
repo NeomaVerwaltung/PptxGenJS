@@ -141,3 +141,36 @@ A picture fill without usable image data is dropped with a warning rather than w
 `a:blip` with no relationship makes PowerPoint report the file as damaged.
 
 Both fill types work on shapes and table cells.
+
+## Line Properties
+
+`line` accepts the full `CT_LineProperties` model (ECMA-376 §20.1.2.1). Everything below is optional
+and omitted when unset.
+
+```javascript
+slide.addShape(pptx.ShapeType.line, {
+    x: 1, y: 1, w: 4, h: 0,
+    line: {
+        color: '0000FF', width: 3,
+        compound: 'thickThin',
+        join: 'miter', miterLimit: 400,
+        beginArrowType: 'arrow', beginArrowSize: { width: 'lg', length: 'lg' },
+        endArrowType: 'triangle', endArrowSize: { width: 'sm' },
+    },
+})
+```
+
+| Option           | Type   | Default | Description                                                     |
+| :--------------- | :----- | :------ | :-------------------------------------------------------------- |
+| `compound`       | string | `sng`   | `sng`, `dbl`, `thickThin`, `thinThick`, `tri`                   |
+| `join`           | string | `round` | how segments meet at a corner: `round`, `bevel`, `miter`        |
+| `miterLimit`     | number | `800`   | `join: 'miter'` only — percent of line width                     |
+| `customDash`     | array  |         | `[{ dash, space }]` percentages of line width; replaces `dashType` |
+| `beginArrowSize` | object |         | `{ width, length }`, each `sm`/`med`/`lg`                        |
+| `endArrowSize`   | object |         | `{ width, length }`                                             |
+
+`customDash` and `dashType` are the same choice in the schema, so a custom pattern replaces the preset
+one rather than appearing alongside it. An invalid `compound`, `join`, or dash stop is dropped with a
+warning; usable stops in a partly-invalid pattern still apply.
+
+These options also drive `a:uLn` via the text `underlineLine` option — see the text docs.
