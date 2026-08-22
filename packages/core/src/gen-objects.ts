@@ -493,6 +493,15 @@ export function addImageDefinition(target: PresSlide | SlideLayout, opt: ImagePr
 		transparency: opt.transparency || 0,
 		objectName,
 		shadow: opt.shadow ? correctShadowOptions(opt.shadow) : undefined,
+		// the other effects were declared on `ImageProps` but missing from this rebuild, so they never
+		// reached `genXmlEffectLst` - see the effect list in src/xml/slide.ts
+		glow: opt.glow,
+		softEdge: opt.softEdge,
+		reflection: opt.reflection,
+		blur: opt.blur,
+		fillOverlay: opt.fillOverlay,
+		effectDag: opt.effectDag,
+		alphaEffects: opt.alphaEffects,
 		line: opt.line,
 		// non-visual props and locks are part of the object's identity, not its geometry
 		title: opt.title,

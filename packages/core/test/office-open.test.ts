@@ -16,6 +16,9 @@ if (!officeBinary) throw new Error('Set PPTXGENJS_OFFICE_BIN to the LibreOffice 
 
 const execFile = promisify(execFileCallback)
 
+/** 4x2 px PNG */
+const PNG_4x2 = 'image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAACCAIAAADwyuo0AAAADklEQVR4nGP4jwQYkDkANvEX6SAXxcIAAAAASUVORK5CYII='
+
 test('office: LibreOffice opens and converts a generated presentation', async () => {
 	const directory = await mkdtemp(join(tmpdir(), 'pptxgenjs-office-'))
 	const presentationPath = join(directory, 'smoke.pptx')
@@ -77,6 +80,16 @@ test('office: LibreOffice opens and converts a generated presentation', async ()
 			]],
 			{ x: 0.5, y: 0.5, w: 8, h: 1.5, rtl: true, border: [{ type: 'solid', color: '999999', width: 1 }, { type: 'solid', color: '999999', width: 1 }, { type: 'solid', color: '999999', width: 1 }, { type: 'solid', color: '999999', width: 1 }] }
 		)
+		// the DrawingML effect vocabulary - the round-trip fixture for #138
+		const effectSlide = pptx.addSlide()
+		effectSlide.addShape(pptx.ShapeType.rect, {
+			x: 0.5, y: 0.5, w: 3, h: 1.5, fill: { color: 'CCCCCC' },
+			blur: { radius: 3 },
+			fillOverlay: { blend: 'mult', fill: { color: 'FF0000', transparency: 40 } },
+			shadow: { type: 'preset', preset: 'shdw7', color: '333333' },
+		})
+		effectSlide.addShape(pptx.ShapeType.ellipse, { x: 4.5, y: 0.5, w: 2, h: 1.5, fill: { color: '4472C4' }, glow: { size: 6, color: 'FFFF00', opacity: 0.6 }, effectDag: { type: 'sib' } })
+		effectSlide.addImage({ data: PNG_4x2, x: 0.5, y: 2.5, w: 2, h: 1, alphaEffects: { invert: true } })
 		pptx.addSlide({ transition: { type: 'morph', duration: 1200 } }).addText('modern transition', { x: 0.5, y: 0.5, w: 5, h: 0.5 })
 		await writeFile(presentationPath, (await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
 

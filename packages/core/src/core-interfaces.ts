@@ -247,7 +247,12 @@ export interface ShadowProps {
 	 * shadow type
 	 * @default 'none'
 	 */
-	type: 'outer' | 'inner' | 'none'
+	type: 'outer' | 'inner' | 'none' | 'preset'
+	/**
+	 * Preset shadow name, required when `type` is `preset` (`a:prstShdw@prst`)
+	 * - PowerPoint's twenty built-in shadow presets
+	 */
+	preset?: 'shdw1' | 'shdw2' | 'shdw3' | 'shdw4' | 'shdw5' | 'shdw6' | 'shdw7' | 'shdw8' | 'shdw9' | 'shdw10' | 'shdw11' | 'shdw12' | 'shdw13' | 'shdw14' | 'shdw15' | 'shdw16' | 'shdw17' | 'shdw18' | 'shdw19' | 'shdw20'
 	/**
 	 * opacity (percent)
 	 * - range: 0.0-1.0
@@ -455,7 +460,7 @@ export interface ShapeFillProps {
 	 * Fill type
 	 * @default 'solid'
 	 */
-	type?: 'none' | 'solid' | 'gradient' | 'pattern' | 'image'
+	type?: 'none' | 'solid' | 'gradient' | 'pattern' | 'image' | 'group'
 	/**
 	 * Pattern fill definition
 	 * - required when `type` is `'pattern'`
@@ -866,6 +871,63 @@ export interface ThemeProps {
  * Soft-edge effect (`a:softEdge`).
  * - MS-PPT > Format Shape/Picture > Effects > Soft Edges
  */
+/**
+ * Blur effect (`a:blur`, ECMA-376 Part 1 §20.1.8.15 CT_BlurEffect)
+ */
+export interface BlurProps {
+	/** Blur radius (points) */
+	radius: number
+	/**
+	 * Whether the blur may grow beyond the shape's bounds
+	 * @default true
+	 */
+	grow?: boolean
+}
+
+/**
+ * Fill-overlay effect (`a:fillOverlay`, ECMA-376 Part 1 §20.1.8.29 CT_FillOverlayEffect)
+ * - blends a second fill over the shape's own fill
+ * - both properties are required by the schema, so a partial value is not emitted
+ */
+export interface FillOverlayProps {
+	/** Blend mode */
+	blend: 'over' | 'mult' | 'screen' | 'darken' | 'lighten'
+	/** The fill blended over the shape */
+	fill: ShapeFillProps
+}
+
+/**
+ * Composed effect graph (`a:effectDag`, ECMA-376 Part 1 §20.1.8.25 CT_EffectContainer)
+ * - `a:effectLst` and `a:effectDag` are alternatives in the schema, so setting this emits the
+ *   shape's effects inside `a:effectDag` instead of `a:effectLst`
+ */
+export interface EffectDagProps {
+	/**
+	 * Whether the contained effects apply to siblings or to the whole tree
+	 * @default sib
+	 */
+	type?: 'sib' | 'tree'
+}
+
+/**
+ * Alpha (transparency) effects applied to an image's `a:blip`
+ * - these are image effects, not shape effects: the schema allows them on `a:blip` and inside
+ *   `a:effectDag`, but not in `a:effectLst`
+ */
+export interface ImageAlphaEffectProps {
+	/**
+	 * Replace every alpha value with this one (`a:alphaRepl`)
+	 * - percent, 0 (fully transparent) to 100 (fully opaque)
+	 */
+	replace?: number
+	/** Invert the alpha channel (`a:alphaInv`) */
+	invert?: boolean
+	/** Force alpha values below 100% to fully transparent (`a:alphaFloor`) */
+	floor?: boolean
+	/** Force alpha values above 0% to fully opaque (`a:alphaCeiling`) */
+	ceiling?: boolean
+}
+
 export interface SoftEdgeProps {
 	/**
 	 * Soft-edge radius (points)
@@ -980,6 +1042,26 @@ export interface ImageProps extends PositionProps, DataOrPathProps, ObjectNamePr
 	 * - MS-PPT > Format Picture > Effects > Reflection
 	 */
 	reflection?: ReflectionProps
+	/**
+	 * Blur options
+	 * - MS-PPT > Format Picture > Effects > Soft Edges is a soft edge; this is the DrawingML blur effect
+	 */
+	blur?: BlurProps
+	/**
+	 * Fill blended over the image's own fill
+	 * @example { blend: 'mult', fill: { color: 'FF0000', transparency: 50 } }
+	 */
+	fillOverlay?: FillOverlayProps
+	/**
+	 * Emit the effects as a composed effect graph (`a:effectDag`) rather than an `a:effectLst`
+	 * - the two are alternatives in the schema, so this replaces the effect list
+	 */
+	effectDag?: EffectDagProps
+	/**
+	 * Alpha (transparency) effects applied to the image itself
+	 * @example { invert: true }
+	 */
+	alphaEffects?: ImageAlphaEffectProps
 	/**
 	 * Image sizing options
 	 */
@@ -1206,6 +1288,21 @@ export interface ShapeProps extends PositionProps, ObjectNameProps, TextBodyProp
 	 * - MS-PPT > Format Shape > Effects > Reflection
 	 */
 	reflection?: ReflectionProps
+	/**
+	 * Blur options
+	 * - MS-PPT > Format Shape > Effects > Soft Edges is a soft edge; this is the DrawingML blur effect
+	 */
+	blur?: BlurProps
+	/**
+	 * Fill blended over the shape's own fill
+	 * @example { blend: 'mult', fill: { color: 'FF0000', transparency: 50 } }
+	 */
+	fillOverlay?: FillOverlayProps
+	/**
+	 * Emit the effects as a composed effect graph (`a:effectDag`) rather than an `a:effectLst`
+	 * - the two are alternatives in the schema, so this replaces the effect list
+	 */
+	effectDag?: EffectDagProps
 
 	/**
 	 * @deprecated v3.3.0

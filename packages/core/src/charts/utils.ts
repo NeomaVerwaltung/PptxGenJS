@@ -34,7 +34,9 @@ export function getExcelColName (colIndex: number): string {
  * `createShadowElement` has passed through the defaults-merge boundary.
  */
 const shadowBrand: unique symbol = Symbol('resolvedShadow')
-type ResolvedShadowProps = Required<ShadowProps> & { readonly [shadowBrand]: boolean }
+// `preset` stays optional: chart shadows are outer/inner only, so a resolved chart shadow never
+// carries a `a:prstShdw` preset name
+type ResolvedShadowProps = Required<Omit<ShadowProps, 'preset'>> & Pick<ShadowProps, 'preset'> & { readonly [shadowBrand]: boolean }
 
 /**
  * Resolve boundary: merge user shadow options over the documented defaults and brand the result.
