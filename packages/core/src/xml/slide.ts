@@ -14,7 +14,7 @@ import {
 	SHAPE_TYPE,
 	SLIDE_OBJECT_TYPES,
 } from '../core-enums'
-import { BlurProps, BorderProps, EffectDagProps, FillOverlayProps, ImageAlphaEffectProps, ISlideObject, ObjectOptions, PresSlide, ReflectionProps, ShadowProps, SectionProps, SlideLayout, SoftEdgeProps, TableCell, TableCellProps, TableProps, TextGlowProps } from '../core-interfaces'
+import { BlurProps, BorderProps, EffectDagProps, FillOverlayProps, ImageAlphaEffectProps, Color, ISlideObject, ObjectOptions, ShapeStyleProps, PresSlide, ReflectionProps, ShadowProps, SectionProps, SlideLayout, SoftEdgeProps, TableCell, TableCellProps, TableProps, TextGlowProps } from '../core-interfaces'
 import {
 	convertRotationDegrees,
 	createColorElement,
@@ -232,6 +232,46 @@ function genXmlEffectLst (opts: EffectOptions): string {
 	// `a:effect` references are not emitted (see docs/api-shapes.md)
 	if (opts.effectDag) return `<a:effectDag type="${opts.effectDag.type === 'tree' ? 'tree' : 'sib'}">${xml}</a:effectDag>`
 	return `<a:effectLst>${xml}</a:effectLst>`
+}
+
+/**
+ * Theme style references for a shape (`p:style`).
+ * - CT_ShapeStyle requires all four children, so a `style` set at all emits all four; a property the
+ *   caller left unset references nothing (`idx="0"`, or `idx="none"` for the font)
+ * - indices are 1-based into the theme's `a:fmtScheme` lists (ECMA-376 Part 1 §20.1.4.2.19), which is
+ *   also what PowerPoint and python-pptx write
+ * @param {ShapeStyleProps | undefined} style - style reference options
+ * @return {string} `p:style` XML, or an empty string when no references are set
+ */
+function genXmlShapeStyle (style?: ShapeStyleProps): string {
+	if (!style) return ''
+
+	// `phClr` is the substitution target inside a theme's format scheme, not a colour a reference can
+	// resolve to, so it cannot be used here
+	let color: Color = style.color ?? 'accent1'
+	if (color === 'phClr') {
+		console.warn('[pptxgenjs] `style.color` cannot be `phClr` - it is the placeholder a theme reference resolves, not a color. Using `accent1`.')
+		color = 'accent1'
+	}
+	// `lt1` is a valid `ST_SchemeColorVal` but not one of the legacy `SchemeColor` names a bare string
+	// is validated against, so the default is expressed in the explicit scheme form
+	let fontColor: Color = style.fontColor ?? { scheme: 'lt1' }
+	if (fontColor === 'phClr') {
+		console.warn('[pptxgenjs] `style.fontColor` cannot be `phClr` - using `lt1`.')
+		fontColor = { scheme: 'lt1' }
+	}
+
+	const idx = (value?: number): number => (typeof value === 'number' && isFinite(value) && value > 0 ? Math.round(value) : 0)
+	const matrixColor = createColorElement(color)
+
+	return (
+		'<p:style>' +
+		`<a:lnRef idx="${idx(style.line)}">${matrixColor}</a:lnRef>` +
+		`<a:fillRef idx="${idx(style.fill)}">${matrixColor}</a:fillRef>` +
+		`<a:effectRef idx="${idx(style.effect)}">${matrixColor}</a:effectRef>` +
+		`<a:fontRef idx="${style.font === 'major' || style.font === 'minor' ? style.font : 'none'}">${createColorElement(fontColor)}</a:fontRef>` +
+		'</p:style>'
+	)
 }
 
 /**
@@ -743,7 +783,10 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 				}
 
 				// Option: FILL
-				strSlideXml += slideItemObj.options.fill ? genXmlColorSelection(slideItemObj.options.fill) : '<a:noFill/>'
+				// With a `fillRef` and no explicit fill, the fill element is omitted entirely: an absent
+				// fill is what makes the shape inherit the theme's, and `<a:noFill/>` would override it
+				if (slideItemObj.options.fill) strSlideXml += genXmlColorSelection(slideItemObj.options.fill)
+				else if (!slideItemObj.options.styleRef?.fill) strSlideXml += '<a:noFill/>'
 
 				// shape Type: LINE: line color
 				if (slideItemObj.options.line) strSlideXml += genXmlLine(slideItemObj.options.line)
@@ -763,6 +806,9 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 
 				// B: Close shape Properties
 				strSlideXml += '</p:spPr>'
+
+				// B2: `p:style` follows `p:spPr` and precedes `p:txBody` in the CT_Shape sequence
+				strSlideXml += genXmlShapeStyle(slideItemObj.options.styleRef)
 
 				// C: Add formatted text (text body "bodyPr")
 				strSlideXml += genXmlTextBody(slideItemObj)
@@ -828,6 +874,8 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 
 				strSlideXml += genXmlEffectLst(slideItemObj.options)
 				strSlideXml += '</p:spPr>'
+				// `p:style` follows `p:spPr` in the CT_Picture sequence too
+				strSlideXml += genXmlShapeStyle(slideItemObj.options.styleRef)
 				strSlideXml += '</p:pic>'
 				break
 

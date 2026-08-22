@@ -90,6 +90,11 @@ test('office: LibreOffice opens and converts a generated presentation', async ()
 		})
 		effectSlide.addShape(pptx.ShapeType.ellipse, { x: 4.5, y: 0.5, w: 2, h: 1.5, fill: { color: '4472C4' }, glow: { size: 6, color: 'FFFF00', opacity: 0.6 }, effectDag: { type: 'sib' } })
 		effectSlide.addImage({ data: PNG_4x2, x: 0.5, y: 2.5, w: 2, h: 1, alphaEffects: { invert: true } })
+		// theme style references - the round-trip fixture for #141
+		const styleSlide = pptx.addSlide()
+		styleSlide.addShape(pptx.ShapeType.rect, { x: 0.5, y: 0.5, w: 3, h: 1.5, styleRef: { line: 1, fill: 3, effect: 2, font: 'minor' } })
+		styleSlide.addShape(pptx.ShapeType.ellipse, { x: 4.5, y: 0.5, w: 3, h: 1.5, styleRef: { fill: 1, color: 'accent2' } })
+		styleSlide.addImage({ data: PNG_4x2, x: 0.5, y: 2.5, w: 2, h: 1, styleRef: { line: 2 } })
 		pptx.addSlide({ transition: { type: 'morph', duration: 1200 } }).addText('modern transition', { x: 0.5, y: 0.5, w: 5, h: 0.5 })
 		await writeFile(presentationPath, (await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
 

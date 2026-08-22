@@ -120,6 +120,15 @@ slide.addImage({ path: 'logo.png', x: 1, y: 1, w: 2, h: 1, alphaEffects: { inver
 | `floor`   | boolean | force any alpha below 100% to fully transparent (`a:alphaFloor`)       |
 | `ceiling` | boolean | force any alpha above 0% to fully opaque (`a:alphaCeiling`)            |
 
+## Theme Style References
+
+Pictures take the same `styleRef` as shapes — useful for an outline that follows the theme. See
+[Theme Style References](./api-shapes.md#theme-style-references-styleref).
+
+```typescript
+slide.addImage({ path: 'logo.png', x: 1, y: 1, w: 2, h: 1, styleRef: { line: 2 } });
+```
+
 ## Shadow Properties (`ShadowProps`)
 
 The `ShadowProps` property adds a shadow to an image.
