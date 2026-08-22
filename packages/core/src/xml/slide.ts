@@ -29,6 +29,7 @@ import {
 import { slideCommentRelId } from './relationships'
 import { genXmlHyperlink } from './hyperlink'
 import { genXmlLine } from './line'
+import { genXmlCNvPr, genXmlCNvSpPr, genXmlLocks } from './non-visual'
 import { genXmlPlaceholder, genXmlTextBody } from './text'
 import { genXmlContentPart } from './content-part'
 import { genXmlZoom } from './zoom'
@@ -297,9 +298,9 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 
 				// STEP 1: Start Table XML
 				// NOTE: Non-numeric cNvPr id values will trigger "presentation needs repair" type warning in MS-PPT-2013
-				strXml = `<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="${intTableNum * (slide._slideNum ?? 0) + 1}" name="${slideItemObj.options.objectName}"/>`
+				strXml = '<p:graphicFrame><p:nvGraphicFramePr>' + genXmlCNvPr(intTableNum * (slide._slideNum ?? 0) + 1, String(slideItemObj.options.objectName), slideItemObj.options)
 				strXml +=
-					'<p:cNvGraphicFramePr><a:graphicFrameLocks noGrp="1"/></p:cNvGraphicFramePr>' +
+					`<p:cNvGraphicFramePr>${genXmlLocks('a:graphicFrameLocks', slideItemObj.options.lock, ' noGrp="1"')}</p:cNvGraphicFramePr>` +
 					// MS-PPTX 2.3.1.19: each `p14:modId` must be unique on the slide, so it cannot be a constant
 					`  <p:nvPr><p:extLst><p:ext uri="${OOXML_EXT.modId.uri}"><p14:modId xmlns:p14="${OOXML_EXT.modId.ns}" val="${shapeModId(idx)}"/></p:ext></p:extLst></p:nvPr>` +
 					'</p:nvGraphicFramePr>'
@@ -547,13 +548,11 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 				strSlideXml += '<p:sp>'
 
 				// B: The addition of the "txBox" attribute is the sole determiner of if an object is a shape or textbox
-				strSlideXml += `<p:nvSpPr><p:cNvPr id="${idx + 2}" name="${slideItemObj.options.objectName}">`
 				// <Hyperlink> - `a:hlinkHover` follows `a:hlinkClick` in CT_NonVisualDrawingProps
-				if (slideItemObj.options.hyperlink?._rId) strSlideXml += genXmlHyperlink(slideItemObj.options.hyperlink, 'click', 'shape')
-				if (slideItemObj.options.hyperlinkHover?._rId) strSlideXml += genXmlHyperlink(slideItemObj.options.hyperlinkHover, 'hover', 'shape')
-				// </Hyperlink>
-				strSlideXml += '</p:cNvPr>'
-				strSlideXml += '<p:cNvSpPr' + (slideItemObj.options?.isTextBox ? ' txBox="1"/>' : '/>')
+				strSlideXml += '<p:nvSpPr>' + genXmlCNvPr(idx + 2, String(slideItemObj.options.objectName), slideItemObj.options, '',
+					(slideItemObj.options.hyperlink?._rId ? genXmlHyperlink(slideItemObj.options.hyperlink, 'click', 'shape') : '') +
+					(slideItemObj.options.hyperlinkHover?._rId ? genXmlHyperlink(slideItemObj.options.hyperlinkHover, 'hover', 'shape') : ''))
+				strSlideXml += genXmlCNvSpPr(slideItemObj.options)
 				strSlideXml += `<p:nvPr>${slideItemObj._type === 'placeholder' ? genXmlPlaceholder(slideItemObj) : genXmlPlaceholder(placeholderObj)}</p:nvPr>`
 				strSlideXml += '</p:nvSpPr><p:spPr>'
 				strSlideXml += `<a:xfrm${locationAttr}>`
@@ -667,13 +666,11 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 			case SLIDE_OBJECT_TYPES.image:
 				strSlideXml += '<p:pic>'
 				strSlideXml += '  <p:nvPicPr>'
-				strSlideXml += `<p:cNvPr id="${idx + 2}" name="${slideItemObj.options.objectName}" descr="${encodeXmlEntities(
-					slideItemObj.options.altText || slideItemObj.image
-				)}">`
-				if (slideItemObj.hyperlink?._rId) strSlideXml += genXmlHyperlink(slideItemObj.hyperlink, 'click', 'shape')
-				if (slideItemObj.hyperlinkHover?._rId) strSlideXml += genXmlHyperlink(slideItemObj.hyperlinkHover, 'hover', 'shape')
-				strSlideXml += '    </p:cNvPr>'
-				strSlideXml += '    <p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr>'
+				strSlideXml += genXmlCNvPr(idx + 2, String(slideItemObj.options.objectName), slideItemObj.options, slideItemObj.options.altText || slideItemObj.image,
+					(slideItemObj.hyperlink?._rId ? genXmlHyperlink(slideItemObj.hyperlink, 'click', 'shape') : '') +
+					(slideItemObj.hyperlinkHover?._rId ? genXmlHyperlink(slideItemObj.hyperlinkHover, 'hover', 'shape') : ''))
+				// `noChangeAspect` has always been emitted here; caller locks are added to it
+				strSlideXml += `    <p:cNvPicPr${slideItemObj.options.lock?.preferRelativeResize === true ? ' preferRelativeResize="1"' : ''}>${genXmlLocks('a:picLocks', slideItemObj.options.lock, ' noChangeAspect="1"')}</p:cNvPicPr>`
 				strSlideXml += '    <p:nvPr>' + genXmlPlaceholder(placeholderObj) + '</p:nvPr>'
 				strSlideXml += '  </p:nvPicPr>'
 				strSlideXml += '<p:blipFill>'

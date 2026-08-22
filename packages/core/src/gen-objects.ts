@@ -494,6 +494,10 @@ export function addImageDefinition(target: PresSlide | SlideLayout, opt: ImagePr
 		objectName,
 		shadow: opt.shadow ? correctShadowOptions(opt.shadow) : undefined,
 		line: opt.line,
+		// non-visual props and locks are part of the object's identity, not its geometry
+		title: opt.title,
+		hidden: opt.hidden,
+		lock: opt.lock,
 		_sizeFromImage: !intWidth && !intHeight,
 	}
 

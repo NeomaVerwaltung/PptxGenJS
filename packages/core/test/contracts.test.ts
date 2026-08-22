@@ -1146,7 +1146,9 @@ test('contract: mouse-over actions use the right element for each host', async (
 	assert.equal([...xml.matchAll(/<a:hlinkMouseOver/g)].length, 1, 'exactly one run-level hover expected')
 	assert.equal([...xml.matchAll(/<a:hlinkHover/g)].length, 2, 'exactly two shape-level hovers expected')
 	// the run-level hover element must not appear on a shape, nor vice versa
-	assert.doesNotMatch(xml, /<p:cNvPr[^>]*>(?:(?!<\/p:cNvPr>)[\s\S])*<a:hlinkMouseOver/, 'a:hlinkMouseOver must not appear in p:cNvPr')
+	assert.doesNotMatch(xml, /<p:cNvPr[^>]*[^/]>(?:(?!<\/p:cNvPr>)[\s\S])*<a:hlinkMouseOver/, 'a:hlinkMouseOver must not appear in p:cNvPr')
+	// and the run-level element does belong to a:rPr
+	assert.match(xml, /<a:rPr[^>]*>(?:(?!<\/a:rPr>)[\s\S])*<a:hlinkMouseOver/, 'a:hlinkMouseOver must sit inside a:rPr')
 
 	// every link resolves to a relationship
 	const rels = await readPart(hlZip, 'ppt/slides/_rels/slide1.xml.rels')
@@ -1439,4 +1441,65 @@ test('contract: text without the new attributes is byte-identical', async () => 
 	assert.doesNotMatch(xml, /upright|rot=|anchorCtr|spcFirstLastPara|compatLnSpc|forceAA|horzOverflow|vertOverflow/, 'no bodyPr attribute may appear unasked')
 	assert.doesNotMatch(xml, /marR=|defTabSz=|fontAlgn=|eaLnBrk=|latinLnBrk=|hangingPunct=/, 'no pPr attribute may appear unasked')
 	assert.doesNotMatch(xml, /cap=|normalizeH|noProof|a:uLn|a:sym/, 'no rPr attribute may appear unasked')
+})
+
+test('contract: editing locks and non-visual properties are reachable', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addShape(pptx.ShapeType.rect, {
+		x: 1, y: 1, w: 2, h: 1,
+		objectName: 'Locked Box', title: 'Alt title', hidden: true,
+		lock: { noMove: true, noResize: true, noSelect: true, noTextEdit: true },
+	})
+	slide.addImage({ data: HOVER_PNG, x: 4, y: 1, w: 1, h: 1, lock: { noCrop: true, preferRelativeResize: true }, title: 'Pic title' })
+	slide.addTable([['a']], { x: 1, y: 3, w: 4, lock: { noSelect: true } })
+	const lockZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	await assertPptxPackageContracts(lockZip)
+	const xml = await readPart(lockZip, 'ppt/slides/slide1.xml')
+
+	assert.doesNotMatch(xml, /NaN|undefined/, 'lock options must not leak invalid values')
+	// `title` is the alt-text title, distinct from `descr`
+	// self-closes because this shape has no hyperlink children
+	assert.match(xml, /<p:cNvPr id="2" name="Locked Box" title="Alt title" hidden="1"\/>/, 'shape non-visual props missing')
+	assert.match(xml, /<a:spLocks noSelect="1" noMove="1" noResize="1" noTextEdit="1"\/>/, 'shape locks missing')
+	// the picture keeps the `noChangeAspect` the library has always emitted, and adds the caller's
+	assert.match(xml, /<p:cNvPicPr preferRelativeResize="1"><a:picLocks noChangeAspect="1" noCrop="1"\/><\/p:cNvPicPr>/, 'picture locks missing')
+	assert.match(xml, /title="Pic title"/, 'picture alt title missing')
+	// the table frame keeps its default noGrp
+	assert.match(xml, /<a:graphicFrameLocks noGrp="1" noSelect="1"\/>/, 'graphic frame locks missing')
+})
+
+test('contract: locks that do not apply to an object are dropped with a warning', async () => {
+	const warnings: string[] = []
+	const origWarn = console.warn
+	console.warn = (msg: string) => warnings.push(String(msg))
+	let xml = ''
+	try {
+		const pptx = new pptxgen()
+		// `noTextEdit` is not a graphicFrameLocks attribute; `noCrop` is not a spLocks one
+		pptx.addSlide().addTable([['a']], { x: 1, y: 1, w: 3, lock: { noTextEdit: true, noSelect: true } })
+		pptx.addSlide().addShape(pptx.ShapeType.rect, { x: 1, y: 1, w: 2, h: 1, lock: { noCrop: true, noMove: true } })
+		xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+	} finally {
+		console.warn = origWarn
+	}
+
+	assert.equal(warnings.filter(w => w.includes('does not apply to this object type')).length, 2, 'inapplicable locks must warn')
+	// the applicable lock still lands; the inapplicable one is not written
+	assert.match(xml, /<a:graphicFrameLocks noGrp="1" noSelect="1"\/>/, 'the applicable lock must survive')
+	assert.doesNotMatch(xml, /noTextEdit/, 'an inapplicable lock must not be emitted')
+})
+
+test('contract: objects without locks keep the output they always had', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addShape(pptx.ShapeType.rect, { x: 1, y: 1, w: 2, h: 1 })
+	slide.addImage({ data: HOVER_PNG, x: 4, y: 1, w: 1, h: 1 })
+	slide.addTable([['a']], { x: 1, y: 3, w: 3 })
+	const xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+
+	assert.doesNotMatch(xml, /a:spLocks|title=|hidden=|preferRelativeResize/, 'no lock or non-visual attribute may appear unasked')
+	// the two locks the library has always written are unchanged
+	assert.match(xml, /<p:cNvPicPr><a:picLocks noChangeAspect="1"\/><\/p:cNvPicPr>/, 'default picture lock changed')
+	assert.match(xml, /<a:graphicFrameLocks noGrp="1"\/>/, 'default frame lock changed')
 })

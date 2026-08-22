@@ -1640,7 +1640,59 @@ declare namespace PptxGenJS {
 		 */
 		margin?: Margin
 	}
-	export interface ObjectNameProps {
+	/**
+	 * Editing locks (ECMA-376 20.1.2.2.34 `a:spLocks` and its siblings)
+	 * - each is omitted unless set, so the values the library emits today are unchanged
+	 */
+	export interface ShapeLockProps {
+		/** prevent grouping with other shapes */
+		noGroup?: boolean
+		/** prevent selection */
+		noSelect?: boolean
+		/** prevent rotation */
+		noRotate?: boolean
+		/** prevent changing the aspect ratio */
+		noChangeAspect?: boolean
+		/** prevent moving */
+		noMove?: boolean
+		/** prevent resizing */
+		noResize?: boolean
+		/** prevent editing the geometry points */
+		noEditPoints?: boolean
+		/** prevent dragging the adjust handles */
+		noAdjustHandles?: boolean
+		/** prevent changing arrowheads */
+		noChangeArrowheads?: boolean
+		/** prevent changing the preset geometry */
+		noChangeShapeType?: boolean
+		/** prevent editing the text */
+		noTextEdit?: boolean
+		/** pictures only: prevent cropping */
+		noCrop?: boolean
+		/** pictures only: prefer resizing relative to the original size */
+		preferRelativeResize?: boolean
+	}
+	/**
+	 * Non-visual drawing properties beyond the name (ECMA-376 19.3.1.12 `p:cNvPr`)
+	 */
+	export interface NonVisualProps {
+		/**
+		 * Alt-text *title*, distinct from the description
+		 * - PowerPoint: right-click > Edit Alt Text
+		 */
+		title?: string
+		/**
+		 * Hide the shape
+		 * - it stays in the file and can be re-shown from the selection pane
+		 * @default false
+		 */
+		hidden?: boolean
+		/**
+		 * Editing locks for this shape
+		 */
+		lock?: ShapeLockProps
+	}
+	export interface ObjectNameProps extends NonVisualProps {
 		/**
 		 * Object name
 		 * - used instead of default "Object N" name
