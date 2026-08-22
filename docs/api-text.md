@@ -368,3 +368,45 @@ optional and omitted when unset, so existing output is unchanged.
 | `complexScriptFontFace` | string                    | override the complex-script typeface            |
 
 `fontFace` still sets all three scripts; the per-script options override individual ones.
+
+## Fields
+
+A field is a run PowerPoint refreshes on open — a date, the slide number, a header or footer. The run's
+`text` is the cached value, shown by consumers that do not refresh.
+
+```typescript
+slide.addText([
+    { text: '22/08/2026', options: { field: 'datetime1' } },
+    { text: ' — page ' },
+    { text: '1', options: { field: 'slidenum' } },
+], { x: 1, y: 1, w: 4, h: 0.5 });
+```
+
+Types: `slidenum`, `datetime`, `datetime1`–`datetime13` (locale-formatted variants),
+`datetimeFigureOut`, `headerfooter`, `hdr`, `ftr`. Fields mix freely with ordinary runs in a paragraph.
+An unknown type is emitted as plain text with a warning.
+
+## Bullet Colour, Size, Font, and Pictures
+
+```typescript
+slide.addText('item', { x: 1, y: 1, w: 4, h: 1, bullet: { image: pngBase64, size: 150 } });
+slide.addText('item', { x: 1, y: 2, w: 4, h: 1, bullet: { characterCode: '25BA', fontFace: 'Wingdings', color: 'FF0000' } });
+```
+
+| Option     | Type   | Default | Description                                             |
+| :--------- | :----- | :------ | :------------------------------------------------------ |
+| `color`    | Color  |         | bullet colour, independent of the text (`a:buClr`)      |
+| `size`     | number | `100`   | percent of text size, 25–400 (`a:buSzPct`)              |
+| `sizePts`  | number |         | size in points instead of a percent (`a:buSzPts`)       |
+| `fontFace` | string |         | typeface for the glyph (`a:buFont`)                     |
+| `image`    | string |         | base64 picture bullet (`a:buBlip`)                      |
+
+A picture bullet replaces a character or number bullet. `sizePts` and `size` are the same choice in the
+schema, so `sizePts` wins when both are given. Numbered bullets keep their `+mj-lt` fallback unless
+`fontFace` is set.
+
+## Right-to-Left Columns and East Asian Text
+
+`rtlColumns` controls `a:bodyPr@rtlCol`, which decides whether multi-column text flows right-to-left.
+It follows the text box's `rtlMode` unless set explicitly, so an RTL deck no longer flows its columns
+the wrong way. `kumimoji` enables horizontal-in-vertical numerals for East Asian vertical text.

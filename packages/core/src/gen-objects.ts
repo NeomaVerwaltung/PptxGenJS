@@ -1325,6 +1325,34 @@ export function addTableDefinition(
  * @param {boolean} isPlaceholder whether this a placeholder object
  * @since: 1.0.0
  */
+/**
+ * Resolve a picture bullet's image into a slide relationship
+ * - the paragraph emitter is pure, so the rId has to exist before the XML is generated
+ * @param {PresSlide | SlideLayout} target - slide the bullet belongs to
+ * @param {ObjectOptions} opts - text options whose `bullet.image` to resolve
+ */
+function resolveBulletImage (target: PresSlide | SlideLayout, opts?: ObjectOptions): void {
+	const bullet = typeof opts?.bullet === 'object' ? opts.bullet : undefined
+	if (!bullet?.image || bullet._imageRId) return
+
+	if (!bullet.image.toLowerCase().includes('base64,')) {
+		console.warn('[pptxgenjs] `bullet.image` must be base64 image data (ex: \'image/png;base64,iV[...]\') - picture bullet ignored')
+		bullet.image = undefined
+		return
+	}
+	const extn = /image\/(\w+);/.exec(bullet.image)?.[1] ?? 'png'
+	const rId = getNewRelId(target)
+	target._relsMedia.push({
+		path: `preencoded.${extn}`,
+		type: `image/${extn}`,
+		extn,
+		data: bullet.image,
+		rId,
+		Target: `../media/image-${target._slideNum}-${target._relsMedia.length + 1}.${extn}`,
+	})
+	bullet._imageRId = rId
+}
+
 export function addTextDefinition(target: PresSlide | SlideLayout, text: TextProps[], opts: TextPropsOptions, isPlaceholder: boolean): void {
 	const newObject: ISlideObject = {
 		_type: isPlaceholder ? SLIDE_OBJECT_TYPES.placeholder : SLIDE_OBJECT_TYPES.text,
@@ -1455,8 +1483,10 @@ export function addTextDefinition(target: PresSlide | SlideLayout, text: TextPro
 	// STEP 2: Create/Clean text options
 	newObject.text?.forEach(item => (item.options = cleanOpts(item.options || {})))
 
-	// STEP 3: Create hyperlinks
+	// STEP 3: Create hyperlinks and any picture-bullet relationships
 	createHyperlinkRels(target, newObject.text || '')
+	resolveBulletImage(target, newObject.options)
+	newObject.text?.forEach(item => resolveBulletImage(target, item.options))
 	resolveHyperlinkRels(target, newObject.options?.hyperlinkHover)
 	newObject.text?.forEach(item => {
 		resolveHyperlinkRels(target, item.options?.hyperlinkHover)

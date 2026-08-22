@@ -43,6 +43,8 @@ test('office: LibreOffice opens and converts a generated presentation', async ()
 			{ text: 'ratio ' },
 			{ text: 'a/b', options: { omml: '<m:f><m:num><m:r><m:t>a</m:t></m:r></m:num><m:den><m:r><m:t>b</m:t></m:r></m:den></m:f>' } },
 		], { x: 0.5, y: 1, w: 5, h: 0.5 })
+		slide.addText([{ text: '22/08/2026', options: { field: 'datetime1' } }, { text: ' page ' }, { text: '1', options: { field: 'slidenum' } }], { x: 6, y: 7.2, w: 3, h: 0.4 })
+		slide.addText('picture bullet', { x: 0.5, y: 7.2, w: 4, h: 0.4, bullet: { image: 'image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkAAIAAAoAAv/lxKUAAAAASUVORK5CYII=', color: 'FF0000', size: 150 } })
 		slide.addShape(pptx.ShapeType.rect, { x: 8, y: 5.5, w: 1.4, h: 0.6, objectName: 'Locked', title: 'Alt title', lock: { noMove: true, noResize: true, noTextEdit: true } })
 		slide.addShape(pptx.ShapeType.line, { x: 0.5, y: 6.9, w: 4, h: 0, line: { color: '0000FF', width: 3, compound: 'thickThin', join: 'miter', miterLimit: 400, beginArrowType: 'arrow', beginArrowSize: { width: 'lg', length: 'lg' }, customDash: [{ dash: 400, space: 300 }] } })
 		slide.addText('attribute coverage', { x: 6, y: 6.5, w: 3, h: 0.6, capitalization: 'small', upright: true, fontAlign: 'ctr', marginRight: 0.1, underlineLine: { width: 1, color: 'FF0000' }, symbolFontFace: 'Wingdings' })

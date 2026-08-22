@@ -174,6 +174,14 @@ export const COMPOUND_TYPES = new Set(['sng', 'dbl', 'thickThin', 'thinThick', '
 /** ECMA-376 20.1.10.34/35 ST_LineEndWidth and ST_LineEndLength - arrow sizing */
 export const ARROW_SIZES = new Set(['sm', 'med', 'lg'])
 
+/** ECMA-376 21.1.2.2.4 - `a:fld@type` values PowerPoint refreshes */
+export const TEXT_FIELD_TYPES = new Set([
+	'slidenum', 'datetime', 'datetimeFigureOut',
+	'datetime1', 'datetime2', 'datetime3', 'datetime4', 'datetime5', 'datetime6', 'datetime7',
+	'datetime8', 'datetime9', 'datetime10', 'datetime11', 'datetime12', 'datetime13',
+	'headerfooter', 'hdr', 'ftr',
+])
+
 export const PATTERN_TYPES = new Set([
 	'pct5', 'pct10', 'pct20', 'pct25', 'pct30', 'pct40', 'pct50', 'pct60', 'pct70', 'pct75', 'pct80', 'pct90',
 	'horz', 'vert', 'ltHorz', 'ltVert', 'dkHorz', 'dkVert', 'narHorz', 'narVert', 'dashHorz', 'dashVert',
