@@ -3735,6 +3735,103 @@ declare namespace PptxGenJS {
 		 */
 		color?: Color
 	}
+	/**
+	 * Additional document properties (ECMA-376 15.2 and the OPC core properties)
+	 * - each is omitted when unset, so `docProps` output is unchanged by default
+	 */
+	export interface DocumentProps {
+		/** `dc:description` - the Comments field in PowerPoint's Info pane */
+		description?: string
+		/** `dc:language`, ex: 'en-US' */
+		language?: string
+		/** `dc:identifier` */
+		identifier?: string
+		/** `cp:keywords`, comma-separated */
+		keywords?: string
+		/** `cp:category` */
+		category?: string
+		/** `cp:contentStatus`, ex: 'Draft' */
+		contentStatus?: string
+		/** `cp:version` */
+		version?: string
+		/** `cp:lastPrinted`, ISO 8601 */
+		lastPrinted?: string
+		/** `Manager` in app.xml */
+		manager?: string
+		/** `Template` in app.xml */
+		template?: string
+		/** `HyperlinkBase` in app.xml - the base for relative hyperlinks */
+		hyperlinkBase?: string
+		/** `TotalTime` in app.xml - editing time in minutes */
+		totalEditTime?: number
+	}
+	/**
+	 * Slide-size preset (`p:sldSz@type`)
+	 */
+	export type SlideSizeType =
+		| 'screen4x3' | 'screen16x9' | 'screen16x10' | 'letter' | 'ledger' | 'a3' | 'a4' | 'b4ISO'
+		| 'b5ISO' | 'b4JIS' | 'b5JIS' | 'hagakiCard' | '35mm' | 'overhead' | 'banner' | 'custom'
+	/**
+	 * Photo-album mode (`p:photoAlbum`)
+	 */
+	export interface PhotoAlbumProps {
+		/** render in black and white */
+		blackWhite?: boolean
+		/** show captions below each picture */
+		showCaptions?: boolean
+		/** pictures per slide and orientation */
+		layout?: 'fitToSlide' | '1pic' | '2pic' | '4pic' | '1picTitle' | '2picTitle' | '4picTitle'
+		/** frame style drawn around each picture */
+		frame?: 'frameStyle1' | 'frameStyle2' | 'frameStyle3' | 'frameStyle4' | 'frameStyle5' | 'frameStyle6' | 'frameStyle7'
+	}
+	/**
+	 * East Asian line-breaking rules (`p:kinsoku`)
+	 */
+	export interface KinsokuProps {
+		/** language the rules apply to, ex: 'ja-JP' */
+		lang?: string
+		/** characters that may not start a line */
+		invalidStartChars?: string
+		/** characters that may not end a line */
+		invalidEndChars?: string
+	}
+	/**
+	 * Print defaults stored with the deck (`p:prnPr`)
+	 */
+	export interface PrintProps {
+		/** what to print */
+		what?: 'slides' | 'handouts1' | 'handouts2' | 'handouts3' | 'handouts4' | 'handouts6' | 'handouts9' | 'notes' | 'outline'
+		/** colour mode */
+		colorMode?: 'bw' | 'gray' | 'clr'
+		/** include hidden slides */
+		hiddenSlides?: boolean
+		/** scale to fit the paper */
+		scaleToFitPaper?: boolean
+		/** draw a frame around each slide */
+		frameSlides?: boolean
+	}
+	/**
+	 * View properties stored in `ppt/viewProps.xml` (`p:viewPr`)
+	 * - unset values keep the literal prior versions wrote
+	 */
+	export interface ViewProps {
+		/** zoom percent in the normal slide view @default 136 */
+		zoom?: number
+		/** snap objects to the grid @default false */
+		snapToGrid?: boolean
+		/** snap objects to each other @default true */
+		snapToObjects?: boolean
+		/** show drawing guides */
+		showGuides?: boolean
+		/** show comments and ink markup */
+		showComments?: boolean
+		/** grid spacing in inches @default 0.0833 (76200 EMU) */
+		gridSpacing?: number
+		/** view PowerPoint opens the deck in */
+		lastView?: 'sldView' | 'sldMasterView' | 'notesView' | 'handoutView' | 'notesMasterView' | 'outlineView' | 'sldSorterView' | 'sldThumbnailView'
+		/** classic drawing guides (`p:guideLst`), positioned in inches */
+		guides?: GuideProps[]
+	}
 	export interface PresentationProps {
 		author: string
 		company: string
@@ -3789,6 +3886,35 @@ declare namespace PptxGenJS {
 		 * - opt-in: unset writes no guide list
 		 */
 		notesGuides?: GuideProps[]
+		/**
+		 * Additional document properties written to `docProps`
+		 */
+		documentProps?: DocumentProps
+		/**
+		 * Slide-size preset (`p:sldSz@type`)
+		 * - the dimensions come from the layout; this records which preset they match
+		 */
+		slideSizeType?: SlideSizeType
+		/**
+		 * Photo-album mode (`p:photoAlbum`)
+		 */
+		photoAlbum?: PhotoAlbumProps
+		/**
+		 * East Asian line-breaking rules (`p:kinsoku`)
+		 */
+		kinsoku?: KinsokuProps
+		/**
+		 * Print defaults stored with the deck (`p:prnPr`)
+		 */
+		printProps?: PrintProps
+		/**
+		 * Recently-used colours shown in the colour picker (`p:clrMru`)
+		 */
+		recentColors?: Color[]
+		/**
+		 * View properties (`ppt/viewProps.xml`)
+		 */
+		viewProps?: ViewProps
 	}
 
 	// LAST: Slide

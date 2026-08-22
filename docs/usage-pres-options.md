@@ -207,3 +207,98 @@ pptx.notesGuides = [{ orientation: 'horz', position: 1 }];
 Both lists are opt-in: with none set, no guide list is written. A guide with an unknown orientation or a
 negative/non-numeric position is dropped with a warning, and if every guide is rejected no guide list is
 written at all.
+
+## Extended Document Properties
+
+`title`, `author`, `subject`, `company` and `revision` above cover the properties PowerPoint shows
+first. `documentProps` carries the rest of `docProps/core.xml` and `docProps/app.xml`.
+
+```typescript
+pptx.documentProps = {
+    description: 'Q3 numbers, final',
+    keywords: 'quarterly, finance',
+    category: 'Reports',
+    contentStatus: 'Final',
+    version: '2.1',
+    language: 'de-DE',
+    manager: 'Ada Lovelace',
+    template: 'Corp.potx',
+    hyperlinkBase: 'https://intranet.example',
+    totalEditTime: 42,
+};
+```
+
+| Option          | Part       | Description                                       |
+| :-------------- | :--------- | :------------------------------------------------ |
+| `description`   | `core.xml` | free-text comments field                          |
+| `keywords`      | `core.xml` | comma-separated keywords                          |
+| `category`      | `core.xml` | document category                                 |
+| `contentStatus` | `core.xml` | e.g. `Draft`, `Final`                             |
+| `version`       | `core.xml` | version string                                    |
+| `language`      | `core.xml` | BCP-47 tag, e.g. `de-DE`                          |
+| `identifier`    | `core.xml` | external identifier                               |
+| `lastPrinted`   | `core.xml` | W3CDTF timestamp                                  |
+| `manager`       | `app.xml`  | manager name                                      |
+| `template`      | `app.xml`  | template the deck was built from                  |
+| `hyperlinkBase` | `app.xml`  | base URL for relative hyperlinks                  |
+| `totalEditTime` | `app.xml`  | accumulated editing time in minutes               |
+
+`app.xml` also reports counts PptxGenJS derives from the deck itself - paragraphs, slides, slides
+carrying speaker notes, hidden slides and media clips. Those are not settable.
+
+## Presentation-Wide Settings
+
+These map to the remaining `ppt/presentation.xml` children. All are opt-in: unset, nothing is written.
+
+```typescript
+pptx.slideSizeType = 'screen16x9';
+pptx.photoAlbum = { blackWhite: false, showCaptions: true, layout: '2pic', frame: 'frameStyle3' };
+pptx.kinsoku = { lang: 'ja-JP', invalidStartChars: ')]}', invalidEndChars: '([{' };
+pptx.printProps = { what: 'handouts4', colorMode: 'gray', frameSlides: true };
+pptx.recentColors = ['FF0000', { scheme: 'accent1' }];
+```
+
+| Property        | Description                                                                              |
+| :-------------- | :--------------------------------------------------------------------------------------- |
+| `slideSizeType` | names the slide size on `p:sldSz` (`screen16x9`, `A4`, `letter`, `custom`, …)             |
+| `photoAlbum`    | photo-album presentation settings - `blackWhite`, `showCaptions`, `layout`, `frame`       |
+| `kinsoku`       | East Asian line-breaking - characters that may not start or end a line                    |
+| `printProps`    | default print settings - `what`, `colorMode`, `hiddenSlides`, `scaleToFitPaper`, `frameSlides` |
+| `recentColors`  | the "recent colors" swatch row, most recent first                                        |
+
+`slideSizeType` labels the size; it does not change it. Set the dimensions with `layout` (above).
+
+`kinsoku` needs both `invalidStartChars` and `invalidEndChars` - the OOXML schema makes both
+required, so a value carrying only one is dropped rather than written as an element PowerPoint would
+refuse to open.
+
+## Editing View
+
+`viewProps` configures `ppt/viewProps.xml` - what PowerPoint restores when the deck is opened. None of
+it affects how slides render.
+
+```typescript
+pptx.viewProps = {
+    lastView: 'sldView',
+    zoom: 100,
+    snapToGrid: true,
+    snapToObjects: true,
+    showGuides: true,
+    showComments: false,
+    gridSpacing: 0.125,
+};
+```
+
+| Option          | Type    | Default | Description                                            |
+| :-------------- | :------ | :------ | :----------------------------------------------------- |
+| `lastView`      | string  |         | view to restore (`sldView`, `sldSorterView`, `notesView`, …) |
+| `zoom`          | number  | `136`   | slide-view zoom in percent                             |
+| `gridSpacing`   | number  | `0.083` | grid spacing in inches                                 |
+| `snapToGrid`    | boolean | `false` | snap objects to the grid                               |
+| `snapToObjects` | boolean | `true`  | snap objects to other objects                          |
+| `showGuides`    | boolean | `false` | show the drawing guides                                |
+| `showComments`  | boolean | `true`  | show the comments pane                                 |
+| `guides`        | array   |         | same shape as `pptx.guides` (above)                    |
+
+The defaults reproduce what earlier versions wrote as a fixed literal, so a deck that sets none of
+these is byte-identical to before.

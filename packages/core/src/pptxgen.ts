@@ -81,6 +81,13 @@ import {
 import {
 	AddFontProps,
 	AddSlideProps,
+	Color,
+	DocumentProps,
+	KinsokuProps,
+	PhotoAlbumProps,
+	PrintProps,
+	SlideSizeType,
+	ViewProps,
 	CommentAuthorProps,
 	CompressionLevel,
 	EmbeddedFont,
@@ -339,6 +346,79 @@ export default class PptxGenJS implements IPresentationProps {
 
 	public get commentAuthors(): CommentAuthorProps[] | undefined {
 		return this._commentAuthors
+	}
+
+	/**
+	 * Additional document properties written to `docProps`
+	 * - opt-in: unset leaves `core.xml` and `app.xml` unchanged
+	 */
+	private _documentProps?: DocumentProps
+	public set documentProps(value: DocumentProps | undefined) {
+		this._documentProps = value
+	}
+
+	public get documentProps(): DocumentProps | undefined {
+		return this._documentProps
+	}
+
+	/** slideSizeType - see the matching props interface */
+	private _slideSizeType?: SlideSizeType
+	public set slideSizeType(value: SlideSizeType | undefined) {
+		this._slideSizeType = value
+	}
+
+	public get slideSizeType(): SlideSizeType | undefined {
+		return this._slideSizeType
+	}
+
+	/** photoAlbum - see the matching props interface */
+	private _photoAlbum?: PhotoAlbumProps
+	public set photoAlbum(value: PhotoAlbumProps | undefined) {
+		this._photoAlbum = value
+	}
+
+	public get photoAlbum(): PhotoAlbumProps | undefined {
+		return this._photoAlbum
+	}
+
+	/** kinsoku - see the matching props interface */
+	private _kinsoku?: KinsokuProps
+	public set kinsoku(value: KinsokuProps | undefined) {
+		this._kinsoku = value
+	}
+
+	public get kinsoku(): KinsokuProps | undefined {
+		return this._kinsoku
+	}
+
+	/** printProps - see the matching props interface */
+	private _printProps?: PrintProps
+	public set printProps(value: PrintProps | undefined) {
+		this._printProps = value
+	}
+
+	public get printProps(): PrintProps | undefined {
+		return this._printProps
+	}
+
+	/** recentColors - see the matching props interface */
+	private _recentColors?: Color[]
+	public set recentColors(value: Color[] | undefined) {
+		this._recentColors = value
+	}
+
+	public get recentColors(): Color[] | undefined {
+		return this._recentColors
+	}
+
+	/** viewProps - see the matching props interface */
+	private _viewProps?: ViewProps
+	public set viewProps(value: ViewProps | undefined) {
+		this._viewProps = value
+	}
+
+	public get viewProps(): ViewProps | undefined {
+		return this._viewProps
 	}
 
 	/** fonts registered with `addFont()` */
@@ -691,8 +771,8 @@ export default class PptxGenJS implements IPresentationProps {
 
 			zip.file('[Content_Types].xml', genXml.makeXmlContTypes(this.slides, this.slideLayouts, this.masterSlide, this._embeddedFonts, hasComments)) // TODO: pass only `this` like below! 20200206
 			zip.file('_rels/.rels', genXml.makeXmlRootRels())
-			zip.file('docProps/app.xml', genXml.makeXmlApp(this.slides, this.company)) // TODO: pass only `this` like below! 20200206
-			zip.file('docProps/core.xml', genXml.makeXmlCore(this.title, this.subject, this.author, this.revision)) // TODO: pass only `this` like below! 20200206
+			zip.file('docProps/app.xml', genXml.makeXmlApp(this.slides, this.company, this.documentProps)) // TODO: pass only `this` like below! 20200206
+			zip.file('docProps/core.xml', genXml.makeXmlCore(this.title, this.subject, this.author, this.revision, this.documentProps)) // TODO: pass only `this` like below! 20200206
 			zip.file('ppt/_rels/presentation.xml.rels', genXml.makeXmlPresentationRels(this.slides, this._embeddedFonts, hasComments))
 			// Opt-in: no `ppt/fonts` folder exists unless `addFont()` was called
 			this._embeddedFonts.forEach((font, idx) => zip.file(genFonts.fontPartName(idx), font.data, { binary: true }))
@@ -700,7 +780,7 @@ export default class PptxGenJS implements IPresentationProps {
 			zip.file('ppt/presentation.xml', genXml.makeXmlPresentation(this))
 			zip.file('ppt/presProps.xml', genXml.makeXmlPresProps(this))
 			zip.file('ppt/tableStyles.xml', genXml.makeXmlTableStyles())
-			zip.file('ppt/viewProps.xml', genXml.makeXmlViewProps())
+			zip.file('ppt/viewProps.xml', genXml.makeXmlViewProps(this))
 
 			// C: Create a Layout/Master/Rel/Slide file for each SlideLayout and Slide
 			this.slideLayouts.forEach((layout, idx) => {

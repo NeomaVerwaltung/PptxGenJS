@@ -583,3 +583,65 @@ test('#35: images accept a line/outline and emit it in the picture spPr', async 
 	assert.ok(pic.includes('<a:srgbClr val="FF0000"/>'), 'picture outline color missing')
 	assert.ok(pic.includes('<a:prstDash val="dash"/>'), 'picture outline dash type missing')
 })
+
+test('#137/#136/#153: presentation, view and document properties reach their parts', async () => {
+	const pptx = new pptxgen()
+	pptx.documentProps = { category: 'Reports', contentStatus: 'Final', keywords: 'a, b', language: 'de-DE', version: '2.1', manager: 'Ada', template: 'Corp.potx', hyperlinkBase: 'https://x.test', totalEditTime: 42 }
+	pptx.slideSizeType = 'screen16x9'
+	pptx.photoAlbum = { blackWhite: true, layout: '2pic', frame: 'frameStyle3' }
+	pptx.kinsoku = { lang: 'ja-JP', invalidStartChars: ')]}', invalidEndChars: '([{' }
+	pptx.printProps = { what: 'handouts4', colorMode: 'gray', frameSlides: true }
+	pptx.recentColors = ['FF0000', { scheme: 'accent1' }]
+	pptx.viewProps = { lastView: 'sldThumbnailView', showComments: false, zoom: 75, gridSpacing: 0.5, snapToGrid: true, snapToObjects: false }
+	const slide = pptx.addSlide()
+	slide.addText('one', { x: 1, y: 1 })
+	slide.addNotes('speaker note')
+	pptx.addSlide().hidden = true
+
+	const zip = await writeZip(pptx)
+	const core = await readPart(zip, 'docProps/core.xml')
+	for (const el of ['<cp:category>Reports</cp:category>', '<cp:contentStatus>Final</cp:contentStatus>', '<cp:keywords>a, b</cp:keywords>', '<dc:language>de-DE</dc:language>', '<cp:version>2.1</cp:version>']) {
+		assert.ok(core.includes(el), `core.xml missing ${el}`)
+	}
+
+	// app.xml counts are derived, and each element may appear only once in CT_Properties
+	const app = await readPart(zip, 'docProps/app.xml')
+	for (const el of ['<Manager>Ada</Manager>', '<Template>Corp.potx</Template>', '<HyperlinkBase>https://x.test</HyperlinkBase>', '<TotalTime>42</TotalTime>', '<Notes>1</Notes>', '<HiddenSlides>1</HiddenSlides>', '<Paragraphs>1</Paragraphs>']) {
+		assert.ok(app.includes(el), `app.xml missing ${el}`)
+		const tag = /^<(\w+)>/.exec(el)?.[1] ?? ''
+		assert.equal((app.match(new RegExp(`<${tag}>`, 'g')) ?? []).length, 1, `app.xml emits <${tag}> more than once`)
+	}
+
+	const pres = await readPart(zip, 'ppt/presentation.xml')
+	assert.ok(pres.includes(' type="screen16x9"/>'), 'sldSz type missing')
+	assert.ok(pres.includes('<p:photoAlbum bw="1" layout="2pic" frame="frameStyle3"/>'), `photoAlbum wrong: ${pres.slice(0, 400)}`)
+	assert.ok(pres.includes('<p:kinsoku lang="ja-JP" invalStChars=")]}" invalEndChars="([{"/>'), 'kinsoku wrong')
+	assert.ok(pres.includes('<p:prnPr prnWhat="handouts4" clrMode="gray" frameSlides="1"/>'), 'prnPr wrong')
+	assert.ok(pres.includes('<p:clrMru><a:srgbClr val="FF0000"/><a:schemeClr val="accent1"/></p:clrMru>'), 'clrMru wrong')
+	// CT_Presentation fixes the child order: photoAlbum/kinsoku before defaultTextStyle, prnPr/clrMru after
+	const order = ['<p:notesSz', '<p:photoAlbum', '<p:kinsoku', '<p:defaultTextStyle>', '<p:prnPr', '<p:clrMru>'].map(tag => pres.indexOf(tag))
+	assert.deepEqual(order, [...order].sort((a, b) => a - b), `CT_Presentation child order violated: ${order.join(',')}`)
+
+	const view = await readPart(zip, 'ppt/viewProps.xml')
+	assert.ok(view.includes('lastView="sldThumbnailView"'), 'lastView missing')
+	assert.ok(view.includes('showComments="0"'), 'showComments missing')
+	assert.ok(view.includes('<p:cSldViewPr snapToGrid="1" snapToObjects="0">'), `snap attrs wrong: ${view}`)
+	assert.ok(view.includes('<a:sx n="75" d="100"/>'), 'zoom missing')
+	assert.ok(view.includes('<p:gridSpacing cx="457200" cy="457200"/>'), 'gridSpacing missing')
+
+	// a partial kinsoku is dropped: invalStChars/invalEndChars are required on CT_Kinsoku
+	const partial = new pptxgen()
+	partial.kinsoku = { lang: 'ja-JP' }
+	partial.addSlide()
+	assert.ok(!(await readPart(await writeZip(partial), 'ppt/presentation.xml')).includes('<p:kinsoku'), 'incomplete kinsoku was emitted')
+
+	// an untouched presentation keeps the previous output: none of these elements appear
+	const bare = new pptxgen()
+	bare.addSlide()
+	const bareZip = await writeZip(bare)
+	const barePres = await readPart(bareZip, 'ppt/presentation.xml')
+	for (const tag of ['<p:photoAlbum', '<p:kinsoku', '<p:prnPr', '<p:clrMru', 'type="']) assert.ok(!barePres.includes(tag), `default presentation.xml gained ${tag}`)
+	const bareView = await readPart(bareZip, 'ppt/viewProps.xml')
+	assert.ok(bareView.includes('<a:sx n="136" d="100"/>') && bareView.includes('<p:gridSpacing cx="76200" cy="76200"/>'), 'default viewProps.xml changed')
+	assert.ok(!bareView.includes('lastView=') && !bareView.includes('showComments='), 'default viewProps.xml gained attributes')
+})
