@@ -1368,3 +1368,75 @@ test('contract: presentations without content parts are unchanged', async () => 
 	assert.equal(Object.keys(plainZip.files).filter(file => file.includes('contentParts')).length, 0, 'no content-part folder may be created')
 	assert.doesNotMatch(await readPart(plainZip, 'ppt/slides/slide1.xml'), /contentPart/, 'a slide without content parts must be unchanged')
 })
+
+test('contract: the remaining a:bodyPr, a:pPr, and a:rPr attributes are reachable', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addText('all the attributes', {
+		x: 1, y: 1, w: 4, h: 2,
+		// a:bodyPr (ECMA-376 21.1.2.1.1)
+		upright: true, textRotate: 15, anchorCenter: true, spaceFirstLastPara: true,
+		compatLineSpacing: true, forceAntiAlias: true, horizontalOverflow: 'clip', verticalOverflow: 'ellipsis',
+		// a:pPr (21.1.2.2.7)
+		marginRight: 0.25, defaultTabSize: 0.5, fontAlign: 'ctr',
+		eastAsianLineBreak: false, latinLineBreak: false, hangingPunctuation: false,
+		// a:rPr (21.1.2.3.9)
+		capitalization: 'small', normalizeHeight: true, noProof: true, dirty: true,
+		symbolFontFace: 'Wingdings', latinFontFace: 'Georgia', eastAsianFontFace: 'MS Gothic', complexScriptFontFace: 'Arial',
+		underlineLine: { width: 1.5, color: 'FF0000', dashType: 'dash' },
+	})
+	const attrZip = await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
+	await assertPptxPackageContracts(attrZip)
+	const xml = await readPart(attrZip, 'ppt/slides/slide1.xml')
+
+	assert.doesNotMatch(xml, /NaN|undefined/, 'attributes must not leak invalid values')
+	// 15deg -> 900000 (60000ths); 0.25in -> 228600 EMU; 0.5in -> 457200 EMU
+	assert.match(xml, /<a:bodyPr wrap="square" upright="1" rot="900000" anchorCtr="1" spcFirstLastPara="1" compatLnSpc="1" forceAA="1" horzOverflow="clip" vertOverflow="ellipsis"/, 'bodyPr attributes missing')
+	assert.match(xml, /<a:pPr marR="228600" defTabSz="457200" fontAlgn="ctr" eaLnBrk="0" latinLnBrk="0" hangingPunct="0"/, 'pPr attributes missing')
+	assert.match(xml, /<a:rPr lang="en-US" cap="small" normalizeH="1" noProof="1" dirty="1">/, 'rPr attributes missing')
+
+	// per-script typefaces can differ; `a:sym` follows them
+	assert.match(xml, /<a:latin typeface="Georgia"[^>]*\/><a:ea typeface="MS Gothic"[^>]*\/><a:cs typeface="Arial"[^>]*\/><a:sym typeface="Wingdings"\/>/, 'per-script fonts or sym missing')
+	// a:uLn carries its own line properties, distinct from the underline colour
+	assert.match(xml, /<a:uLn w="19050"><a:solidFill><a:srgbClr val="FF0000"\/><\/a:solidFill><a:prstDash val="dash"\/><\/a:uLn>/, 'uLn missing')
+})
+
+test('contract: rPr children follow the schema sequence', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addText('ordered', {
+		x: 1, y: 1, w: 4, h: 1,
+		outline: { size: 1, color: '000000' },
+		color: 'FF0000',
+		glow: { size: 4, color: 'FFFF00', opacity: 0.5 },
+		highlight: '00FF00',
+		underline: { style: 'sng', color: '0000FF' },
+		underlineLine: 'text',
+		fontFace: 'Arial',
+		symbolFontFace: 'Wingdings',
+	})
+	const xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+
+	// CT_TextCharacterProperties order: ln, fill, effect, highlight, uLn, uFill, latin, ea, cs, sym.
+	// The glow effect used to be written last, after a:uFill, which is invalid against the schema.
+	const order = ['a:ln', 'a:solidFill', 'a:effectLst', 'a:highlight', 'a:uLnTx', 'a:uFill', 'a:latin', 'a:ea', 'a:cs', 'a:sym']
+	const rPr = /<a:rPr[^>]*>[\s\S]*?<\/a:rPr>/.exec(xml)?.[0] ?? ''
+	assert.ok(rPr, 'rPr not found')
+	const positions = order.map(tag => ({ tag, at: rPr.indexOf(`<${tag}`) }))
+	positions.forEach(entry => { assert.ok(entry.at > -1, `${entry.tag} missing from rPr`) })
+	positions.reduce((prev, entry) => {
+		assert.ok(entry.at > prev.at, `${entry.tag} must follow ${prev.tag} in CT_TextCharacterProperties`)
+		return entry
+	})
+})
+
+test('contract: text without the new attributes is byte-identical', async () => {
+	const pptx = new pptxgen()
+	pptx.addSlide().addText('plain', { x: 1, y: 1, w: 3, h: 1 })
+	const xml = await readPart(await JSZip.loadAsync((await pptx.write({ outputType: 'nodebuffer' })) as Buffer), 'ppt/slides/slide1.xml')
+
+	assert.match(xml, /<a:bodyPr wrap="square" rtlCol="0" anchor="ctr">/, 'default bodyPr changed')
+	assert.match(xml, /<a:rPr lang="en-US" dirty="0">/, 'default rPr changed - `dirty` must stay 0')
+	assert.doesNotMatch(xml, /upright|rot=|anchorCtr|spcFirstLastPara|compatLnSpc|forceAA|horzOverflow|vertOverflow/, 'no bodyPr attribute may appear unasked')
+	assert.doesNotMatch(xml, /marR=|defTabSz=|fontAlgn=|eaLnBrk=|latinLnBrk=|hangingPunct=/, 'no pPr attribute may appear unasked')
+	assert.doesNotMatch(xml, /cap=|normalizeH|noProof|a:uLn|a:sym/, 'no rPr attribute may appear unasked')
+})

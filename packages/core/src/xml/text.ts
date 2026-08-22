@@ -3,10 +3,11 @@
  */
 
 import { BULLET_TYPES, CRLF, DEF_BULLET_MARGIN, OOXML_EXT, PLACEHOLDER_TYPES, SLIDE_OBJECT_TYPES } from '../core-enums'
-import { ISlideObject, ObjectOptions, TableCell, TextProps, TextPropsOptions } from '../core-interfaces'
+import { ISlideObject, ObjectOptions, ParagraphProps, TableCell, TextBodyProps, TextProps, TextPropsOptions, TextRunProps } from '../core-interfaces'
 import { genXmlHyperlink } from './hyperlink'
+import { genXmlLine } from './line'
 import { alternateContent } from './markup-compat'
-import { createColorElement, createGlowElement, encodeXmlEntities, genXmlColorSelection, inch2Emu, resolveGlowOptions, valToPts, warnDeprecatedOnce } from '../gen-utils'
+import { convertRotationDegrees, createColorElement, createGlowElement, encodeXmlEntities, genXmlColorSelection, inch2Emu, resolveGlowOptions, valToPts, warnDeprecatedOnce } from '../gen-utils'
 
 function genXmlParagraphProperties (textObj: ISlideObject | TextProps, isDefault: boolean): string {
 	let strXmlBullet = ''
@@ -52,6 +53,16 @@ function genXmlParagraphProperties (textObj: ISlideObject | TextProps, isDefault
 		if (options.indentLevel && !isNaN(Number(options.indentLevel)) && options.indentLevel > 0) {
 			paragraphPropXml += ` lvl="${options.indentLevel}"`
 		}
+
+		// Remaining CT_TextParagraphProperties attributes - omitted unless set, so output is unchanged
+		const para = options as ParagraphProps
+		if (typeof para.marginRight === 'number' && isFinite(para.marginRight) && para.marginRight >= 0) paragraphPropXml += ` marR="${inch2Emu(para.marginRight)}"`
+		if (typeof para.defaultTabSize === 'number' && isFinite(para.defaultTabSize) && para.defaultTabSize > 0) paragraphPropXml += ` defTabSz="${inch2Emu(para.defaultTabSize)}"`
+		if (['auto', 't', 'ctr', 'base', 'b'].includes(String(para.fontAlign))) paragraphPropXml += ` fontAlgn="${String(para.fontAlign)}"`
+		// these three default to true in the schema, so only write them when turned off
+		if (para.eastAsianLineBreak === false) paragraphPropXml += ' eaLnBrk="0"'
+		if (para.latinLineBreak === false) paragraphPropXml += ' latinLnBrk="0"'
+		if (para.hangingPunctuation === false) paragraphPropXml += ' hangingPunct="0"'
 
 		// OPTION: Paragraph Spacing: Before/After
 		if (options.paraSpaceBefore && !isNaN(Number(options.paraSpaceBefore)) && options.paraSpaceBefore > 0) {
@@ -163,21 +174,42 @@ function genXmlTextRunProperties (opts: ObjectOptions | TextPropsOptions, isDefa
 		runProps += ' baseline="30000"'
 	}
 	runProps += opts.charSpacing ? ` spc="${Math.round(opts.charSpacing * 100)}" kern="0"` : '' // IMPORTANT: Also disable kerning; otherwise text won't actually expand
-	runProps += ' dirty="0">'
+	// Remaining CT_TextCharacterProperties attributes - omitted unless set, so output is unchanged
+	const run = opts as TextRunProps
+	if (['none', 'small', 'all'].includes(String(run.capitalization))) runProps += ` cap="${String(run.capitalization)}"`
+	if (run.normalizeHeight === true) runProps += ' normalizeH="1"'
+	if (run.noProof === true) runProps += ' noProof="1"'
+	// `dirty` was hardcoded to 0; it stays the default so existing output does not change
+	runProps += ` dirty="${run.dirty === true ? '1' : '0'}">`
 	// Color / Font / Highlight / Outline are children of <a:rPr>, so add them now before closing the runProperties tag
-	if (opts.color || opts.fontFace || opts.outline || (typeof opts.underline === 'object' && opts.underline.color)) {
+	const perScript = run.latinFontFace ?? run.eastAsianFontFace ?? run.complexScriptFontFace
+	if (opts.color || opts.fontFace || opts.outline || perScript || run.underlineLine || run.symbolFontFace || (typeof opts.underline === 'object' && opts.underline.color)) {
 		if (opts.outline && typeof opts.outline === 'object') {
 			runProps += `<a:ln w="${valToPts(opts.outline.size || 0.75)}">${genXmlColorSelection(opts.outline.color || 'FFFFFF')}</a:ln>`
 		}
 		if (opts.color) runProps += genXmlColorSelection({ color: opts.color, transparency: opts.transparency })
-		if (opts.highlight) runProps += `<a:highlight>${createColorElement(opts.highlight)}</a:highlight>`
-		if (typeof opts.underline === 'object' && opts.underline.color) runProps += `<a:uFill>${genXmlColorSelection(opts.underline.color)}</a:uFill>`
+		/* CT_TextCharacterProperties fixes the child order: ln, fill, effect, highlight, uLn, uFill,
+		 * latin, ea, cs, sym. The glow effect was emitted last, after `a:uFill`, which is out of
+		 * sequence - PowerPoint tolerated it, but it is invalid against the schema. */
 		const resolvedGlow = resolveGlowOptions(opts.glow)
 		if (resolvedGlow) runProps += `<a:effectLst>${createGlowElement(resolvedGlow)}</a:effectLst>`
-		if (opts.fontFace) {
+		if (opts.highlight) runProps += `<a:highlight>${createColorElement(opts.highlight)}</a:highlight>`
+		// `a:uLn` describes the underline's line; `a:uLnTx` follows the run's own line instead
+		if (run.underlineLine === 'text') runProps += '<a:uLnTx/>'
+		else if (run.underlineLine && typeof run.underlineLine === 'object') runProps += genXmlLine(run.underlineLine, 'a:uLn')
+		if (typeof opts.underline === 'object' && opts.underline.color) runProps += `<a:uFill>${genXmlColorSelection(opts.underline.color)}</a:uFill>`
+		if (opts.fontFace || perScript) {
 			// NOTE: 'cs' = Complex Script, 'ea' = East Asian (use "-120" instead of "0" - per Issue #174); ea must come first (Issue #174)
-			runProps += `<a:latin typeface="${opts.fontFace}" pitchFamily="34" charset="0"/><a:ea typeface="${opts.fontFace}" pitchFamily="34" charset="-122"/><a:cs typeface="${opts.fontFace}" pitchFamily="34" charset="-120"/>`
+			// `fontFace` sets all three scripts; the per-script options override individual ones
+			const latin = run.latinFontFace ?? opts.fontFace
+			const eastAsian = run.eastAsianFontFace ?? opts.fontFace
+			const complex = run.complexScriptFontFace ?? opts.fontFace
+			if (latin) runProps += `<a:latin typeface="${latin}" pitchFamily="34" charset="0"/>`
+			if (eastAsian) runProps += `<a:ea typeface="${eastAsian}" pitchFamily="34" charset="-122"/>`
+			if (complex) runProps += `<a:cs typeface="${complex}" pitchFamily="34" charset="-120"/>`
 		}
+		// `a:sym` must follow the script typefaces per CT_TextCharacterProperties
+		if (run.symbolFontFace) runProps += `<a:sym typeface="${encodeXmlEntities(run.symbolFontFace)}"/>`
 	}
 
 	// Hyperlink support
@@ -304,6 +336,18 @@ function genXmlBodyProperties (slideObject: ISlideObject | TableCell): string {
 		if (slideObject.options._bodyProp.tIns || slideObject.options._bodyProp.tIns === 0) bodyProperties += ` tIns="${slideObject.options._bodyProp.tIns}"`
 		if (slideObject.options._bodyProp.rIns || slideObject.options._bodyProp.rIns === 0) bodyProperties += ` rIns="${slideObject.options._bodyProp.rIns}"`
 		if (slideObject.options._bodyProp.bIns || slideObject.options._bodyProp.bIns === 0) bodyProperties += ` bIns="${slideObject.options._bodyProp.bIns}"`
+
+		// B.2: Remaining CT_TextBodyProperties attributes - each omitted unless asked for, so
+		// existing output is unchanged
+		const body = slideObject.options as TextBodyProps
+		if (body.upright === true) bodyProperties += ' upright="1"'
+		if (typeof body.textRotate === 'number' && isFinite(body.textRotate)) bodyProperties += ` rot="${convertRotationDegrees(body.textRotate)}"`
+		if (body.anchorCenter === true) bodyProperties += ' anchorCtr="1"'
+		if (body.spaceFirstLastPara === true) bodyProperties += ' spcFirstLastPara="1"'
+		if (body.compatLineSpacing === true) bodyProperties += ' compatLnSpc="1"'
+		if (body.forceAntiAlias === true) bodyProperties += ' forceAA="1"'
+		if (body.horizontalOverflow === 'overflow' || body.horizontalOverflow === 'clip') bodyProperties += ` horzOverflow="${body.horizontalOverflow}"`
+		if (['overflow', 'ellipsis', 'clip'].includes(String(body.verticalOverflow))) bodyProperties += ` vertOverflow="${String(body.verticalOverflow)}"`
 
 		// C: Columns, then rtl, after margins
 		if (slideObject.options._bodyProp.numCol) bodyProperties += ` numCol="${slideObject.options._bodyProp.numCol}"`

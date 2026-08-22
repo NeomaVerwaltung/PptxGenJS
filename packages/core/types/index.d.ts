@@ -1829,7 +1829,7 @@ declare namespace PptxGenJS {
 
 	// shapes =========================================================================================
 
-	export interface ShapeProps extends PositionProps, ObjectNameProps {
+	export interface ShapeProps extends PositionProps, ObjectNameProps, TextBodyProps {
 		/**
 		 * Glow effect
 		 */
@@ -2308,7 +2308,125 @@ declare namespace PptxGenJS {
 		size: number
 	}
 
-	export interface TextPropsOptions extends PositionProps, DataOrPathProps, TextBaseProps, ObjectNameProps {
+	/**
+	 * Text-body attributes beyond wrap/insets/anchor (`a:bodyPr`, ECMA-376 21.1.2.1.1)
+	 * - every one is optional and omitted when unset, so default output does not change
+	 */
+	export interface TextBodyProps {
+		/**
+		 * Keep text upright when the shape is rotated
+		 * @default false
+		 */
+		upright?: boolean
+		/**
+		 * Rotate the text body independently of the shape (degrees)
+		 * - distinct from the shape's own `rotate`
+		 */
+		textRotate?: number
+		/**
+		 * Centre the anchor point as well as the text
+		 * @default false
+		 */
+		anchorCenter?: boolean
+		/**
+		 * Respect paragraph spacing before the first and after the last line
+		 * @default false
+		 */
+		spaceFirstLastPara?: boolean
+		/**
+		 * Use legacy line-spacing rules
+		 * @default false
+		 */
+		compatLineSpacing?: boolean
+		/**
+		 * Force anti-aliasing regardless of size
+		 * @default false
+		 */
+		forceAntiAlias?: boolean
+		/**
+		 * How text overflowing the body behaves
+		 * - `horzOverflow` / `vertOverflow` in the schema
+		 */
+		horizontalOverflow?: 'overflow' | 'clip'
+		verticalOverflow?: 'overflow' | 'ellipsis' | 'clip'
+	}
+	/**
+	 * Paragraph attributes beyond margins/alignment (`a:pPr`, ECMA-376 21.1.2.2.7)
+	 */
+	export interface ParagraphProps {
+		/**
+		 * Right margin (inches)
+		 * - the left margin is `indentLevel`/`marL` handling already present
+		 */
+		marginRight?: number
+		/**
+		 * Default tab stop interval (inches)
+		 */
+		defaultTabSize?: number
+		/**
+		 * Baseline alignment of glyphs within the line
+		 */
+		fontAlign?: 'auto' | 't' | 'ctr' | 'base' | 'b'
+		/**
+		 * Apply East Asian line-breaking rules
+		 * @default true
+		 */
+		eastAsianLineBreak?: boolean
+		/**
+		 * Allow Latin words to break across lines
+		 * @default true
+		 */
+		latinLineBreak?: boolean
+		/**
+		 * Apply hanging punctuation
+		 * @default true
+		 */
+		hangingPunctuation?: boolean
+	}
+	/**
+	 * Run attributes beyond bold/italic/size (`a:rPr`, ECMA-376 21.1.2.3.9)
+	 */
+	export interface TextRunProps {
+		/**
+		 * Capitalisation applied to the run
+		 */
+		capitalization?: 'none' | 'small' | 'all'
+		/**
+		 * Normalise glyph heights
+		 * @default false
+		 */
+		normalizeHeight?: boolean
+		/**
+		 * Exclude the run from spelling and grammar checking
+		 * @default false
+		 */
+		noProof?: boolean
+		/**
+		 * Mark the run as needing re-inspection by the consumer
+		 * - written as `dirty`, which was previously hardcoded to `0`
+		 * @default false
+		 */
+		dirty?: boolean
+		/**
+		 * Underline line properties (`a:uLn`), distinct from the underline colour
+		 * - pass `'text'` to follow the run's own line (`a:uLnTx`)
+		 */
+		underlineLine?: 'text' | ShapeLineProps
+		/**
+		 * Symbol font for the run (`a:sym`), for Wingdings-style glyphs
+		 */
+		symbolFontFace?: string
+		/**
+		 * Per-script typefaces (`a:latin` / `a:ea` / `a:cs`)
+		 * - `fontFace` sets all three; these override individual scripts
+		 */
+		latinFontFace?: string
+		eastAsianFontFace?: string
+		complexScriptFontFace?: string
+	}
+	export interface TextPropsOptions extends PositionProps, DataOrPathProps, TextBaseProps, ObjectNameProps, TextBodyProps, ParagraphProps, TextRunProps {
+		/** text-body, paragraph, and run attribute completeness (ECMA-376 21.1.2)
+		 */
 		baseline?: number
 		/**
 		 * Character spacing
