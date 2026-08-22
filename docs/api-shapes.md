@@ -198,6 +198,55 @@ slide.addShape(pptx.ShapeType.rect, { x: 1, y: 1, w: 3, h: 2, glow: { size: 6, c
 The graph is flat: nested `a:cont` containers and named `a:effect` references are not emitted.
 PowerPoint's UI never produces them, so there is nothing to round-trip against.
 
+## Theme Style References (`styleRef`)
+
+A shape with explicit colours keeps them when the user swaps the presentation theme in PowerPoint. A
+shape with *references* into the theme's format scheme restyles instead. `styleRef` emits `p:style`.
+
+```typescript
+slide.addShape(pptx.ShapeType.rect, {
+    x: 1, y: 1, w: 3, h: 2,
+    styleRef: { line: 1, fill: 3, effect: 2, font: 'minor' },
+});
+```
+
+| Option      | Type   | Default    | Description                                                |
+| :---------- | :----- | :--------- | :--------------------------------------------------------- |
+| `line`      | number |            | 1-based index into the theme's `a:lnStyleLst`               |
+| `fill`      | number |            | 1-based index into the theme's `a:fillStyleLst`             |
+| `effect`    | number |            | 1-based index into the theme's `a:effectStyleLst`           |
+| `font`      | string | `none`     | `major`, `minor` or `none` — which theme font the text follows |
+| `color`     | Color  | `accent1`  | what the theme's `phClr` placeholder resolves to            |
+| `fontColor` | Color  | `lt1`      | colour the referenced font resolves against                |
+
+The built-in theme ships three entries in each list, so `1`–`3` are the useful indices.
+
+### What Actually Restyles
+
+Direct formatting beats a reference — that is OOXML's own precedence. So a referenced property only
+restyles if you *don't* also set it explicitly:
+
+```typescript
+// restyles with the theme: no explicit fill, so the fill element is omitted entirely
+slide.addShape(pptx.ShapeType.rect, { x: 1, y: 1, w: 3, h: 2, styleRef: { fill: 1 } });
+
+// stays red forever: the explicit fill overrides the reference
+slide.addShape(pptx.ShapeType.rect, { x: 1, y: 1, w: 3, h: 2, styleRef: { fill: 1 }, fill: { color: 'FF0000' } });
+```
+
+Normally a shape with no `fill` gets `<a:noFill/>` — transparent. With `styleRef.fill` set and no
+explicit fill, the fill element is left out altogether, because an *absent* fill is what inherits and
+`<a:noFill/>` would override the reference.
+
+Omitting a property references nothing (`idx="0"`, or `idx="none"` for the font) rather than guessing
+an index — an unset `line` will not paint an outline on a shape that never asked for one.
+
+`color` cannot be `phClr`: that is the placeholder a reference resolves, not a colour it can carry.
+Passing it warns and falls back to `accent1`.
+
+`fontColor` defaults to `lt1` rather than following `color`, because text sharing its shape's fill
+colour renders invisible.
+
 ## Line Properties
 
 `line` accepts the full `CT_LineProperties` model (ECMA-376 §20.1.2.1). Everything below is optional

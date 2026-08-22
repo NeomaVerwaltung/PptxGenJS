@@ -1783,6 +1783,12 @@ declare namespace PptxGenJS {
 		 */
 		alphaEffects?: ImageAlphaEffectProps
 		/**
+		 * Theme style references (`p:style`)
+		 * - lets the object restyle when the user swaps the presentation theme in PowerPoint
+		 * @example { fill: 1, line: 2, effect: 0, font: 'minor' }
+		 */
+		styleRef?: ShapeStyleProps
+		/**
 		 * Alt Text value ("How would you describe this object and its contents to someone who is blind?")
 		 * - PowerPoint: [right-click on an image] > "Edit Alt Text..."
 		 */
@@ -1984,6 +1990,12 @@ declare namespace PptxGenJS {
 		 * - the two are alternatives in the schema, so this replaces the effect list
 		 */
 		effectDag?: EffectDagProps
+		/**
+		 * Theme style references (`p:style`)
+		 * - lets the object restyle when the user swaps the presentation theme in PowerPoint
+		 * @example { fill: 1, line: 2, effect: 0, font: 'minor' }
+		 */
+		styleRef?: ShapeStyleProps
 		/**
 		 * Horizontal alignment
 		 * @default 'left'
@@ -2527,6 +2539,38 @@ declare namespace PptxGenJS {
 		floor?: boolean
 		/** Force alpha values above 0% to fully opaque (`a:alphaCeiling`) */
 		ceiling?: boolean
+	}
+
+	/**
+	 * Theme style references for a shape (`p:style`, ECMA-376 Part 1 §20.1.4.1.25 CT_ShapeStyle)
+	 * - each index points into the matching list in the theme's `a:fmtScheme`, 1-based; omit a
+	 *   property to reference nothing, which is what an unstyled shape does today
+	 * - a referenced property is the one that changes when the user swaps the theme in PowerPoint, so
+	 *   setting `fill` here and no explicit `fill` on the shape leaves the fill to the theme
+	 */
+	export interface ShapeStyleProps {
+		/** Index into the theme's `a:lnStyleLst` (1-based) */
+		line?: number
+		/** Index into the theme's `a:fillStyleLst` (1-based) */
+		fill?: number
+		/** Index into the theme's `a:effectStyleLst` (1-based) */
+		effect?: number
+		/**
+		 * Which of the theme's font collections the shape's text follows
+		 * @default none
+		 */
+		font?: 'major' | 'minor' | 'none'
+		/**
+		 * Colour the referenced line, fill and effect resolve the theme's `phClr` against
+		 * @default 'accent1'
+		 */
+		color?: Color
+		/**
+		 * Colour the referenced font resolves against
+		 * - defaults to `lt1` because a font sharing the fill's colour renders as invisible text
+		 * @default 'lt1'
+		 */
+		fontColor?: Color
 	}
 
 	export interface SoftEdgeProps {

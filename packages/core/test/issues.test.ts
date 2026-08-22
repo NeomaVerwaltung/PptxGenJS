@@ -765,3 +765,60 @@ test('#138: blur, fillOverlay, prstShdw, effectDag, blip alpha effects and group
 		assert.ok(!bareXml.includes(tag), `default shape gained ${tag}`)
 	}
 })
+
+test('#141: shapes and pictures emit p:style theme references', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addShape('rect', { x: 0.5, y: 0.5, w: 2, h: 1, styleRef: { line: 1, fill: 3, effect: 2, font: 'minor' } })
+	slide.addShape('rect', { x: 3, y: 0.5, w: 2, h: 1, styleRef: { fill: 1 }, fill: { color: 'FF0000' } })
+	slide.addShape('rect', { x: 5.5, y: 0.5, w: 2, h: 1, styleRef: { effect: 1, color: 'phClr' } })
+	slide.addImage({ data: PNG_4x2, x: 0.5, y: 2, w: 1, h: 0.5, styleRef: { line: 2, color: 'accent3' } })
+
+	const xml = await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')
+	const shapes = xml.match(/<p:sp>[\s\S]*?<\/p:sp>/g) ?? []
+	assert.equal(shapes.length, 3, `expected three shapes, got ${shapes.length}`)
+
+	// CT_ShapeStyle requires all four children, in this order, so one set property emits all four.
+	// Indices are 1-based into the theme's `a:fmtScheme` lists; 0 references nothing.
+	assert.ok(shapes[0].includes(
+		'<p:style><a:lnRef idx="1"><a:schemeClr val="accent1"/></a:lnRef>' +
+		'<a:fillRef idx="3"><a:schemeClr val="accent1"/></a:fillRef>' +
+		'<a:effectRef idx="2"><a:schemeClr val="accent1"/></a:effectRef>' +
+		'<a:fontRef idx="minor"><a:schemeClr val="lt1"/></a:fontRef></p:style>'
+	), `p:style wrong: ${shapes[0]}`)
+
+	// `p:style` follows `p:spPr` and precedes `p:txBody` in the CT_Shape sequence
+	const order = ['</p:spPr>', '<p:style>', '</p:style>', '<p:txBody>'].map(tag => shapes[0].indexOf(tag))
+	assert.ok(order.every(idx => idx > -1), `a p:sp child is missing: ${order.join(',')}`)
+	assert.deepEqual(order, [...order].sort((a, b) => a - b), `CT_Shape child order violated: ${order.join(',')}`)
+
+	// This is what makes a theme swap restyle the shape: a referenced fill and no explicit fill means
+	// NO fill element at all - `<a:noFill/>` would override the reference
+	const spPr0 = /<p:spPr>[\s\S]*?<\/p:spPr>/.exec(shapes[0])?.[0] ?? ''
+	assert.ok(!spPr0.includes('<a:noFill/>') && !spPr0.includes('<a:solidFill>'), `a referenced fill must be left to the theme: ${spPr0}`)
+
+	// an explicit fill still wins, which is OOXML's own precedence
+	const spPr1 = /<p:spPr>[\s\S]*?<\/p:spPr>/.exec(shapes[1])?.[0] ?? ''
+	assert.ok(spPr1.includes('<a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>'), 'an explicit fill was dropped')
+	// unset references are explicit no-references, never a guessed index
+	assert.ok(shapes[1].includes('<a:lnRef idx="0">') && shapes[1].includes('<a:effectRef idx="0">') && shapes[1].includes('<a:fontRef idx="none">'), `unset refs wrong: ${shapes[1]}`)
+
+	// `phClr` is the substitution target a reference resolves, not a colour it can carry
+	assert.ok(shapes[2].includes('<a:effectRef idx="1"><a:schemeClr val="accent1"/></a:effectRef>'), 'phClr was not rejected')
+	assert.ok(!xml.includes('val="phClr"'), 'phClr reached the output')
+	// without a referenced fill the `a:noFill` default still applies
+	assert.ok((/<p:spPr>[\s\S]*?<\/p:spPr>/.exec(shapes[2])?.[0] ?? '').includes('<a:noFill/>'), 'the noFill default was suppressed without a fill reference')
+
+	// `p:style` follows `p:spPr` in the CT_Picture sequence too
+	const pic = /<p:pic>[\s\S]*?<\/p:pic>/.exec(xml)?.[0] ?? ''
+	assert.ok(pic.includes('<a:lnRef idx="2"><a:schemeClr val="accent3"/></a:lnRef>'), `picture p:style wrong: ${pic}`)
+	const picOrder = ['</p:spPr>', '<p:style>', '</p:pic>'].map(tag => (pic + '</p:pic>').indexOf(tag))
+	assert.deepEqual(picOrder, [...picOrder].sort((a, b) => a - b), `CT_Picture child order violated: ${picOrder.join(',')}`)
+
+	// a shape asking for no references is unchanged, `a:noFill` default included
+	const bare = new pptxgen()
+	bare.addSlide().addShape('rect', { x: 1, y: 1, w: 2, h: 1 })
+	const bareXml = await readPart(await writeZip(bare), 'ppt/slides/slide1.xml')
+	assert.ok(!bareXml.includes('<p:style>'), 'default shape gained a p:style')
+	assert.ok(bareXml.includes('<a:noFill/>'), 'default shape lost its noFill')
+})
