@@ -323,3 +323,48 @@ slide.addShape(pptx.ShapeType.rect, {
 
 `a:snd` accepts WAV only (ECMA-376 §20.1.2.2.32); other formats are rejected with a warning rather
 than linked. A link with neither `url` nor `slide` is dropped with a warning.
+
+## Text Body, Paragraph, and Run Attributes
+
+The remaining `a:bodyPr`, `a:pPr`, and `a:rPr` attributes are settable per text object. All are
+optional and omitted when unset, so existing output is unchanged.
+
+### Text body (`a:bodyPr`)
+
+| Option               | Type    | Description                                       |
+| :------------------- | :------ | :------------------------------------------------ |
+| `upright`            | boolean | keep text upright when the shape is rotated       |
+| `textRotate`         | number  | rotate the text body independently (degrees)      |
+| `anchorCenter`       | boolean | centre the anchor point as well as the text       |
+| `spaceFirstLastPara` | boolean | honour spacing before the first / after the last line |
+| `compatLineSpacing`  | boolean | legacy line-spacing rules                         |
+| `forceAntiAlias`     | boolean | force anti-aliasing                               |
+| `horizontalOverflow` | string  | `overflow` or `clip`                              |
+| `verticalOverflow`   | string  | `overflow`, `ellipsis`, or `clip`                 |
+
+### Paragraph (`a:pPr`)
+
+| Option               | Type    | Description                                        |
+| :------------------- | :------ | :------------------------------------------------- |
+| `marginRight`        | number  | right margin (inches)                              |
+| `defaultTabSize`     | number  | default tab interval (inches)                      |
+| `fontAlign`          | string  | `auto`, `t`, `ctr`, `base`, or `b`                 |
+| `eastAsianLineBreak` | boolean | East Asian line-breaking rules (default `true`)    |
+| `latinLineBreak`     | boolean | allow Latin words to break (default `true`)        |
+| `hangingPunctuation` | boolean | hanging punctuation (default `true`)               |
+
+### Run (`a:rPr`)
+
+| Option                  | Type                      | Description                                     |
+| :---------------------- | :------------------------ | :---------------------------------------------- |
+| `capitalization`        | string                    | `none`, `small`, or `all`                       |
+| `normalizeHeight`       | boolean                   | normalise glyph heights                         |
+| `noProof`               | boolean                   | exclude from spelling and grammar checking      |
+| `dirty`                 | boolean                   | mark for re-inspection (default `false`)        |
+| `underlineLine`         | `'text'` \| `ShapeLineProps` | underline line properties, or follow the run's own line |
+| `symbolFontFace`        | string                    | symbol font for the run (`a:sym`)               |
+| `latinFontFace`         | string                    | override the Latin typeface                     |
+| `eastAsianFontFace`     | string                    | override the East Asian typeface                |
+| `complexScriptFontFace` | string                    | override the complex-script typeface            |
+
+`fontFace` still sets all three scripts; the per-script options override individual ones.

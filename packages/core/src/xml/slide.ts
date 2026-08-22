@@ -13,21 +13,7 @@ import {
 	SHAPE_TYPE,
 	SLIDE_OBJECT_TYPES,
 } from '../core-enums'
-import {
-	ISlideObject,
-	ObjectOptions,
-	PresSlide,
-	ReflectionProps,
-	ShadowProps,
-	SectionProps,
-	ShapeLineProps,
-	SlideLayout,
-	SoftEdgeProps,
-	TableCell,
-	TableCellProps,
-	TableProps,
-	TextGlowProps,
-} from '../core-interfaces'
+import { ISlideObject, ObjectOptions, PresSlide, ReflectionProps, ShadowProps, SectionProps, SlideLayout, SoftEdgeProps, TableCell, TableCellProps, TableProps, TextGlowProps } from '../core-interfaces'
 import {
 	convertRotationDegrees,
 	createColorElement,
@@ -42,6 +28,7 @@ import {
 
 import { slideCommentRelId } from './relationships'
 import { genXmlHyperlink } from './hyperlink'
+import { genXmlLine } from './line'
 import { genXmlPlaceholder, genXmlTextBody } from './text'
 import { genXmlContentPart } from './content-part'
 import { genXmlZoom } from './zoom'
@@ -116,21 +103,6 @@ function shapeModId (objectIndex: number): number {
 	return MS_PPTX_ID_BASE.modId + objectIndex
 }
 
-/**
- * Create the `a:ln` outline block for a shape/image
- * @param {ShapeLineProps} line - line options
- * @return {string} XML
- */
-function genXmlLine (line: ShapeLineProps): string {
-	let xml = line.width ? `<a:ln w="${valToPts(line.width)}">` : '<a:ln>'
-	if (line.color || line.type === 'gradient') xml += genXmlColorSelection(line)
-	if (line.dashType) xml += `<a:prstDash val="${line.dashType}"/>`
-	if (line.beginArrowType) xml += `<a:headEnd type="${line.beginArrowType}"/>`
-	if (line.endArrowType) xml += `<a:tailEnd type="${line.endArrowType}"/>`
-	// FUTURE: `endArrowSize` < a: headEnd type = "arrow" w = "lg" len = "lg" /> 'sm' | 'med' | 'lg'(values are 1 - 9, making a 3x3 grid of w / len possibilities)
-	xml += '</a:ln>'
-	return xml
-}
 
 /**
  * Create one shadow child for an `a:effectLst`.
