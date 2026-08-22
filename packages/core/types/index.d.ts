@@ -2151,6 +2151,55 @@ declare namespace PptxGenJS {
 		 */
 		newSlideStartY?: number
 	}
+	/**
+	 * 3-D bevel applied to a table cell (`a:bevel`, ECMA-376 Part 1 §20.1.5.3 CT_Bevel)
+	 */
+	export interface CellBevelProps {
+		/**
+		 * Bevel shape
+		 * @default circle
+		 */
+		preset?: 'relaxedInset' | 'circle' | 'slope' | 'cross' | 'angle' | 'softRound' | 'convex' | 'coolSlant' | 'divot' | 'riblet' | 'hardEdge' | 'artDeco'
+		/**
+		 * Bevel width (inches)
+		 * @default 0.083
+		 */
+		width?: number
+		/**
+		 * Bevel height (inches)
+		 * @default 0.083
+		 */
+		height?: number
+	}
+
+	/**
+	 * Light rig for a 3-D table cell (`a:lightRig`, ECMA-376 Part 1 §20.1.5.5 CT_LightRig)
+	 * - both properties are required by the schema, so a partial value is not emitted
+	 */
+	export interface CellLightRigProps {
+		rig: 'legacyFlat1' | 'legacyFlat2' | 'legacyFlat3' | 'legacyFlat4' | 'legacyNormal1' | 'legacyNormal2' | 'legacyNormal3' | 'legacyNormal4' | 'legacyHarsh1' | 'legacyHarsh2' | 'legacyHarsh3' | 'legacyHarsh4' | 'threePt' | 'balanced' | 'soft' | 'harsh' | 'flood' | 'contrasting' | 'morning' | 'sunrise' | 'sunset' | 'chilly' | 'freezing' | 'flat' | 'twoPt' | 'glow' | 'brightRoom'
+		dir: 'tl' | 't' | 'tr' | 'l' | 'r' | 'bl' | 'b' | 'br'
+	}
+
+	/**
+	 * 3-D properties of a table cell (`a:cell3D`, ECMA-376 Part 1 §21.1.3.1 CT_Cell3D)
+	 */
+	export interface Cell3DProps {
+		/**
+		 * Cell bevel
+		 * - `a:bevel` is required by the schema, so an `a:bevel` with schema defaults is written
+		 *   whenever `cell3D` is set
+		 */
+		bevel?: CellBevelProps
+		/**
+		 * Surface material
+		 * @default plastic
+		 */
+		material?: 'legacyMatte' | 'legacyPlastic' | 'legacyMetal' | 'legacyWireframe' | 'matte' | 'plastic' | 'metal' | 'warmMatte' | 'translucentPowder' | 'powder' | 'dkEdge' | 'softEdge' | 'clear' | 'flat' | 'softmetal'
+		/** Light rig - dropped unless both `rig` and `dir` are set */
+		lightRig?: CellLightRigProps
+	}
+
 	export interface TableCellProps extends TextBaseProps {
 		/**
 		 * Auto-paging character weight
@@ -2173,13 +2222,38 @@ declare namespace PptxGenJS {
 		 */
 		autoPageLineWeight?: number
 		/**
+		 * Whether text is centered both horizontally and vertically in the cell
+		 * @default false
+		 */
+		anchorCtr?: boolean
+		/**
 		 * Cell border
 		 */
 		border?: BorderProps | [BorderProps, BorderProps, BorderProps, BorderProps]
 		/**
+		 * Diagonal border running bottom-left to top-right (`a:lnBlToTr`)
+		 * - independent of `border`, which only covers the four edges
+		 */
+		borderDiagonalUp?: BorderProps
+		/**
+		 * Diagonal border running top-left to bottom-right (`a:lnTlToBr`)
+		 * - independent of `border`, which only covers the four edges
+		 */
+		borderDiagonalDown?: BorderProps
+		/**
+		 * 3-D bevel and lighting for the cell
+		 * @example { bevel: { preset: 'circle', width: 0.05, height: 0.05 }, material: 'metal' }
+		 */
+		cell3D?: Cell3DProps
+		/**
 		 * Cell colspan
 		 */
 		colspan?: number
+		/**
+		 * Whether text wider than the cell is clipped or allowed to overflow it
+		 * @default clip
+		 */
+		horzOverflow?: 'clip' | 'overflow'
 		/**
 		 * Fill color
 		 * @example { color:'FF0000' } // hex color (red)
@@ -2317,6 +2391,12 @@ declare namespace PptxGenJS {
 		 * @default false
 		 */
 		bandCol?: boolean
+		/**
+		 * Lay the columns out right-to-left (`a:tblPr@rtl`)
+		 * - reverses column order for the whole table; cell text direction is set per cell
+		 * @default false
+		 */
+		rtl?: boolean
 		/**
 		 * Table style id (GUID of a built-in PowerPoint table style)
 		 * - required for `bandRow`/`firstRow`/etc. to have a visible effect

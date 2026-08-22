@@ -3,6 +3,7 @@
  */
 
 import {
+	DEF_CELL_BORDER,
 	DEF_CELL_MARGIN_IN,
 	DEF_PRES_LAYOUT_NAME,
 	DEF_TEXT_SHADOW,
@@ -13,7 +14,7 @@ import {
 	SHAPE_TYPE,
 	SLIDE_OBJECT_TYPES,
 } from '../core-enums'
-import { ISlideObject, ObjectOptions, PresSlide, ReflectionProps, ShadowProps, SectionProps, SlideLayout, SoftEdgeProps, TableCell, TableCellProps, TableProps, TextGlowProps } from '../core-interfaces'
+import { BorderProps, ISlideObject, ObjectOptions, PresSlide, ReflectionProps, ShadowProps, SectionProps, SlideLayout, SoftEdgeProps, TableCell, TableCellProps, TableProps, TextGlowProps } from '../core-interfaces'
 import {
 	convertRotationDegrees,
 	createColorElement,
@@ -73,9 +74,30 @@ const ImageSizingXml = {
  * @param {TableProps} opts - table options
  * @return {string} XML
  */
+/**
+ * One `a:tcPr` border line (`a:lnL`, `a:lnTlToBr`, ...)
+ * - the four edges and the two diagonals share CT_LineProperties, so they share this emitter
+ * @param {string} name - element name without the `a:` prefix
+ * @param {BorderProps} border - border definition
+ * @returns {string} XML
+ */
+function genXmlCellBorder (name: string, border: BorderProps): string {
+	if (border.type === 'none') return `<a:${name} w="0" cap="flat" cmpd="sng" algn="ctr"><a:noFill/></a:${name}>`
+
+	const width = border.width ?? border.pt ?? DEF_CELL_BORDER.pt
+	return (
+		`<a:${name} w="${valToPts(width)}" cap="flat" cmpd="sng" algn="ctr">` +
+		`<a:solidFill>${createColorElement(border.color ?? DEF_CELL_BORDER.color)}</a:solidFill>` +
+		`<a:prstDash val="${border.type === 'dash' ? 'sysDash' : 'solid'}"/><a:round/>` +
+		'<a:headEnd type="none" w="med" len="med"/><a:tailEnd type="none" w="med" len="med"/>' +
+		`</a:${name}>`
+	)
+}
+
 function genXmlTblPr (opts: TableProps): string {
 	const firstRow = opts.firstRow ?? (opts.autoPageRepeatHeader ? true : undefined)
 	const flags: Array<[string, boolean | undefined]> = [
+		['rtl', opts.rtl],
 		['firstRow', firstRow],
 		['lastRow', opts.lastRow],
 		['firstCol', opts.firstCol],
@@ -472,10 +494,11 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 							)}"`
 						}
 
-						// FUTURE: Cell NOWRAP property (textwrap: add to a:tcPr (horzOverflow="overflow" or whatever options exist)
+						const cellOverflow = cellOpts.horzOverflow === 'overflow' || cellOpts.horzOverflow === 'clip' ? ` horzOverflow="${cellOpts.horzOverflow}"` : ''
+						const cellAnchorCtr = cellOpts.anchorCtr === true ? ' anchorCtr="1"' : ''
 
 						// 4: Set CELL content and properties ==================================
-						strXml += `<a:tc${cellSpanAttrStr}>${genXmlTextBody(cell)}<a:tcPr${cellMarginXml}${cellValign}${cellTextDir}>`
+						strXml += `<a:tc${cellSpanAttrStr}>${genXmlTextBody(cell)}<a:tcPr${cellMarginXml}${cellValign}${cellTextDir}${cellAnchorCtr}${cellOverflow}>`
 						// strXml += `<a:tc${cellColspan}${cellRowspan}>${genXmlTextBody(cell)}<a:tcPr${cellMarginXml}${cellValign}${cellTextDir}>`
 						// FIXME: 20200525: ^^^
 						// <a:tcPr marL="38100" marR="38100" marT="38100" marB="38100" vert="vert270">
@@ -489,17 +512,27 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 								{ idx: 1, name: 'lnR' },
 								{ idx: 0, name: 'lnT' },
 								{ idx: 2, name: 'lnB' },
-							].forEach(obj => {
-								if (border[obj.idx].type !== 'none') {
-									strXml += `<a:${obj.name} w="${valToPts(border[obj.idx].pt)}" cap="flat" cmpd="sng" algn="ctr">`
-									strXml += `<a:solidFill>${createColorElement(border[obj.idx].color)}</a:solidFill>`
-									strXml += `<a:prstDash val="${border[obj.idx].type === 'dash' ? 'sysDash' : 'solid'
-									}"/><a:round/><a:headEnd type="none" w="med" len="med"/><a:tailEnd type="none" w="med" len="med"/>`
-									strXml += `</a:${obj.name}>`
-								} else {
-									strXml += `<a:${obj.name} w="0" cap="flat" cmpd="sng" algn="ctr"><a:noFill/></a:${obj.name}>`
-								}
-							})
+							].forEach(obj => { strXml += genXmlCellBorder(obj.name, border[obj.idx]) })
+						}
+
+						// 5b: Diagonals follow the four edges in the CT_TableCellProperties sequence, and are
+						// written only when asked for - unlike the edges, which are always emitted as a set
+						if (cellOpts.borderDiagonalDown) strXml += genXmlCellBorder('lnTlToBr', cellOpts.borderDiagonalDown)
+						if (cellOpts.borderDiagonalUp) strXml += genXmlCellBorder('lnBlToTr', cellOpts.borderDiagonalUp)
+
+						// 5c: `a:cell3D` follows the diagonals and precedes the fill
+						if (cellOpts.cell3D) {
+							const cell3D = cellOpts.cell3D
+							const bevel = cell3D.bevel ?? {}
+							let bevelAttrs = ''
+							if (typeof bevel.width === 'number' && isFinite(bevel.width) && bevel.width >= 0) bevelAttrs += ` w="${inch2Emu(bevel.width)}"`
+							if (typeof bevel.height === 'number' && isFinite(bevel.height) && bevel.height >= 0) bevelAttrs += ` h="${inch2Emu(bevel.height)}"`
+							if (bevel.preset) bevelAttrs += ` prst="${bevel.preset}"`
+							// `rig` and `dir` are both required on CT_LightRig, so a partial rig is dropped rather
+							// than emitted as an element PowerPoint would refuse to open
+							const lightRig = cell3D.lightRig?.rig && cell3D.lightRig.dir ? `<a:lightRig rig="${cell3D.lightRig.rig}" dir="${cell3D.lightRig.dir}"/>` : ''
+							// `a:bevel` is required by the schema, so it is always written
+							strXml += `<a:cell3D${cell3D.material ? ` prstMaterial="${cell3D.material}"` : ''}><a:bevel${bevelAttrs}/>${lightRig}</a:cell3D>`
 						}
 
 						// 6: Close cell Properties & Cell
