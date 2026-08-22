@@ -1,6 +1,6 @@
 /** OOXML relationship-part generation. */
 
-import { COMMENT, CRLF } from '../core-enums'
+import { COMMENT, CRLF, OOXML_CHARTEX, isChartexType } from '../core-enums'
 import { ISlideRel, ISlideRelChart, ISlideRelMedia, PresSlide, SlideLayout } from '../core-interfaces'
 import { encodeXmlEntities } from '../gen-utils'
 
@@ -22,7 +22,9 @@ function slideObjectRelationsToXml (slide: PresSlide | SlideLayout, defaultRels:
 	})
 	;(slide._relsChart || []).forEach((rel: ISlideRelChart) => {
 		lastRid = Math.max(lastRid, rel.rId)
-		strXml += `<Relationship Id="rId${rel.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="${rel.Target}"/>`
+		// A chartex part is reached through a Microsoft relationship type, not the ECMA-376 chart one
+		const relType = isChartexType(rel.opts._type) ? OOXML_CHARTEX.relType : 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart'
+		strXml += `<Relationship Id="rId${rel.rId}" Type="${relType}" Target="${rel.Target}"/>`
 	})
 	;(slide._relsMedia || []).forEach((rel: ISlideRelMedia) => {
 		const relRid = rel.rId.toString()

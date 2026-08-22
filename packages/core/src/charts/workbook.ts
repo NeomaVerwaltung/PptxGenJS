@@ -1,9 +1,10 @@
 /** Embedded Excel workbook generation for charts. */
 
-import { CHART_TYPE, OOXML_EXT } from '../core-enums'
+import { CHART_TYPE, OOXML_EXT, isChartexType } from '../core-enums'
 import { ISlideRelChart } from '../core-interfaces'
 import { encodeXmlEntities } from '../gen-utils'
 import JSZip from 'jszip'
+import { makeXmlChartEx } from './chartex'
 import { makeXmlCharts } from './xml'
 import { chartColorsPartName, chartStylePartName, makeXmlChartColors, makeXmlChartStyle } from './style'
 import { CHART_STYLE } from '../core-enums'
@@ -591,7 +592,9 @@ function addWorkbookToPresentation (chartObject: ISlideRelChart, zipExcel: JSZip
 
 				// 2: Create the chart.xml and rel files
 				// PowerPoint finds the style and colour-style parts by relationship type, so they are
-				// declared here rather than referenced from inside `chartN.xml`
+				// declared here rather than referenced from inside `chartN.xml`.
+				// A chartex layout cannot be laid out without them at all, so it needs no special case here.
+				const isChartex = isChartexType(chartObject.opts._type)
 				zip.file(
 					'ppt/charts/_rels/' + chartObject.fileName + '.rels',
 					'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -601,7 +604,7 @@ function addWorkbookToPresentation (chartObject: ISlideRelChart, zipExcel: JSZip
 					`<Relationship Id="rId3" Type="${CHART_STYLE.styleRelType}" Target="style${chartObject.globalId}.xml"/>` +
 					'</Relationships>'
 				)
-				zip.file(`ppt/charts/${chartObject.fileName}`, makeXmlCharts(chartObject))
+				zip.file(`ppt/charts/${chartObject.fileName}`, isChartex ? makeXmlChartEx(chartObject) : makeXmlCharts(chartObject))
 				zip.file(chartColorsPartName(chartObject.globalId), makeXmlChartColors(chartObject.opts?.chartColorStyle))
 				zip.file(chartStylePartName(chartObject.globalId), makeXmlChartStyle(chartObject.opts?.chartStyle))
 

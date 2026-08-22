@@ -133,6 +133,17 @@ test('office: LibreOffice opens and converts a generated presentation', { skip: 
 			[['Region', 'Sales'], ['West', '20'], ['East', '31'], ['North', '18']],
 			{ x: 0.5, y: 0.5, w: 8, tableStyleId: '{A1B2C3D4-1111-2222-3333-444455556666}', firstRow: true, bandRow: true }
 		)
+		// ChartEx charts are a separate part type wrapped in `mc:AlternateContent`. A consumer that does not
+		// understand the `cx1` namespace must take the fallback shape and still open the file cleanly - which
+		// is what this asserts; it does not prove the chartex layouts themselves render.
+		const chartExSlide = pptx.addSlide()
+		chartExSlide.addChart(pptx.ChartType.waterfall, [{ name: 'Cash flow', labels: ['Start', 'Q1', 'Q2', 'End'], values: [100, 30, -20, 110] }], { x: 0.5, y: 0.5, w: 4.5, h: 3, showTitle: true, title: 'Waterfall', showValue: true, chartExSubtotals: [0, 3] })
+		chartExSlide.addChart(pptx.ChartType.treemap, [{ name: 'Revenue', labels: ['A', 'B', 'C'], values: [10, 20, 30] }], { x: 5.2, y: 0.5, w: 4.5, h: 3 })
+		chartExSlide.addChart(pptx.ChartType.funnel, [{ name: 'Pipeline', labels: ['Leads', 'Qualified', 'Won'], values: [500, 120, 30] }], { x: 0.5, y: 3.8, w: 4.5, h: 3, showLegend: true })
+		chartExSlide.addChart(pptx.ChartType.boxWhisker, [
+			{ name: 'Alpha', labels: ['x', 'y', 'z'], values: [1, 5, 9] },
+			{ name: 'Beta', labels: ['x', 'y', 'z'], values: [2, 6, 4] },
+		], { x: 5.2, y: 3.8, w: 4.5, h: 3, chartExMeanLine: true })
 		pptx.addSlide({ transition: { type: 'morph', duration: 1200 } }).addText('modern transition', { x: 0.5, y: 0.5, w: 5, h: 0.5 })
 		await writeFile(presentationPath, (await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
 

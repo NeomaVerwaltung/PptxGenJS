@@ -47,6 +47,7 @@ The stable public XML/chart entry points are re-exported by `packages/core/src/x
 | Media | `encodeSlideMediaRels()` in `packages/core/src/gen-media.ts` | base64 data on media relationships | candidate selection, duplicate propagation, Node file/HTTP and browser loaders, SVG preview generation |
 | Tables | `getSlidesForTableRows()` in `packages/core/src/gen-tables.ts` | paginated internal table-row models | margin, width, column, height, and row-pagination calculations |
 | Chart XML | `makeXmlCharts()` in `packages/core/src/charts/xml.ts` | `ppt/charts/chart*.xml` | chart-space start, chart types, axes, plot area/legend, chart-space end |
+| ChartEx XML | `makeXmlChartEx()` in `packages/core/src/charts/chartex.ts` | `ppt/charts/chartEx*.xml` | chart data, series/layout props, axes, title/legend; sidecar constants in `chartex-parts.ts` |
 | Chart workbook | `createExcelWorksheet()` in `packages/core/src/charts/workbook.ts` | embedded `.xlsx` and chart relationship parts | folders, fixed package files, shared strings, table XML, worksheet XML, final embedding |
 
 ## Slide XML
@@ -137,9 +138,29 @@ Its phases are:
 - `addWorksheetFile()` writes chart values, including bubble, scatter, normal category, and multi-level category layouts.
 - `addWorkbookToPresentation()` generates the nested archive, adds it beneath `ppt/embeddings/`, creates the chart `.rels` part, and emits the chart XML.
 
+### ChartEx XML
+
+`makeXmlChartEx(rel)` is a parallel emitter for the PowerPoint 2016+ layouts (MS-ODRAWXML 2.1). It shares
+the embedded workbook with the classic path and nothing else: the layout is chosen by `cx:series@layoutId`
+rather than by element name, and the data lives in `cx:chartData` as one `cx:data` block per series.
+`addWorkbookToPresentation()` branches on the chart type and writes the chartex part, its two extra
+sidecar relationships, and the shared style/colors parts.
+
+Routing a chartex chart touches five call sites, all keyed off `isChartexType()`:
+
+| Call site | What changes |
+| --- | --- |
+| `gen-objects.ts:addChartDefinition()` | part is named `chartExN.xml`; a chartex type inside a combo array throws |
+| `charts/workbook.ts:addWorkbookToPresentation()` | writes the `cx:` part plus `chartExStyle.xml` / `chartExColors.xml` |
+| `xml/package.ts:makeXmlContTypes()` | Microsoft content type for the part, and the two sidecar overrides once per package |
+| `xml/relationships.ts` | Microsoft `chartEx` relationship type instead of the ECMA-376 chart one |
+| `xml/slide.ts` | frame is wrapped in `mc:AlternateContent` with a locked text-shape fallback |
+
 ### Chart and workbook invariants
 
 - The chart XML's external-data `rId1` must match the chart relationship written beside the chart file.
+- ChartEx cell references assume the worksheet layout `addWorksheetFile()` writes: labels in column A, one series per column from B. Changing that layout breaks `cx:f` in every chartex part.
+- A chartex part is invalid to PowerPoint without both sidecar parts; they are shared across the package, so removing the last chartex chart must also drop their content-type overrides.
 - Multi-type charts require matching category/value axis arrays and a declared secondary-axis user when multiple value axes are present.
 - Bubble, scatter, normal category, and multi-level category sheets intentionally have different ranges and shared-string layouts.
 - Preserve numeric zero values. `0` is chart data, not absence.

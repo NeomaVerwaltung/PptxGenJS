@@ -42,9 +42,31 @@ Two rules keep this page truthful, both enforced by `packages/core/test/ms-pptx-
 | `p16:sectionZm` | `p:spTree` via `mc:AlternateContent` | n/a (`mc:Choice Requires="p16"`) | powerpoint/2016/sectionzoom | §2.2.15 / §2.9 | `slide.addSectionZoom()` |
 | `p16:summaryZm` | `p:spTree` via `mc:AlternateContent` | n/a (`mc:Choice Requires="p16"`) | powerpoint/2016/summaryzoom | §2.2.15 / §2.11 | `slide.addSummaryZoom()` |
 | `p166:zmPr` | inside a zoom object | n/a | powerpoint/2016/6/main | §2.2.15 | zoom `returnToParent`/`showBg`/`transitionDur` |
+| `cx:chart` | `p:spTree` via `mc:AlternateContent` | n/a (`mc:Choice Requires="cx1"`) | drawing/2014/chartex | MS-ODRAWXML §2.1 | `addChart()` with a chartex type |
 
 Each row's package contract is asserted in `packages/core/test/contracts.test.ts` or `packages/core/test/issues.test.ts`, and the
 LibreOffice round-trip in `packages/core/test/office-open.test.ts` (`npm run test:office`) covers them end to end.
+
+## Extension parts
+
+Most optional markup is an element inside a standard part. ChartEx is the exception: it is a whole
+part in a Microsoft namespace, reached by a Microsoft relationship type, because ECMA-376 has no
+markup for the PowerPoint 2016 chart layouts.
+
+| Part | Content type | Relationship type | Written when |
+| :-- | :-- | :-- | :-- |
+| `/ppt/charts/chartExN.xml` | `application/vnd.ms-office.chartex+xml` | `…/office/2014/relationships/chartEx` | `addChart()` with `waterfall`, `funnel`, `treemap`, `sunburst`, `histogram`, or `boxWhisker` |
+| `/ppt/charts/chartExStyle.xml` | `application/vnd.ms-office.chartstyle+xml` | `…/office/2011/relationships/chartStyle` | alongside any chartex part; one shared copy per package |
+| `/ppt/charts/chartExColors.xml` | `application/vnd.ms-office.chartcolorstyle+xml` | `…/office/2011/relationships/chartColorStyle` | alongside any chartex part; one shared copy per package |
+
+The style and colors parts are not optional: PowerPoint resolves every visual property of a chartex
+layout through them and reports the package as damaged if either is missing. The embedded workbook
+stays `rId1` on the chart part, which is what `cx:externalData` points at.
+
+The `mc:Choice` gates on the schema generation the layout needs — `drawing/2015/9/8/chartex` for the
+2016 launch layouts, `drawing/2015/10/21/chartex` for funnel. Where PowerPoint writes a rendered
+preview image in the `mc:Fallback`, PptxGenJS writes a locked text shape of the same size: no
+rasterizer is available, and a silently-editable fallback could drift from the chart part.
 
 ## Not emitted
 

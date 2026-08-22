@@ -230,6 +230,12 @@ declare namespace PptxGenJS {
 		'pie' = 'pie',
 		'radar' = 'radar',
 		'scatter' = 'scatter',
+		'boxWhisker' = 'boxWhisker',
+		'funnel' = 'funnel',
+		'histogram' = 'histogram',
+		'sunburst' = 'sunburst',
+		'treemap' = 'treemap',
+		'waterfall' = 'waterfall',
 	}
 	export enum OutputType {
 		'arraybuffer' = 'arraybuffer',
@@ -680,6 +686,9 @@ declare namespace PptxGenJS {
 	// @source `core-interfaces.d.ts` (via import)
 	// @code `import { CHART_NAME, PLACEHOLDER_TYPES, SHAPE_NAME, SLIDE_OBJECT_TYPES, TEXT_HALIGN, TEXT_VALIGN, WRITE_OUTPUT_TYPE } from './core-enums'`
 	export type CHART_NAME = 'area' | 'bar' | 'bar3D' | 'bubble' | 'doughnut' | 'line' | 'pie' | 'radar' | 'scatter'
+		| CHARTEX_NAME
+	/** PowerPoint 2016+ chart types; emitted as a `cx:chartSpace` part (MS-ODRAWXML 2.1) rather than ECMA-376 `c:chartSpace` */
+	export type CHARTEX_NAME = 'boxWhisker' | 'funnel' | 'histogram' | 'sunburst' | 'treemap' | 'waterfall'
 	export enum PLACEHOLDER_TYPES {
 		'title' = 'title',
 		'body' = 'body',
@@ -3518,6 +3527,43 @@ declare namespace PptxGenJS {
 		 */
 		radarStyle?: 'standard' | 'marker' | 'filled' // TODO: convert to 'radar'|'markers'|'filled' in 4.0 (verbatim with PPT app UI)
 	}
+	/**
+	 * Options for the PowerPoint 2016+ chartex layouts (waterfall, funnel, treemap, sunburst, histogram,
+	 * box & whisker). Each is ignored by every other chart type.
+	 * @see MS-ODRAWXML 2.1
+	 */
+	export interface IChartPropsChartEx {
+		/**
+		 * MS-PPT > Chart Type > Histogram > Format Axis > "Number of bins"
+		 * - fixed bin count; ignored when `chartExBinSize` is set
+		 * - omit both to let PowerPoint choose the bins
+		 * @example 8
+		 */
+		chartExBinCount?: number
+		/**
+		 * MS-PPT > Chart Type > Histogram > Format Axis > "Bin width"
+		 * - fixed bin width, in value-axis units; takes precedence over `chartExBinCount`
+		 * @example 5
+		 */
+		chartExBinSize?: number
+		/**
+		 * MS-PPT > Chart Type > Box & Whisker > Format Data Series > "Show mean line"
+		 * @default false
+		 */
+		chartExMeanLine?: boolean
+		/**
+		 * MS-PPT > Chart Type > Treemap > Format Data Series > "Treemap Label Options"
+		 * - how a parent category label is drawn over its children
+		 * @default overlapping
+		 */
+		chartExParentLabels?: 'none' | 'overlapping' | 'banner'
+		/**
+		 * MS-PPT > Chart Type > Waterfall > "Set as Total"
+		 * - zero-based indexes of the data points drawn as absolute totals rather than deltas
+		 * @example [0, 4] // first and fifth bars are totals
+		 */
+		chartExSubtotals?: number[]
+	}
 	export interface IChartPropsDataLabel {
 		dataLabelBkgrdColors?: boolean
 		dataLabelColor?: string
@@ -3589,6 +3635,7 @@ declare namespace PptxGenJS {
 		IChartPropsBase,
 		IChartPropsChartBar,
 		IChartPropsChartDoughnut,
+		IChartPropsChartEx,
 		IChartPropsChartLine,
 		IChartPropsChartPie,
 		IChartPropsChartRadar,

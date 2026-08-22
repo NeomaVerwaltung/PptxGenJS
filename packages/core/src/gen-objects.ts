@@ -6,6 +6,7 @@ import {
 	BARCHART_COLORS,
 	CHART_NAME,
 	CHART_TYPE,
+	isChartexType,
 	DEF_CELL_BORDER,
 	DEF_CELL_MARGIN_IN,
 	DEF_CHART_BORDER,
@@ -183,6 +184,11 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 	let tmpOpt: IChartOptsLib | IOptsChartData[] | null = null
 	let tmpData: IOptsChartData[] = []
 	if (Array.isArray(type)) {
+		// A chartex layout owns the whole `cx:plotArea` and cannot share one with an ECMA-376 chart type,
+		// so a multi-type spec that names one would silently render as an empty frame
+		const chartexSpec = type.find(obj => isChartexType(obj.type))
+		if (chartexSpec) throw new Error(`pptxgenjs: chart type "${String(chartexSpec.type)}" cannot be combined in a multi-type chart`)
+
 		// For multi-type charts there needs to be data for each type,
 		// as well as a single data source for non-series operations.
 		// The data is indexed below to keep the data in order when segmented
@@ -386,22 +392,48 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 		delete options.catAxisMultiLevelLabels
 	}
 
+	// ChartEx: reject values PowerPoint would reject, so a bad option degrades to the layout default
+	// rather than to the repair dialog
+	if (isChartexType(options._type)) {
+		const pointCount = Math.max(...tmpData.map(item => (item.values ?? []).length), 0)
+		if (options.chartExSubtotals) {
+			const valid = options.chartExSubtotals.filter(idx => Number.isInteger(idx) && idx >= 0 && idx < pointCount)
+			if (valid.length !== options.chartExSubtotals.length) console.warn(`Warning: chart.chartExSubtotals must be data point indexes 0-${pointCount - 1}.`)
+			options.chartExSubtotals = valid
+		}
+		if (options.chartExBinCount !== undefined && (!Number.isInteger(options.chartExBinCount) || options.chartExBinCount < 1)) {
+			console.warn('Warning: chart.chartExBinCount must be a positive integer.')
+			delete options.chartExBinCount
+		}
+		if (options.chartExBinSize !== undefined && (isNaN(options.chartExBinSize) || options.chartExBinSize <= 0)) {
+			console.warn('Warning: chart.chartExBinSize must be greater than 0.')
+			delete options.chartExBinSize
+		}
+		if (options.chartExParentLabels && !['none', 'overlapping', 'banner'].includes(options.chartExParentLabels)) {
+			console.warn('Warning: chart.chartExParentLabels options: `none`, `overlapping`, `banner`.')
+			delete options.chartExParentLabels
+		}
+	}
+
 	// STEP 4: Set props (_type already set to chart on the literal above).
 	// The chart object stores the position/placeholder that gen-xml reads; chart `fill`
 	// is a color string (vs ObjectOptions' ShapeFillProps) and is never read here, so it
 	// is reconciled to undefined to keep the stored object a valid ObjectOptions.
-	resultObject.options = { ...options, fill: undefined }
+	resultObject.options = { ...options, _chartType: options._type, fill: undefined }
 	resultObject.chartRid = getNewRelId(target)
 
 	// STEP 5: Add this chart to this Slide Rels (rId/rels count spans all slides! Count all images to get next rId)
+	// ChartEx charts are a separate part type with their own content type and relationship type,
+	// so the file name is what every downstream emitter keys off (see `xml/package.ts`)
+	const fileName = isChartexType(options._type) ? `chartEx${chartId}.xml` : `chart${chartId}.xml`
 	target._relsChart.push({
 		rId: getNewRelId(target),
 		data: tmpData,
 		opts: options,
 		type: options._type,
 		globalId: chartId,
-		fileName: `chart${chartId}.xml`,
-		Target: `/ppt/charts/chart${chartId}.xml`,
+		fileName,
+		Target: `/ppt/charts/${fileName}`,
 	})
 
 	target._slideObjects.push(resultObject)
