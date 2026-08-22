@@ -701,7 +701,8 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 					(slideItemObj.options.hyperlink?._rId ? genXmlHyperlink(slideItemObj.options.hyperlink, 'click', 'shape') : '') +
 					(slideItemObj.options.hyperlinkHover?._rId ? genXmlHyperlink(slideItemObj.options.hyperlinkHover, 'hover', 'shape') : ''))
 				strSlideXml += genXmlCNvSpPr(slideItemObj.options)
-				strSlideXml += `<p:nvPr>${slideItemObj._type === 'placeholder' ? genXmlPlaceholder(slideItemObj) : genXmlPlaceholder(placeholderObj)}</p:nvPr>`
+				// `userDrawn` on `p:nvPr` marks a shape as author-placed rather than layout furniture
+				strSlideXml += `<p:nvPr${slideItemObj.options?.userDrawn === true ? ' userDrawn="1"' : ''}>${slideItemObj._type === 'placeholder' ? genXmlPlaceholder(slideItemObj) : genXmlPlaceholder(placeholderObj)}</p:nvPr>`
 				strSlideXml += '</p:nvSpPr><p:spPr>'
 				strSlideXml += `<a:xfrm${locationAttr}>`
 				strSlideXml += `<a:off x="${x}" y="${y}"/>`

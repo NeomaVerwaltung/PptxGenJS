@@ -95,6 +95,15 @@ test('office: LibreOffice opens and converts a generated presentation', async ()
 		styleSlide.addShape(pptx.ShapeType.rect, { x: 0.5, y: 0.5, w: 3, h: 1.5, styleRef: { line: 1, fill: 3, effect: 2, font: 'minor' } })
 		styleSlide.addShape(pptx.ShapeType.ellipse, { x: 4.5, y: 0.5, w: 3, h: 1.5, styleRef: { fill: 1, color: 'accent2' } })
 		styleSlide.addImage({ data: PNG_4x2, x: 0.5, y: 2.5, w: 2, h: 1, styleRef: { line: 2 } })
+		// layout metadata - the round-trip fixture for #149
+		pptx.defineSlideMaster({
+			title: 'SECTION HEADER',
+			layoutType: 'secHead',
+			matchingName: 'Section Header',
+			colorMapOverride: { bg1: 'dk1', tx1: 'lt1' },
+			objects: [{ placeholder: { options: { name: 'secTitle', type: 'title', x: 0.5, y: 2, w: 9, h: 1.5 }, text: 'Section' } }],
+		})
+		pptx.addSlide({ masterName: 'SECTION HEADER' }).addText('section', { placeholder: 'secTitle' })
 		pptx.addSlide({ transition: { type: 'morph', duration: 1200 } }).addText('modern transition', { x: 0.5, y: 0.5, w: 5, h: 0.5 })
 		await writeFile(presentationPath, (await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
 

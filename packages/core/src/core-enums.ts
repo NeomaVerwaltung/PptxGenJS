@@ -120,6 +120,17 @@ export const OOXML_EXT = {
 } as const
 export const LAYOUT_IDX_SERIES_BASE = 2147483649
 /** ECMA-376 20.1.10.51 ST_PresetPatternVal - the 54 preset fill patterns */
+/**
+ * ECMA-376 20.1.6.2 CT_ColorMapping - the identity map, which is what `a:masterClrMapping` means
+ * - all twelve attributes are required, so a partial `colorMapOverride` is filled from this
+ */
+export const DEF_COLOR_MAP = Object.freeze({
+	bg1: 'lt1', tx1: 'dk1', bg2: 'lt2', tx2: 'dk2',
+	accent1: 'accent1', accent2: 'accent2', accent3: 'accent3',
+	accent4: 'accent4', accent5: 'accent5', accent6: 'accent6',
+	hlink: 'hlink', folHlink: 'folHlink',
+})
+
 /** ECMA-376 20.1.10.42 ST_SchemeColorVal - every slot `a:schemeClr@val` accepts */
 export const SCHEME_COLOR_VALUES = new Set([
 	'bg1', 'tx1', 'bg2', 'tx2', 'dk1', 'lt1', 'dk2', 'lt2',

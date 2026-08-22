@@ -1668,6 +1668,22 @@ declare namespace PptxGenJS {
 		 * margin (points)
 		 */
 		margin?: Margin
+		/**
+		 * Text direction inside the placeholder (`p:ph@orient`)
+		 * @default horz
+		 */
+		orient?: 'horz' | 'vert'
+		/**
+		 * How much of the layout the placeholder covers (`p:ph@sz`)
+		 * @default full
+		 */
+		sz?: 'full' | 'half' | 'quarter'
+		/**
+		 * Mark the placeholder as drawn by the author rather than inherited layout furniture
+		 * (`p:nvPr@userDrawn`)
+		 * @default false
+		 */
+		userDrawn?: boolean
 	}
 	/**
 	 * Editing locks (ECMA-376 20.1.2.2.34 `a:spLocks` and its siblings)
@@ -3557,11 +3573,82 @@ declare namespace PptxGenJS {
 		 */
 		margin?: Margin // TODO: convert to inches in 4.0 (valid values are 0-22)
 	}
+	/**
+	 * ECMA-376 20.1.10.14 ST_ColorSchemeIndex - a slot in the theme's colour scheme
+	 */
+	export type ColorSchemeIndex = 'dk1' | 'lt1' | 'dk2' | 'lt2' | 'accent1' | 'accent2' | 'accent3' | 'accent4' | 'accent5' | 'accent6' | 'hlink' | 'folHlink'
+
+	/**
+	 * Per-layout colour map override (`p:clrMapOvr` > `a:overrideClrMapping`)
+	 * - all twelve attributes are required by the schema, so anything left unset is filled from the
+	 *   identity map (which is what inheriting the master's mapping means)
+	 */
+	export interface ColorMapOverrideProps {
+		bg1?: ColorSchemeIndex
+		tx1?: ColorSchemeIndex
+		bg2?: ColorSchemeIndex
+		tx2?: ColorSchemeIndex
+		accent1?: ColorSchemeIndex
+		accent2?: ColorSchemeIndex
+		accent3?: ColorSchemeIndex
+		accent4?: ColorSchemeIndex
+		accent5?: ColorSchemeIndex
+		accent6?: ColorSchemeIndex
+		hlink?: ColorSchemeIndex
+		folHlink?: ColorSchemeIndex
+	}
+
+	/**
+	 * ECMA-376 19.7.15 ST_SlideLayoutType - the placeholder arrangement a layout describes
+	 * - PowerPoint's layout gallery and its Reset Layout command read this
+	 */
+	export type SlideLayoutType = 'title' | 'tx' | 'twoColTx' | 'tbl' | 'txAndChart' | 'chartAndTx' | 'dgm' | 'chart' | 'txAndClipArt' | 'clipArtAndTx' | 'titleOnly' | 'blank' | 'txAndObj' | 'objAndTx' | 'objOnly' | 'obj' | 'txAndMedia' | 'mediaAndTx' | 'objOverTx' | 'txOverObj' | 'txAndTwoObj' | 'twoObjAndTx' | 'twoObjOverTx' | 'fourObj' | 'vertTx' | 'clipArtAndVertTx' | 'vertTitleAndTx' | 'vertTitleAndTxOverChart' | 'twoObj' | 'objAndTwoObj' | 'twoObjAndObj' | 'cust' | 'secHead' | 'twoTxTwoObj' | 'objTx' | 'picTx'
+
 	export interface SlideMasterProps {
 		/**
 		 * Unique name for this master
 		 */
 		title: string
+		/**
+		 * Which placeholder arrangement this layout describes (`p:sldLayout@type`)
+		 * - PowerPoint's New Slide gallery groups layouts by this, and Reset Layout trusts it
+		 * @default cust
+		 */
+		layoutType?: SlideLayoutType
+		/**
+		 * Name shown for the layout in PowerPoint's gallery (`@matchingName`)
+		 * - unset writes nothing; PowerPoint then falls back to the layout name from `title`
+		 */
+		matchingName?: string
+		/**
+		 * Keep the layout in the deck even when no slide uses it (`@preserve`)
+		 * @default true
+		 */
+		preserve?: boolean
+		/**
+		 * Draw the master's shapes behind slides using this layout (`@showMasterSp`)
+		 * @default true
+		 */
+		showMasterShapes?: boolean
+		/**
+		 * Play the master's placeholder animations on slides using this layout (`@showMasterPhAnim`)
+		 * @default true
+		 */
+		showMasterPlaceholderAnimation?: boolean
+		/**
+		 * Mark the layout as drawn by the author rather than generated (`@userDrawn`)
+		 * @default false
+		 */
+		userDrawn?: boolean
+		/**
+		 * Remap the theme's colour slots for this layout only (`p:clrMapOvr`)
+		 * - with none set the layout inherits the master's mapping, which is today's behaviour
+		 */
+		colorMapOverride?: ColorMapOverrideProps
+		/**
+		 * Transition applied to slides using this layout (`p:transition`)
+		 */
+		transition?: SlideTransitionProps
 		background?: BackgroundProps
 		margin?: Margin
 		slideNumber?: SlideNumberProps
