@@ -39,6 +39,15 @@ slide.addChart(pres.ChartType.line, dataChartAreaLine, { x: 1, y: 1, w: 8, h: 4 
 - Only a chartex chart can occupy its plot area: passing one inside a combo-chart array throws.
 - Supported options are the general ones (`title`, `showTitle`, `showLegend`, `legendPos`, `showValue`, `showLabel`, `dataLabel*`, series `color`) plus the chartex-specific props below. Axis, gridline, 3D, and bar options do not apply.
 
+Four differences from the classic chart types, each of which warns rather than producing a broken file:
+
+- **One series per chart**, except `boxWhisker`, which plots one distribution per series. Extra series are dropped.
+- **Single-level `labels` only.** Multi-level category labels are a classic-chart feature; only the first level is used.
+- **`chartColors` does not apply.** These layouts colour each data point from the chart colour style, so a series-level fill would flatten a treemap to one colour. Use a series `color` to override the whole series.
+- **`dataLabelPosition` takes `ctr`, `inEnd`, or `outEnd`** - `cx:dataLabels@pos` is its own vocabulary, not `c:dLblPos`. Anything else falls back to the layout default.
+
+A `histogram` bins raw values itself, so `labels` may be omitted entirely.
+
 ```typescript
 slide.addChart(
   pres.ChartType.waterfall,

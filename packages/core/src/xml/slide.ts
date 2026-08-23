@@ -10,6 +10,7 @@ import {
 	EMU,
 	MS_PPTX_ID_BASE,
 	OOXML_CHARTEX,
+	chartExRequiresNs,
 	OOXML_EXT,
 	isChartexType,
 	SLDNUMFLDID,
@@ -37,7 +38,6 @@ import { genXmlPlaceholder, genXmlTextBody } from './text'
 import { genXmlContentPart } from './content-part'
 import { genXmlZoom } from './zoom'
 import { alternateContent } from './markup-compat'
-import { chartExRequiresNs } from '../charts/chartex'
 
 const ImageSizingXml = {
 	cover: function (imgSize: { w: number, h: number }, boxDim: { w: number, h: number, x: number, y: number }) {
@@ -983,7 +983,7 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 				break
 
 			case SLIDE_OBJECT_TYPES.chart: {
-				const chartType = slideItemObj.options._chartType
+				const chartType = slideItemObj.options._type
 				const isChartex = isChartexType(chartType)
 				const graphicDataUri = isChartex ? OOXML_CHARTEX.ns : 'http://schemas.openxmlformats.org/drawingml/2006/chart'
 				const chartRef = isChartex
@@ -1165,14 +1165,20 @@ function genXmlCreationId (slide: PresSlide | SlideLayout): string {
  * @returns {string} XML string
  */
 function genXmlChartExFallback (shapeId: number, slideItemObj: ISlideObject, box: { x: number, y: number, cx: number, cy: number }): string {
-	const name = slideItemObj.options?.objectName ?? 'Chart'
+	const options = slideItemObj.options ?? {}
+	const name = options.objectName ?? 'Chart'
 	const message = 'This chart is not available in your version of PowerPoint. Editing this shape or saving this file in a different format will permanently break the chart.'
+	// The shape mirrors the chart frame's non-visual props - id, name, alt text - and nothing else.
+	// A chart's `title` is the chart title, not the alt-text title `p:cNvPr@title` carries, so the
+	// chart options are deliberately not passed through as NonVisualProps.
+	// `noTextEdit` is not optional here: an edited fallback would no longer match the chart part.
+	const locks = genXmlLocks('a:spLocks', undefined, ' noTextEdit="1"')
 
 	return (
 		'<p:sp>' +
 		'<p:nvSpPr>' +
-		`<p:cNvPr id="${shapeId}" name="${name}" descr="${encodeXmlEntities(slideItemObj.options?.altText ?? message)}"/>` +
-		'<p:cNvSpPr><a:spLocks noTextEdit="1"/></p:cNvSpPr>' +
+		genXmlCNvPr(shapeId, name, undefined, options.altText ?? message) +
+		`<p:cNvSpPr>${locks}</p:cNvSpPr>` +
 		'<p:nvPr/>' +
 		'</p:nvSpPr>' +
 		`<p:spPr><a:xfrm><a:off x="${box.x}" y="${box.y}"/><a:ext cx="${box.cx}" cy="${box.cy}"/></a:xfrm>` +

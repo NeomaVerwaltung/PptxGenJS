@@ -11,7 +11,7 @@
  * chartex-specific workbook layout is needed.
  */
 
-import { CHARTEX_LAYOUT_ID, CHARTEX_NAME, CHART_TYPE, DEF_FONT_COLOR, DEF_FONT_SIZE, DEF_FONT_TITLE_SIZE, OOXML_CHARTEX } from '../core-enums'
+import { CHARTEX_LAYOUT_ID, CHARTEX_NAME, DEF_FONT_COLOR, DEF_FONT_SIZE, DEF_FONT_TITLE_SIZE, OOXML_CHARTEX, isChartexType } from '../core-enums'
 import { IChartOptsLib, IOptsChartData, ISlideRelChart } from '../core-interfaces'
 import { createColorElement, encodeXmlEntities, getUuid } from '../gen-utils'
 import { getExcelColName } from './utils'
@@ -32,15 +32,24 @@ function firstLabelLevel (data: IOptsChartData[]): string[] {
 	return Array.isArray(level) ? level : []
 }
 
-/** `<cx:pt idx="N">value</cx:pt>` for every point of one dimension */
-function makePoints (values: Array<string | number>): string {
-	return values.map((value, idx) => `<cx:pt idx="${idx}">${encodeXmlEntities(String(value))}</cx:pt>`).join('')
+/**
+ * `<cx:pt idx="N">value</cx:pt>` for every point of one dimension
+ * - a missing point is written empty: `cx:pt` inside a `cx:numDim` must be a number, so the string
+ *   "null" would be a schema violation (the ECMA-376 emitter blanks the same case)
+ */
+function makePoints (values: Array<string | number | null | undefined>): string {
+	return values
+		.map((value, idx) => `<cx:pt idx="${idx}">${value === null || value === undefined ? '' : encodeXmlEntities(String(value))}</cx:pt>`)
+		.join('')
 }
 
-/** Absolute A1 reference for one column of the embedded worksheet, excluding the header row */
-function columnRef (colIdx: number, rowCount: number): string {
+/**
+ * Absolute A1 reference for one column of the embedded worksheet, excluding the header row.
+ * The range length must equal the dimension's own `ptCount`, so each dimension passes its own.
+ */
+function columnRef (colIdx: number, pointCount: number): string {
 	const col = getExcelColName(colIdx)
-	return `${SHEET}!$${col}$2:$${col}$${rowCount + 1}`
+	return `${SHEET}!$${col}$2:$${col}$${pointCount + 1}`
 }
 
 /**
@@ -55,13 +64,12 @@ function makeChartData (rel: ISlideRelChart, chartType: CHARTEX_NAME): string {
 	return rel.data
 		.map((series, seriesIdx) => {
 			const values = series.values ?? []
-			const rowCount = Math.max(values.length, labels.length)
 			const catDim =
 				chartType === 'histogram' || labels.length === 0
 					? ''
-					: `<cx:strDim type="cat"><cx:f>${columnRef(1, rowCount)}</cx:f><cx:lvl ptCount="${labels.length}">${makePoints(labels)}</cx:lvl></cx:strDim>`
+					: `<cx:strDim type="cat"><cx:f>${columnRef(1, labels.length)}</cx:f><cx:lvl ptCount="${labels.length}">${makePoints(labels)}</cx:lvl></cx:strDim>`
 			const valDim =
-				`<cx:numDim type="${dimType}"><cx:f>${columnRef(seriesIdx + 2, rowCount)}</cx:f>` +
+				`<cx:numDim type="${dimType}"><cx:f>${columnRef(seriesIdx + 2, values.length)}</cx:f>` +
 				`<cx:lvl ptCount="${values.length}" formatCode="General">${makePoints(values)}</cx:lvl></cx:numDim>`
 
 			return `<cx:data id="${seriesIdx}">${catDim}${valDim}</cx:data>`
@@ -134,16 +142,15 @@ function makeLayoutProps (opts: IChartOptsLib, chartType: CHARTEX_NAME): string 
 /** One `cx:series` per data row. Order follows CT_Series: tx, spPr, dataLabels, dataId, layoutPr, axisId. */
 function makeSeries (rel: ISlideRelChart, chartType: CHARTEX_NAME): string {
 	const layoutId = CHARTEX_LAYOUT_ID[chartType]
-	const chartColors = rel.opts.chartColors ?? []
 	const dataLabels = makeDataLabels(rel.opts, chartType)
 	const layoutPr = makeLayoutProps(rel.opts, chartType)
 
 	return rel.data
 		.map((series, idx) => {
 			const nameCell = `${SHEET}!$${getExcelColName(idx + 2)}$1`
-			const color = series.color ?? chartColors[idx % (chartColors.length || 1)]
-			// A single-series layout paints each point from the color style; only an explicit series color overrides it
-			const spPr = series.color && color !== 'transparent' ? `<cx:spPr><a:solidFill>${createColorElement(color)}</a:solidFill></cx:spPr>` : ''
+			// These layouts color each data point from the chart color style, so `chartColors` does not
+			// apply - a series-level fill would flatten a treemap to one color. Only `color` overrides it.
+			const spPr = series.color && series.color !== 'transparent' ? `<cx:spPr><a:solidFill>${createColorElement(series.color)}</a:solidFill></cx:spPr>` : ''
 
 			return (
 				`<cx:series layoutId="${layoutId}" uniqueId="{${getUuid('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx').toUpperCase()}}">` +
@@ -192,7 +199,9 @@ function makeTitle (opts: IChartOptsLib): string {
 
 function makeLegend (opts: IChartOptsLib): string {
 	if (!opts.showLegend) return ''
-	return `<cx:legend pos="${opts.legendPos || 'r'}" align="ctr" overlay="0"/>`
+	// `cx:legend@pos` takes l/r/t/b only; PowerPoint stores the library's `tr` as a top-aligned right legend
+	const isTopRight = opts.legendPos === 'tr'
+	return `<cx:legend pos="${isTopRight ? 'r' : opts.legendPos || 'r'}" align="${isTopRight ? 'min' : 'ctr'}" overlay="0"/>`
 }
 
 /**
@@ -201,12 +210,9 @@ function makeLegend (opts: IChartOptsLib): string {
  * @returns {string} chartex part XML
  */
 export function makeXmlChartEx (rel: ISlideRelChart): string {
-	// The caller only routes chartex types here; the guard keeps `chartType` typed without a cast
-	const chartType = rel.opts._type
-	if (typeof chartType !== 'string' || !(chartType in CHARTEX_LAYOUT_ID)) {
-		throw new Error(`pptxgenjs: "${String(chartType)}" is not a chartex chart type`)
-	}
-	const type = chartType as CHARTEX_NAME
+	// The caller only routes chartex types here; the predicate narrows the union without a cast
+	const type = rel.opts._type
+	if (!isChartexType(type)) throw new Error(`pptxgenjs: "${String(type)}" is not a chartex chart type`)
 
 	return (
 		'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -227,9 +233,4 @@ export function makeXmlChartEx (rel: ISlideRelChart): string {
 		'</cx:chart>' +
 		'</cx:chartSpace>'
 	)
-}
-
-/** `mc:Choice@Requires` namespace gating this chart type - funnel arrived a schema revision after the launch set */
-export function chartExRequiresNs (chartType: CHART_TYPE | CHARTEX_NAME): string {
-	return chartType === CHART_TYPE.FUNNEL ? OOXML_CHARTEX.requiresFunnel : OOXML_CHARTEX.requires2016
 }

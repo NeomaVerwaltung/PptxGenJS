@@ -967,6 +967,14 @@ export const CHARTEX_LAYOUT_ID: Record<CHARTEX_NAME, string> = {
 	waterfall: 'waterfall',
 }
 
+/**
+ * `mc:Choice@Requires` namespace gating a chartex chart type
+ * - funnel arrived a schema revision after the 2016 launch layouts, so it gates on a later generation
+ */
+export function chartExRequiresNs (chartType: unknown): string {
+	return chartType === CHART_TYPE.FUNNEL ? OOXML_CHARTEX.requiresFunnel : OOXML_CHARTEX.requires2016
+}
+
 /** True when `type` is emitted through the chartex pipeline rather than the ECMA-376 one */
 export function isChartexType (type: unknown): type is CHARTEX_NAME {
 	return typeof type === 'string' && Object.prototype.hasOwnProperty.call(CHARTEX_LAYOUT_ID, type)

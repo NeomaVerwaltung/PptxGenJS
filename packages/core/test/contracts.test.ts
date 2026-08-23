@@ -1745,3 +1745,87 @@ test('contract: classic charts are untouched by the chartex path', async () => {
 	assert.equal(barZip.file('ppt/charts/chartExStyle.xml'), null, 'the chartex sidecars must not appear without a chartex chart')
 	assert.doesNotMatch(await readPart(barZip, '[Content_Types].xml'), /chartex|chartstyle|chartcolorstyle/, 'no chartex content type may be declared without a chartex chart')
 })
+
+test('contract: chartex data that PowerPoint would reject is normalized, not emitted', async () => {
+	const warnings: string[] = []
+	const origWarn = console.warn
+	let ragged = ''
+	let multi = ''
+	let extra = ''
+	let noLabels = ''
+	try {
+		console.warn = (msg: string) => warnings.push(String(msg))
+		// a blank point must stay blank: `cx:pt` in a numeric dimension has to be a number, and the range
+		// each `cx:f` names has to be exactly as long as its sibling's `ptCount`
+		ragged = await chartExXml('waterfall', [{ name: 'Cash', labels: ['a', 'b', 'c', 'd'], values: [10, null, 30] }])
+		// chartex cell references assume one label column; the multi-level worksheet layout shifts series right
+		multi = await chartExXml('treemap', [{ name: 'R', labels: [['Gear', 'Berg', 'Motr'], ['Mech', '', '']], values: [1, 2, 3] }])
+		// only box & whisker plots more than one series
+		extra = await chartExXml('waterfall', [{ name: 'A', labels: ['a', 'b'], values: [1, 2] }, { name: 'B', labels: ['a', 'b'], values: [3, 4] }])
+		// a histogram bins raw values, so a label-less series is the natural call shape
+		noLabels = await chartExXml('histogram', [{ name: 'Ages', values: [1, 2, 3] }])
+	} finally {
+		console.warn = origWarn
+	}
+
+	assert.doesNotMatch(ragged, />null<|>undefined</, 'a missing point must be blank, not the string "null"')
+	assert.match(ragged, /<cx:pt idx="1"><\/cx:pt>/, 'a missing point must still hold its index')
+	assert.match(ragged, /<cx:f>Sheet1!\$B\$2:\$B\$4<\/cx:f><cx:lvl ptCount="3"/, 'the value range must be as long as its ptCount')
+	assert.match(ragged, /<cx:f>Sheet1!\$A\$2:\$A\$5<\/cx:f><cx:lvl ptCount="4"/, 'the category range must be as long as its ptCount')
+
+	// column A holds the leaf labels, so that is the level the chart must name
+	assert.match(multi, /<cx:f>Sheet1!\$A\$2:\$A\$4<\/cx:f><cx:lvl ptCount="3"><cx:pt idx="0">Gear</, 'the leaf label level must address column A')
+	assert.match(multi, /type="size"><cx:f>Sheet1!\$B\$2:\$B\$4</, 'values must stay in column B after flattening')
+	assert.doesNotMatch(multi, /Mech/, 'the extra label level must be dropped, not emitted')
+
+	assert.equal((extra.match(/<cx:series /g) ?? []).length, 1, 'a waterfall plots one series')
+	assert.match(noLabels, /<cx:numDim type="val"><cx:f>Sheet1!\$B\$2:\$B\$4</, 'a label-less histogram must still address its values')
+
+	assert.equal(warnings.length, 2, `expected one warning per normalization, got: ${warnings.join(' | ')}`)
+
+	// box & whisker is the one layout that keeps every series
+	const box = await chartExXml('boxWhisker', [{ name: 'A', labels: ['a', 'b'], values: [1, 2] }, { name: 'B', labels: ['a', 'b'], values: [3, 4] }])
+	assert.equal((box.match(/<cx:series /g) ?? []).length, 2, 'box & whisker plots one series per distribution')
+})
+
+test('contract: chartex options use the cx vocabulary, not the ECMA-376 one', async () => {
+	// `cx:legend@pos` takes l/r/t/b only - the library's `tr` has no chartex equivalent
+	assert.match(
+		await chartExXml('treemap', [{ name: 'R', labels: ['a'], values: [1] }], { showLegend: true, legendPos: 'tr' }),
+		/<cx:legend pos="r" align="min" overlay="0"\/>/,
+		'top-right must become a top-aligned right legend'
+	)
+
+	// `dataLabelPosition` must reach the emitter rather than being validated against `c:dLblPos`
+	const warnings: string[] = []
+	const origWarn = console.warn
+	let honoured = ''
+	let rejected = ''
+	try {
+		console.warn = (msg: string) => warnings.push(String(msg))
+		honoured = await chartExXml('waterfall', [{ name: 'C', labels: ['a', 'b'], values: [1, 2] }], { showValue: true, dataLabelPosition: 'ctr' })
+		rejected = await chartExXml('waterfall', [{ name: 'C', labels: ['a', 'b'], values: [1, 2] }], { showValue: true, dataLabelPosition: 'bestFit' })
+	} finally {
+		console.warn = origWarn
+	}
+
+	assert.match(honoured, /<cx:dataLabels pos="ctr">/, 'a valid chartex label position must survive')
+	assert.equal(warnings.length, 1, `only the unsupported position may warn, got: ${warnings.join(' | ')}`)
+	assert.match(rejected, /<cx:dataLabels pos="outEnd">/, 'an unsupported position falls back to the layout default')
+
+	// these layouts colour each point from the colour style; only an explicit series colour overrides it
+	const coloured = await chartExXml('funnel', [{ name: 'P', labels: ['a', 'b'], values: [5, 3], color: 'FF0000' }], { chartColors: ['00FF00'] })
+	assert.match(coloured, /<cx:spPr><a:solidFill><a:srgbClr val="FF0000"\/><\/a:solidFill><\/cx:spPr>/, 'an explicit series colour must be emitted')
+	assert.doesNotMatch(coloured, /00FF00/, 'chartColors does not apply to a chartex layout')
+})
+
+test('contract: the chartex fallback shape mirrors the chart frame it replaces', async () => {
+	const { zip } = await buildChartEx('waterfall', WATERFALL_DATA, { objectName: 'WF', title: 'Quarterly cash', showTitle: true })
+	const slideXml = await readPart(zip, 'ppt/slides/slide1.xml')
+	const fallback = slideXml.slice(slideXml.indexOf('<mc:Fallback>'), slideXml.indexOf('</mc:Fallback>'))
+
+	assert.match(fallback, /name="WF"/, 'the fallback must carry the chart name')
+	// a chart's `title` is the chart title, not the alt-text title `p:cNvPr@title` carries
+	assert.doesNotMatch(fallback, /title="Quarterly cash"/, 'the chart title must not leak into the alt-text title')
+	assert.match(fallback, /<a:spLocks noTextEdit="1"\/>/, 'the fallback must never be text-editable')
+})

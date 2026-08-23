@@ -3132,7 +3132,7 @@ export interface ObjectOptions extends ImageProps, PositionProps, ShapeProps, Ta
 	/** image added without `w`/`h`: size it from the image itself during export @internal */
 	_sizeFromImage?: boolean
 	/** chart type, so the slide emitter can tell a chartex frame from an ECMA-376 one @internal */
-	_chartType?: CHART_NAME | IChartMulti[]
+	_type?: CHART_NAME | IChartMulti[]
 
 	cx?: Coord
 	cy?: Coord

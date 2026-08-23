@@ -262,8 +262,17 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 	// NOTE: a multi-type chart has no single type to validate against, so only the name translation applies there
 	if (options.dataLabelPosition) {
 		const chartType = Array.isArray(options._type) ? undefined : options._type
-		options.dataLabelPosition = resolveDataLabelPosition(options.dataLabelPosition, chartType, options.barGrouping) as typeof options.dataLabelPosition
-		if (!options.dataLabelPosition) delete options.dataLabelPosition
+		if (isChartexType(chartType)) {
+			// `cx:dataLabels@pos` is its own vocabulary, not `c:dLblPos`; these three are the values the
+			// shipped chartex writers emit, so anything else falls back to the layout's own default
+			if (!['ctr', 'inEnd', 'outEnd'].includes(options.dataLabelPosition)) {
+				console.warn(`[pptxgenjs] dataLabelPosition '${options.dataLabelPosition}' is not valid for a '${chartType}' chart - ignoring it (valid: ctr, inEnd, outEnd)`)
+				delete options.dataLabelPosition
+			}
+		} else {
+			options.dataLabelPosition = resolveDataLabelPosition(options.dataLabelPosition, chartType, options.barGrouping) as typeof options.dataLabelPosition
+			if (!options.dataLabelPosition) delete options.dataLabelPosition
+		}
 	}
 	options.dataLabelBkgrdColors = options.dataLabelBkgrdColors || !options.dataLabelBkgrdColors ? options.dataLabelBkgrdColors : false
 	if (!['b', 'l', 'r', 't', 'tr'].includes(options.legendPos || '')) options.legendPos = 'r'
@@ -395,6 +404,25 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 	// ChartEx: reject values PowerPoint would reject, so a bad option degrades to the layout default
 	// rather than to the repair dialog
 	if (isChartexType(options._type)) {
+		// Only box & whisker plots more than one distribution; the other layouts own the whole plot area
+		// and a second `cx:series` is either dropped or flagged for repair
+		if (options._type !== CHART_TYPE.BOX_WHISKER && tmpData.length > 1) {
+			console.warn(`Warning: a ${options._type} chart plots one series - ignoring ${tmpData.length - 1} extra series.`)
+			tmpData = tmpData.slice(0, 1)
+		}
+		tmpData.forEach(item => {
+			// ChartEx cell references assume one label column; the multi-level worksheet layout shifts the
+			// series columns right, so the extra levels are dropped rather than silently misaddressed
+			if (item.labels && item.labels.length > 1) {
+				console.warn('Warning: chartex charts take single-level category labels - using the first level.')
+				item.labels = [item.labels[0]]
+			}
+			// A histogram bins raw values and needs no categories, but the embedded worksheet still writes a
+			// row per label, so a label-less series is padded rather than left to fail during write()
+			const labels = item.labels?.[0]
+			if (!labels || labels.length === 0) item.labels = [Array<string>((item.values ?? []).length).fill('')]
+		})
+
 		const pointCount = Math.max(...tmpData.map(item => (item.values ?? []).length), 0)
 		if (options.chartExSubtotals) {
 			const valid = options.chartExSubtotals.filter(idx => Number.isInteger(idx) && idx >= 0 && idx < pointCount)
@@ -419,7 +447,7 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 	// The chart object stores the position/placeholder that gen-xml reads; chart `fill`
 	// is a color string (vs ObjectOptions' ShapeFillProps) and is never read here, so it
 	// is reconciled to undefined to keep the stored object a valid ObjectOptions.
-	resultObject.options = { ...options, _chartType: options._type, fill: undefined }
+	resultObject.options = { ...options, fill: undefined }
 	resultObject.chartRid = getNewRelId(target)
 
 	// STEP 5: Add this chart to this Slide Rels (rId/rels count spans all slides! Count all images to get next rId)
