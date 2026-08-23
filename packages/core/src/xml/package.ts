@@ -6,8 +6,11 @@
  * @returns {string} `Override` elements
  */
 function chartContentTypes (rel: ISlideRelChart): string {
+	// a chartex chart part carries a Microsoft content type; its style and colour parts are the same
+	// ones every chart gets, so only the first Override differs
+	const partContentType = isChartexType(rel.opts._type) ? OOXML_CHARTEX.partContentType : 'application/vnd.openxmlformats-officedocument.drawingml.chart+xml'
 	return (
-		`<Override PartName="${rel.Target}" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>` +
+		`<Override PartName="${rel.Target}" ContentType="${partContentType}"/>` +
 		`<Override PartName="/${chartColorsPartName(rel.globalId)}" ContentType="${CHART_STYLE.colorsContentType}"/>` +
 		`<Override PartName="/${chartStylePartName(rel.globalId)}" ContentType="${CHART_STYLE.styleContentType}"/>`
 	)
@@ -17,7 +20,7 @@ function chartContentTypes (rel: ISlideRelChart): string {
  * OOXML package-part rendering.
  */
 
-import { CHART_STYLE, COMMENT, CRLF, DEF_COLOR_MAP, DEF_GUIDE_COLOR, EMU, LAYOUT_IDX_SERIES_BASE, OOXML_EXT, SLDNUMFLDID, SLIDE_OBJECT_TYPES } from '../core-enums'
+import { CHART_STYLE, COMMENT, CRLF, DEF_COLOR_MAP, DEF_GUIDE_COLOR, EMU, LAYOUT_IDX_SERIES_BASE, OOXML_CHARTEX, OOXML_EXT, SLDNUMFLDID, SLIDE_OBJECT_TYPES, isChartexType } from '../core-enums'
 import { ColorMapOverrideProps, DocumentProps, EmbeddedFont, ISlideRelChart, TableStyleBorderProps, TableStyleProps, TableStylePartProps, GuideProps, IPresentationProps, PresSlide, SectionProps, SlideLayout, SlideShowProps } from '../core-interfaces'
 import { createColorElement, encodeXmlEntities, genXmlColorSelection, getUuid, inch2Emu } from '../gen-utils'
 import { genXmlLine } from './line'

@@ -9,7 +9,10 @@ import {
 	DEF_TEXT_SHADOW,
 	EMU,
 	MS_PPTX_ID_BASE,
+	OOXML_CHARTEX,
+	chartExRequiresNs,
 	OOXML_EXT,
+	isChartexType,
 	SLDNUMFLDID,
 	SHAPE_TYPE,
 	SLIDE_OBJECT_TYPES,
@@ -34,6 +37,7 @@ import { genXmlCNvPr, genXmlCNvSpPr, genXmlLocks } from './non-visual'
 import { genXmlPlaceholder, genXmlTextBody } from './text'
 import { genXmlContentPart } from './content-part'
 import { genXmlZoom } from './zoom'
+import { alternateContent } from './markup-compat'
 
 const ImageSizingXml = {
 	cover: function (imgSize: { w: number, h: number }, boxDim: { w: number, h: number, x: number, y: number }) {
@@ -978,21 +982,41 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 				strSlideXml += genXmlZoom(slideItemObj, slide, sections, { shapeId: idx + 2, x, y, cx, cy, locationAttr })
 				break
 
-			case SLIDE_OBJECT_TYPES.chart:
-				strSlideXml += '<p:graphicFrame>'
-				strSlideXml += ' <p:nvGraphicFramePr>'
-				strSlideXml += `   <p:cNvPr id="${idx + 2}" name="${slideItemObj.options.objectName}" descr="${encodeXmlEntities(slideItemObj.options.altText || '')}"/>`
-				strSlideXml += '   <p:cNvGraphicFramePr/>'
-				strSlideXml += `   <p:nvPr>${genXmlPlaceholder(placeholderObj)}</p:nvPr>`
-				strSlideXml += ' </p:nvGraphicFramePr>'
-				strSlideXml += ` <p:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${cy}"/></p:xfrm>`
-				strSlideXml += ' <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
-				strSlideXml += '  <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">'
-				strSlideXml += `   <c:chart r:id="rId${slideItemObj.chartRid}" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"/>`
-				strSlideXml += '  </a:graphicData>'
-				strSlideXml += ' </a:graphic>'
-				strSlideXml += '</p:graphicFrame>'
+			case SLIDE_OBJECT_TYPES.chart: {
+				const chartType = slideItemObj.options._type
+				const isChartex = isChartexType(chartType)
+				const graphicDataUri = isChartex ? OOXML_CHARTEX.ns : 'http://schemas.openxmlformats.org/drawingml/2006/chart'
+				const chartRef = isChartex
+					? `<cx:chart xmlns:cx="${OOXML_CHARTEX.ns}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rId${slideItemObj.chartRid}"/>`
+					: `<c:chart r:id="rId${slideItemObj.chartRid}" xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"/>`
+
+				let frameXml = '<p:graphicFrame>'
+				frameXml += ' <p:nvGraphicFramePr>'
+				frameXml += `   <p:cNvPr id="${idx + 2}" name="${slideItemObj.options.objectName}" descr="${encodeXmlEntities(slideItemObj.options.altText || '')}"/>`
+				frameXml += '   <p:cNvGraphicFramePr/>'
+				frameXml += `   <p:nvPr>${genXmlPlaceholder(placeholderObj)}</p:nvPr>`
+				frameXml += ' </p:nvGraphicFramePr>'
+				frameXml += ` <p:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${cy}"/></p:xfrm>`
+				frameXml += ' <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+				frameXml += `  <a:graphicData uri="${graphicDataUri}">`
+				frameXml += `   ${chartRef}`
+				frameXml += '  </a:graphicData>'
+				frameXml += ' </a:graphic>'
+				frameXml += '</p:graphicFrame>'
+
+				// A chartex frame replaces a standard graphic frame, so MS-PPTX 2.2 requires it be offered
+				// through `mc:AlternateContent`. PowerPoint's own fallback is a rendered preview image, which
+				// cannot be produced here - a locked text shape carrying the same message is the honest
+				// equivalent for a consumer that does not understand the chartex namespace.
+				strSlideXml += isChartex
+					? alternateContent({
+						namespaces: { cx1: chartExRequiresNs(chartType) },
+						choice: frameXml,
+						fallback: genXmlChartExFallback(idx + 2, slideItemObj, { x, y, cx, cy }),
+					})
+					: frameXml
 				break
+			}
 
 			default:
 				strSlideXml += ''
@@ -1127,6 +1151,47 @@ function genXmlCreationId (slide: PresSlide | SlideLayout): string {
  * @param {PresSlide|SlideLayout} slideObject - slide object created within createSlideObject
  * @return {string} XML string with <p:cSld> as the root
  */
+/**
+ * Fallback shape for a chartex graphic frame (`mc:Fallback`).
+ *
+ * PowerPoint writes a rendered preview picture here, which this library cannot produce without a
+ * rasterizer. A locked, non-editable text shape occupying the same box is the closest honest
+ * substitute: a consumer that rejects the `mc:Choice` still sees where the chart is and why it is
+ * not drawn, and cannot silently edit it into something that no longer matches the chart part.
+ *
+ * @param {number} shapeId - `p:cNvPr@id`, shared with the frame inside the `mc:Choice`
+ * @param {ISlideObject} slideItemObj - the chart object
+ * @param {object} box - EMU position and extent, matching the frame inside the `mc:Choice`
+ * @returns {string} XML string
+ */
+function genXmlChartExFallback (shapeId: number, slideItemObj: ISlideObject, box: { x: number, y: number, cx: number, cy: number }): string {
+	const options = slideItemObj.options ?? {}
+	const name = options.objectName ?? 'Chart'
+	const message = 'This chart is not available in your version of PowerPoint. Editing this shape or saving this file in a different format will permanently break the chart.'
+	// The shape mirrors the chart frame's non-visual props - id, name, alt text - and nothing else.
+	// A chart's `title` is the chart title, not the alt-text title `p:cNvPr@title` carries, so the
+	// chart options are deliberately not passed through as NonVisualProps.
+	// `noTextEdit` is not optional here: an edited fallback would no longer match the chart part.
+	const locks = genXmlLocks('a:spLocks', undefined, ' noTextEdit="1"')
+
+	return (
+		'<p:sp>' +
+		'<p:nvSpPr>' +
+		genXmlCNvPr(shapeId, name, undefined, options.altText ?? message) +
+		`<p:cNvSpPr>${locks}</p:cNvSpPr>` +
+		'<p:nvPr/>' +
+		'</p:nvSpPr>' +
+		`<p:spPr><a:xfrm><a:off x="${box.x}" y="${box.y}"/><a:ext cx="${box.cx}" cy="${box.cy}"/></a:xfrm>` +
+		'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>' +
+		'<a:solidFill><a:prstClr val="white"/></a:solidFill>' +
+		'<a:ln><a:solidFill><a:prstClr val="black"/></a:solidFill></a:ln></p:spPr>' +
+		'<p:txBody><a:bodyPr vertOverflow="clip" horzOverflow="clip" wrap="square"><a:normAutofit/></a:bodyPr><a:lstStyle/>' +
+		`<a:p><a:r><a:rPr lang="en-US" sz="1100"/><a:t>${encodeXmlEntities(message)}</a:t></a:r></a:p>` +
+		'</p:txBody>' +
+		'</p:sp>'
+	)
+}
+
 export function slideObjectToXml (slide: PresSlide | SlideLayout, sections: SectionProps[] = []): string {
 	let strSlideXml = slide._name ? `<p:cSld name="${encodeXmlEntities(slide._name)}">` : '<p:cSld>'
 	strSlideXml += genXmlSlideBackground(slide)

@@ -31,6 +31,43 @@ slide.addChart(pres.ChartType.line, dataChartAreaLine, { x: 1, y: 1, w: 8, h: 4 
 - Chart type can be any one of `pptx.ChartType`
 - Currently: `pptx.ChartType.area`, `pptx.ChartType.bar`, `pptx.ChartType.bar3d`, `pptx.ChartType.bubble`, `pptx.ChartType.bubble3d`, `pptx.ChartType.doughnut`, `pptx.ChartType.line`, `pptx.ChartType.pie`, `pptx.ChartType.radar`, `pptx.ChartType.scatter`
 
+### Modern Chart Types (PowerPoint 2016+)
+
+- `pptx.ChartType.waterfall`, `pptx.ChartType.funnel`, `pptx.ChartType.treemap`, `pptx.ChartType.sunburst`, `pptx.ChartType.histogram`, `pptx.ChartType.boxWhisker`
+- These layouts have no ECMA-376 markup. PptxGenJS writes them to a separate **chartex** part (`cx:chartSpace`, MS-ODRAWXML 2.1) and wraps the slide's graphic frame in `mc:AlternateContent`, so a consumer that predates PowerPoint 2016 shows a placeholder shape instead of a broken chart.
+- They take the same `data` shape as every other chart type - one entry per series, with `labels` and `values` - and the same embedded workbook, so the chart stays editable in PowerPoint.
+- Only a chartex chart can occupy its plot area: passing one inside a combo-chart array throws.
+- Supported options are the general ones (`title`, `showTitle`, `showLegend`, `legendPos`, `showValue`, `showLabel`, `dataLabel*`, series `color`) plus the chartex-specific props below. Axis, gridline, 3D, and bar options do not apply.
+
+Four differences from the classic chart types, each of which warns rather than producing a broken file:
+
+- **One series per chart**, except `boxWhisker`, which plots one distribution per series. Extra series are dropped.
+- **Single-level `labels` only.** Multi-level category labels are a classic-chart feature; only the first level is used.
+- **`chartColors` does not apply.** These layouts colour each data point from the chart colour style, so a series-level fill would flatten a treemap to one colour. Use a series `color` to override the whole series.
+- **`dataLabelPosition` takes `ctr`, `inEnd`, or `outEnd`** - `cx:dataLabels@pos` is its own vocabulary, not `c:dLblPos`. Anything else falls back to the layout default.
+
+A `histogram` bins raw values itself, so `labels` may be omitted entirely.
+
+```typescript
+slide.addChart(
+  pres.ChartType.waterfall,
+  [{ name: "Cash flow", labels: ["Start", "Q1", "Q2", "Q3", "End"], values: [100, 30, -20, 40, 150] }],
+  { x: 1, y: 1, w: 8, h: 4, showValue: true, chartExSubtotals: [0, 4] }
+);
+```
+
+#### ChartEx Options (`IChartPropsChartEx`)
+
+| Option                 | Type     | Default         | Description                                          | Possible Values                                    |
+| :--------------------- | :------- | :-------------- | :--------------------------------------------------- | :------------------------------------------------- |
+| `chartExSubtotals`     | number[] |                 | waterfall: points drawn as absolute totals           | zero-based data point indexes (Ex: `[0, 4]`)       |
+| `chartExBinCount`      | number   |                 | histogram: fixed number of bins                      | positive integer; ignored if `chartExBinSize` is set |
+| `chartExBinSize`       | number   |                 | histogram: fixed bin width, in value-axis units      | greater than 0                                     |
+| `chartExMeanLine`      | boolean  | `false`         | box & whisker: draw the mean line                    | `true` or `false`                                  |
+| `chartExParentLabels`  | string   | `'overlapping'` | treemap: how a parent label is drawn over its children | `none`, `overlapping`, `banner`                  |
+
+Omitting both histogram bin options leaves PowerPoint's automatic binning in place.
+
 ### Combo Charts
 
 - Chart types can be any one of `pptx.ChartType`, although `pptx.ChartType.area`, `pptx.ChartType.bar`, and `pptx.ChartType.line` will give the best results.

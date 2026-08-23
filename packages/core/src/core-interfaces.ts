@@ -2681,6 +2681,43 @@ export interface IChartPropsChartRadar {
 	 */
 	radarStyle?: 'standard' | 'marker' | 'filled' // TODO: convert to 'radar'|'markers'|'filled' in 4.0 (verbatim with PPT app UI)
 }
+/**
+ * Options for the PowerPoint 2016+ chartex layouts (waterfall, funnel, treemap, sunburst, histogram,
+ * box & whisker). Each is ignored by every other chart type.
+ * @see MS-ODRAWXML 2.1
+ */
+export interface IChartPropsChartEx {
+	/**
+	 * MS-PPT > Chart Type > Histogram > Format Axis > "Number of bins"
+	 * - fixed bin count; ignored when `chartExBinSize` is set
+	 * - omit both to let PowerPoint choose the bins
+	 * @example 8
+	 */
+	chartExBinCount?: number
+	/**
+	 * MS-PPT > Chart Type > Histogram > Format Axis > "Bin width"
+	 * - fixed bin width, in value-axis units; takes precedence over `chartExBinCount`
+	 * @example 5
+	 */
+	chartExBinSize?: number
+	/**
+	 * MS-PPT > Chart Type > Box & Whisker > Format Data Series > "Show mean line"
+	 * @default false
+	 */
+	chartExMeanLine?: boolean
+	/**
+	 * MS-PPT > Chart Type > Treemap > Format Data Series > "Treemap Label Options"
+	 * - how a parent category label is drawn over its children
+	 * @default overlapping
+	 */
+	chartExParentLabels?: 'none' | 'overlapping' | 'banner'
+	/**
+	 * MS-PPT > Chart Type > Waterfall > "Set as Total"
+	 * - zero-based indexes of the data points drawn as absolute totals rather than deltas
+	 * @example [0, 4] // first and fifth bars are totals
+	 */
+	chartExSubtotals?: number[]
+}
 export interface IChartPropsDataLabel {
 	dataLabelBkgrdColors?: boolean
 	dataLabelColor?: string
@@ -2752,6 +2789,7 @@ export interface IChartOpts
 	IChartPropsBase,
 	IChartPropsChartBar,
 	IChartPropsChartDoughnut,
+	IChartPropsChartEx,
 	IChartPropsChartLine,
 	IChartPropsChartPie,
 	IChartPropsChartRadar,
@@ -3093,6 +3131,8 @@ export interface ObjectOptions extends ImageProps, PositionProps, ShapeProps, Ta
 	isLinked?: boolean
 	/** image added without `w`/`h`: size it from the image itself during export @internal */
 	_sizeFromImage?: boolean
+	/** chart type, so the slide emitter can tell a chartex frame from an ECMA-376 one @internal */
+	_type?: CHART_NAME | IChartMulti[]
 
 	cx?: Coord
 	cy?: Coord
