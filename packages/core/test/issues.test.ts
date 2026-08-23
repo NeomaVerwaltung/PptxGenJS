@@ -1014,3 +1014,69 @@ test('#157: charts get a style part and a colour-style part', async () => {
 	assert.ok(!Object.keys(bareZip.files).some(name => /colors\d+\.xml|style\d+\.xml/.test(name)), 'a chartless deck gained chart style parts')
 	assert.ok(!(await readPart(bareZip, '[Content_Types].xml')).includes('chartstyle'), 'a chartless deck gained a chart style content type')
 })
+
+test('#133: custom table style definitions reach ppt/tableStyles.xml', async () => {
+	const STYLE_ID = '{A1B2C3D4-1111-2222-3333-444455556666}'
+	const pptx = new pptxgen()
+	pptx.tableStyles = [
+		{
+			id: STYLE_ID,
+			name: 'NEOMA Blue',
+			// one style carrying every part, so the CT_TableStyle child order is actually exercised
+			wholeTable: { color: { scheme: 'tx1' }, borders: { top: { color: '4472C4', width: 1 }, insideH: { color: 'D9D9D9', width: 0.5 } } },
+			band1H: { fill: { color: 'DEEAF6' } },
+			band2H: { fill: { color: 'FFFFFF' } },
+			band1V: { fill: { color: 'EEEEEE' } },
+			band2V: { fill: { color: 'DDDDDD' } },
+			lastCol: { bold: true },
+			firstCol: { bold: true },
+			lastRow: { bold: true, italic: false },
+			seCell: { fill: { color: '111111' } },
+			swCell: { fill: { color: '222222' } },
+			firstRow: { bold: true, color: 'FFFFFF', fill: { color: '4472C4' } },
+			neCell: { fill: { color: '333333' } },
+			nwCell: { fill: { color: '444444' } },
+		},
+		{ id: 'not-a-guid', name: 'Bad' },
+		{ id: '{A1B2C3D4-1111-2222-3333-444455556667}', name: '' },
+	]
+	pptx.addSlide().addTable([['H1', 'H2'], ['a', 'b']], { x: 1, y: 1, w: 6, tableStyleId: STYLE_ID, firstRow: true, bandRow: true })
+
+	const xml = await readPart(await writeZip(pptx), 'ppt/tableStyles.xml')
+	assert.ok(xml.includes(`<a:tblStyle styleId="${STYLE_ID}" styleName="NEOMA Blue">`), `tblStyle wrong: ${xml.slice(0, 300)}`)
+	// both attributes are required by CT_TableStyle, so a bad id or a missing name is dropped
+	assert.equal((xml.match(/<a:tblStyle /g) ?? []).length, 1, 'an invalid table style was emitted')
+	assert.ok(!xml.includes('not-a-guid'), 'a malformed style id reached the output')
+
+	// CT_TableStyle fixes this order, and it is neither alphabetical nor intuitive: lastCol before
+	// firstCol, and firstRow between swCell and neCell
+	const expected = ['wholeTbl', 'band1H', 'band2H', 'band1V', 'band2V', 'lastCol', 'firstCol', 'lastRow', 'seCell', 'swCell', 'firstRow', 'neCell', 'nwCell']
+	const emitted = (xml.match(/<a:(wholeTbl|band1H|band2H|band1V|band2V|lastCol|firstCol|lastRow|seCell|swCell|firstRow|neCell|nwCell)>/g) ?? []).map(tag => tag.slice(3, -1))
+	assert.deepEqual(emitted, expected, 'CT_TableStyle child order violated')
+
+	// `a:tcTxStyle` precedes `a:tcStyle`, and inside the cell style `a:tcBdr` precedes the fill
+	const firstRow = /<a:firstRow>[\s\S]*?<\/a:firstRow>/.exec(xml)?.[0] ?? ''
+	assert.ok(firstRow.includes('<a:tcTxStyle b="on"><a:srgbClr val="FFFFFF"/></a:tcTxStyle>'), `firstRow text style wrong: ${firstRow}`)
+	assert.ok(firstRow.indexOf('<a:tcTxStyle') < firstRow.indexOf('<a:tcStyle'), 'tcTxStyle must precede tcStyle')
+	assert.ok(firstRow.includes('<a:tcStyle><a:fill><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill></a:fill></a:tcStyle>'), `firstRow fill wrong: ${firstRow}`)
+
+	const whole = /<a:wholeTbl>[\s\S]*?<\/a:wholeTbl>/.exec(xml)?.[0] ?? ''
+	assert.ok(whole.indexOf('<a:tcBdr>') < whole.indexOf('</a:tcStyle>'), 'tcBdr must sit inside tcStyle')
+	assert.ok(whole.includes('<a:top><a:ln w="12700"><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill></a:ln></a:top>'), `border wrong: ${whole}`)
+	assert.ok(whole.includes('<a:insideH><a:ln w="6350">'), 'insideH border missing')
+
+	// `b`/`i` are ST_OnOffStyleType: an unset property is left to the theme, `false` is written as "off"
+	const lastRow = /<a:lastRow>[\s\S]*?<\/a:lastRow>/.exec(xml)?.[0] ?? ''
+	assert.ok(lastRow.includes('b="on"') && lastRow.includes('i="off"'), `lastRow on/off wrong: ${lastRow}`)
+	assert.ok(!(/<a:band1H>[\s\S]*?<\/a:band1H>/.exec(xml)?.[0] ?? '').includes('b='), 'an unset bold was written')
+
+	// `@def` is what a table with no `tableStyleId` inherits, so a custom style must not repoint it
+	assert.ok(xml.includes('def="{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"'), '@def was repointed at a custom style')
+
+	// with no custom styles the part is the same self-closing stub as before
+	const bare = new pptxgen()
+	bare.addSlide().addTable([['a']], { x: 1, y: 1, w: 2 })
+	const bareXml = await readPart(await writeZip(bare), 'ppt/tableStyles.xml')
+	assert.ok(bareXml.trimEnd().endsWith('def="{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"/>'), `default tableStyles.xml changed: ${bareXml}`)
+	assert.ok(!bareXml.includes('<a:tblStyle '), 'a default deck gained a table style')
+})

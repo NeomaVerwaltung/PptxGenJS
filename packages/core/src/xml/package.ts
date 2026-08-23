@@ -18,8 +18,9 @@ function chartContentTypes (rel: ISlideRelChart): string {
  */
 
 import { CHART_STYLE, COMMENT, CRLF, DEF_COLOR_MAP, DEF_GUIDE_COLOR, EMU, LAYOUT_IDX_SERIES_BASE, OOXML_EXT, SLDNUMFLDID, SLIDE_OBJECT_TYPES } from '../core-enums'
-import { ColorMapOverrideProps, DocumentProps, EmbeddedFont, ISlideRelChart, GuideProps, IPresentationProps, PresSlide, SectionProps, SlideLayout, SlideShowProps } from '../core-interfaces'
-import { createColorElement, encodeXmlEntities, getUuid, inch2Emu } from '../gen-utils'
+import { ColorMapOverrideProps, DocumentProps, EmbeddedFont, ISlideRelChart, TableStyleBorderProps, TableStyleProps, TableStylePartProps, GuideProps, IPresentationProps, PresSlide, SectionProps, SlideLayout, SlideShowProps } from '../core-interfaces'
+import { createColorElement, encodeXmlEntities, genXmlColorSelection, getUuid, inch2Emu } from '../gen-utils'
+import { genXmlLine } from './line'
 import { makeXmlEmbeddedFontLst } from '../gen-fonts'
 import { genXmlSlideExtLst, slideObjectToXml } from './slide'
 import { chartColorsPartName, chartStylePartName } from '../charts/style'
@@ -624,8 +625,96 @@ function makeXmlPresPropsExtLst (pres?: IPresentationProps): string {
  * @see: http://openxmldeveloper.org/discussions/formats/f/13/p/2398/8107.aspx
  * @return {string} XML
  */
-export function makeXmlTableStyles (): string {
-	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${CRLF}<a:tblStyleLst xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" def="{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"/>`
+/**
+ * The GUID `a:tblStyleLst@def` has always carried - PowerPoint's "Medium Style 2 - Accent 1"
+ */
+const DEF_TABLE_STYLE_ID = '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}'
+
+/**
+ * CT_TableStyle fixes this child order, and it is neither alphabetical nor the intuitive one:
+ * `lastCol` precedes `firstCol`, and `firstRow` sits between `swCell` and `neCell`.
+ */
+const TABLE_STYLE_PARTS: Array<[keyof TableStyleProps, string]> = [
+	['wholeTable', 'wholeTbl'],
+	['band1H', 'band1H'],
+	['band2H', 'band2H'],
+	['band1V', 'band1V'],
+	['band2V', 'band2V'],
+	['lastCol', 'lastCol'],
+	['firstCol', 'firstCol'],
+	['lastRow', 'lastRow'],
+	['seCell', 'seCell'],
+	['swCell', 'swCell'],
+	['firstRow', 'firstRow'],
+	['neCell', 'neCell'],
+	['nwCell', 'nwCell'],
+]
+
+/** CT_TableCellBorderStyle child order */
+const TABLE_STYLE_BORDERS: Array<keyof TableStyleBorderProps> = ['left', 'right', 'top', 'bottom', 'insideH', 'insideV']
+
+/**
+ * One part of a table style (`a:wholeTbl`, `a:band1H`, ...).
+ * - `a:tcTxStyle` precedes `a:tcStyle`; inside the cell style, `a:tcBdr` precedes the fill
+ * @param {string} tag - element name without the `a:` prefix
+ * @param {TableStylePartProps} part - part definition
+ * @returns {string} XML
+ */
+function genXmlTableStylePart (tag: string, part: TableStylePartProps): string {
+	// `b`/`i` are ST_OnOffStyleType: an unset property means "def", i.e. leave it to the theme
+	const bold = typeof part.bold === 'boolean' ? ` b="${part.bold ? 'on' : 'off'}"` : ''
+	const italic = typeof part.italic === 'boolean' ? ` i="${part.italic ? 'on' : 'off'}"` : ''
+	const txStyle = bold || italic || part.color
+		? `<a:tcTxStyle${bold}${italic}>${part.color ? createColorElement(part.color) : ''}</a:tcTxStyle>`
+		: ''
+
+	const borders = TABLE_STYLE_BORDERS
+		.filter(edge => part.borders?.[edge])
+		.map(edge => {
+			const line = part.borders?.[edge]
+			return line ? `<a:${edge}>${genXmlLine(line)}</a:${edge}>` : ''
+		})
+		.join('')
+	const fill = part.fill ? `<a:fill>${genXmlColorSelection(part.fill)}</a:fill>` : ''
+	const cellStyle = borders || fill ? `<a:tcStyle>${borders ? `<a:tcBdr>${borders}</a:tcBdr>` : ''}${fill}</a:tcStyle>` : ''
+
+	return txStyle || cellStyle ? `<a:${tag}>${txStyle}${cellStyle}</a:${tag}>` : ''
+}
+
+/**
+ * Creates `ppt/tableStyles.xml`
+ * - with no custom styles this is the same self-closing stub earlier versions wrote
+ * @param {TableStyleProps[]} [styles] - custom table style definitions
+ * @return {string} XML
+ */
+export function makeXmlTableStyles (styles?: TableStyleProps[]): string {
+	const valid = (styles ?? []).filter(style => {
+		// `@styleId` is an ST_Guid and `@styleName` is required; a malformed id would be rejected on open
+		if (!/^\{[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\}$/.test(style?.id ?? '')) {
+			console.warn(`[pptxgenjs] table style \`id\` must be a braced GUID, e.g. '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}' - "${String(style?.id)}" ignored`)
+			return false
+		}
+		if (!style.name) {
+			console.warn(`[pptxgenjs] table style ${style.id} has no \`name\` - ignored`)
+			return false
+		}
+		return true
+	})
+
+	const head = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${CRLF}<a:tblStyleLst xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" def="${DEF_TABLE_STYLE_ID}"`
+	if (valid.length === 0) return `${head}/>`
+
+	const body = valid.map(style => {
+		const parts = TABLE_STYLE_PARTS
+			.map(([prop, tag]) => {
+				const part = style[prop]
+				return part && typeof part === 'object' ? genXmlTableStylePart(tag, part) : ''
+			})
+			.join('')
+		return `<a:tblStyle styleId="${style.id}" styleName="${encodeXmlEntities(style.name)}">${parts}</a:tblStyle>`
+	}).join('')
+
+	return `${head}>${body}</a:tblStyleLst>`
 }
 
 /**

@@ -121,6 +121,18 @@ test('office: LibreOffice opens and converts a generated presentation', { skip: 
 		mediaSourceSlide.addMedia({ type: 'wav', data: 'audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=', x: 0.5, y: 3, w: 2, h: 1.5 })
 		// chart style parts - the round-trip fixture for #157
 		pptx.addSlide().addChart('bar', [{ name: 'Series 1', labels: ['a', 'b', 'c'], values: [4, 7, 2] }], { x: 0.5, y: 0.5, w: 6, h: 3, chartStyle: 201, chartColorStyle: { method: 'cycle', id: 10 } })
+		// custom table style - the round-trip fixture for #133, proving banding renders
+		pptx.tableStyles = [{
+			id: '{A1B2C3D4-1111-2222-3333-444455556666}',
+			name: 'Office Smoke',
+			wholeTable: { borders: { top: { color: '4472C4', width: 1 }, bottom: { color: '4472C4', width: 1 }, insideH: { color: 'D9D9D9', width: 0.5 } } },
+			band1H: { fill: { color: 'DEEAF6' } },
+			firstRow: { bold: true, color: 'FFFFFF', fill: { color: '4472C4' } },
+		}]
+		pptx.addSlide().addTable(
+			[['Region', 'Sales'], ['West', '20'], ['East', '31'], ['North', '18']],
+			{ x: 0.5, y: 0.5, w: 8, tableStyleId: '{A1B2C3D4-1111-2222-3333-444455556666}', firstRow: true, bandRow: true }
+		)
 		pptx.addSlide({ transition: { type: 'morph', duration: 1200 } }).addText('modern transition', { x: 0.5, y: 0.5, w: 5, h: 0.5 })
 		await writeFile(presentationPath, (await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
 

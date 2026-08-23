@@ -87,6 +87,7 @@ import {
 	PhotoAlbumProps,
 	PrintProps,
 	SlideSizeType,
+	TableStyleProps,
 	ViewProps,
 	CommentAuthorProps,
 	CompressionLevel,
@@ -409,6 +410,16 @@ export default class PptxGenJS implements IPresentationProps {
 
 	public get recentColors(): Color[] | undefined {
 		return this._recentColors
+	}
+
+	/** tableStyles - see the matching props interface */
+	private _tableStyles?: TableStyleProps[]
+	public set tableStyles(value: TableStyleProps[] | undefined) {
+		this._tableStyles = value
+	}
+
+	public get tableStyles(): TableStyleProps[] | undefined {
+		return this._tableStyles
 	}
 
 	/** viewProps - see the matching props interface */
@@ -780,7 +791,7 @@ export default class PptxGenJS implements IPresentationProps {
 			zip.file('ppt/theme/theme1.xml', genXml.makeXmlTheme(this))
 			zip.file('ppt/presentation.xml', genXml.makeXmlPresentation(this))
 			zip.file('ppt/presProps.xml', genXml.makeXmlPresProps(this))
-			zip.file('ppt/tableStyles.xml', genXml.makeXmlTableStyles())
+			zip.file('ppt/tableStyles.xml', genXml.makeXmlTableStyles(this._tableStyles))
 			zip.file('ppt/viewProps.xml', genXml.makeXmlViewProps(this))
 
 			// C: Create a Layout/Master/Rel/Slide file for each SlideLayout and Slide
