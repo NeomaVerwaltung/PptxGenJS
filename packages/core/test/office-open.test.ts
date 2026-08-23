@@ -18,10 +18,11 @@ const execFile = promisify(execFileCallback)
 /** 4x2 px PNG */
 const PNG_4x2 = 'image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAACCAIAAADwyuo0AAAADklEQVR4nGP4jwQYkDkANvEX6SAXxcIAAAAASUVORK5CYII='
 
-// The skip above must not turn CI green by accident: on CI the binary is always provisioned, so a
-// missing one is a workflow regression rather than a local convenience
-test('office: CI provides a LibreOffice binary', { skip: process.env.CI ? false : 'only meaningful on CI' }, () => {
-	assert.ok(officeBinary, 'PPTXGENJS_OFFICE_BIN is unset on CI - the office round-trip silently skipped')
+// The skip above must not let `npm run test:office` pass without doing anything. npm sets
+// `npm_lifecycle_event` to the script name, so this fires for that entry point only - `npm test`
+// and the `check` job load this file to compile it, and are expected to skip.
+test('office: the test:office script provides a LibreOffice binary', { skip: process.env.npm_lifecycle_event === 'test:office' ? false : 'only meaningful for `npm run test:office`' }, () => {
+	assert.ok(officeBinary, 'PPTXGENJS_OFFICE_BIN is unset - `npm run test:office` would silently skip')
 })
 
 // Skipped rather than failed when LibreOffice is absent, so this file can live in the normal `test`
