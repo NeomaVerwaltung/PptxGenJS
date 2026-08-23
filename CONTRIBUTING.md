@@ -27,6 +27,17 @@ For a release candidate, also run `npm run test:office` on a machine with
 LibreOffice installed and `PPTXGENJS_OFFICE_BIN` set to its executable.
 The CI workflow performs this check on every pull request.
 
+## Contributor agreement
+
+The proposed [Contributor License Agreement](CONTRIBUTOR_LICENSE_AGREEMENT-DRAFT.md)
+is a draft for legal review only. It is not currently binding, and no CLA
+acceptance check is currently required for pull requests.
+
+Do not submit material you do not have authority to contribute. Identify any
+third-party material and its licence terms in the pull request description.
+Once legal approves a final CLA, maintainers will enable the documented
+[GitHub enforcement gate](.github/CLA_ENFORCEMENT.md).
+
 ## Tests
 
 Tests live in each package's `test/` directory. When you change XML generation, add or update the
