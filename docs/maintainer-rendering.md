@@ -151,7 +151,7 @@ Routing a chartex chart touches five call sites, all keyed off `isChartexType()`
 | Call site | What changes |
 | --- | --- |
 | `gen-objects.ts:addChartDefinition()` | part is named `chartExN.xml`; a chartex type inside a combo array throws |
-| `charts/workbook.ts:addWorkbookToPresentation()` | writes the `cx:` part plus `chartExStyle.xml` / `chartExColors.xml` |
+| `charts/workbook.ts:addWorkbookToPresentation()` | writes the `cx:` part instead of the `c:` one; the style/colour parts are the shared ones |
 | `xml/package.ts:makeXmlContTypes()` | Microsoft content type for the part, and the two sidecar overrides once per package |
 | `xml/relationships.ts` | Microsoft `chartEx` relationship type instead of the ECMA-376 chart one |
 | `xml/slide.ts` | frame is wrapped in `mc:AlternateContent` with a locked text-shape fallback |
@@ -160,7 +160,7 @@ Routing a chartex chart touches five call sites, all keyed off `isChartexType()`
 
 - The chart XML's external-data `rId1` must match the chart relationship written beside the chart file.
 - ChartEx cell references assume the worksheet layout `addWorksheetFile()` writes: labels in column A, one series per column from B. Changing that layout breaks `cx:f` in every chartex part.
-- A chartex part is invalid to PowerPoint without both sidecar parts; they are shared across the package, so removing the last chartex chart must also drop their content-type overrides.
+- A chartex part is invalid to PowerPoint without both the chart style and chart colour parts. Those are written for every chart, so nothing chartex-specific is needed - but making them conditional would break chartex charts.
 - Multi-type charts require matching category/value axis arrays and a declared secondary-axis user when multiple value axes are present.
 - Bubble, scatter, normal category, and multi-level category sheets intentionally have different ranges and shared-string layouts.
 - Preserve numeric zero values. `0` is chart data, not absence.

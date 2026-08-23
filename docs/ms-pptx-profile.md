@@ -56,12 +56,12 @@ markup for the PowerPoint 2016 chart layouts.
 | Part | Content type | Relationship type | Written when |
 | :-- | :-- | :-- | :-- |
 | `/ppt/charts/chartExN.xml` | `application/vnd.ms-office.chartex+xml` | `…/office/2014/relationships/chartEx` | `addChart()` with `waterfall`, `funnel`, `treemap`, `sunburst`, `histogram`, or `boxWhisker` |
-| `/ppt/charts/chartExStyle.xml` | `application/vnd.ms-office.chartstyle+xml` | `…/office/2011/relationships/chartStyle` | alongside any chartex part; one shared copy per package |
-| `/ppt/charts/chartExColors.xml` | `application/vnd.ms-office.chartcolorstyle+xml` | `…/office/2011/relationships/chartColorStyle` | alongside any chartex part; one shared copy per package |
 
-The style and colors parts are not optional: PowerPoint resolves every visual property of a chartex
-layout through them and reports the package as damaged if either is missing. The embedded workbook
-stays `rId1` on the chart part, which is what `cx:externalData` points at.
+A chartex part also relates to the `style{N}.xml` and `colors{N}.xml` parts that every chart gets. For
+a classic chart those are optional polish; for a chartex layout they are not, because PowerPoint
+resolves every visual property of the new layouts through them and reports the package as damaged if
+either is missing. The embedded workbook stays `rId1` on the chart part, which is what
+`cx:externalData` points at.
 
 The `mc:Choice` gates on the schema generation the layout needs — `drawing/2015/9/8/chartex` for the
 2016 launch layouts, `drawing/2015/10/21/chartex` for funnel. Where PowerPoint writes a rendered

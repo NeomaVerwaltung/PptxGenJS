@@ -1631,17 +1631,20 @@ test('contract: a chartex chart is a separate part with its own content and rela
 test('contract: a chartex chart relates to the style and color parts PowerPoint requires', async () => {
 	const { zip: cxZip, part } = await buildChartEx('treemap', [{ name: 'Revenue', labels: ['A', 'B', 'C'], values: [10, 20, 30] }])
 
+	// a chartex layout cannot be laid out without them, and they are the same parts every chart relates to
 	const chartRels = await readPart(cxZip, `ppt/charts/_rels/${part.split('/').pop() ?? ''}.rels`)
-	assert.match(chartRels, /Type="http:\/\/schemas\.microsoft\.com\/office\/2011\/relationships\/chartStyle" Target="chartExStyle\.xml"/, 'chart style relationship missing')
-	assert.match(chartRels, /Type="http:\/\/schemas\.microsoft\.com\/office\/2011\/relationships\/chartColorStyle" Target="chartExColors\.xml"/, 'chart color style relationship missing')
+	const styleRel = /Type="http:\/\/schemas\.microsoft\.com\/office\/2011\/relationships\/chartStyle" Target="(style\d+\.xml)"/.exec(chartRels)
+	const colorsRel = /Type="http:\/\/schemas\.microsoft\.com\/office\/2011\/relationships\/chartColorStyle" Target="(colors\d+\.xml)"/.exec(chartRels)
+	assert.ok(styleRel, 'chart style relationship missing')
+	assert.ok(colorsRel, 'chart color style relationship missing')
 	// `cx:externalData` points at rId1, so the workbook must keep that id
 	assert.match(chartRels, /Id="rId1" Type="[^"]*relationships\/package"/, 'the embedded workbook must stay rId1')
 
 	const contentTypes = await readPart(cxZip, '[Content_Types].xml')
-	assert.match(contentTypes, /chartExStyle\.xml" ContentType="application\/vnd\.ms-office\.chartstyle\+xml"/, 'chart style content type missing')
-	assert.match(contentTypes, /chartExColors\.xml" ContentType="application\/vnd\.ms-office\.chartcolorstyle\+xml"/, 'chart color style content type missing')
-	assert.match(await readPart(cxZip, 'ppt/charts/chartExStyle.xml'), /^<\?xml[^>]*\?><cs:chartStyle /, 'chart style part is not a cs:chartStyle document')
-	assert.match(await readPart(cxZip, 'ppt/charts/chartExColors.xml'), /^<\?xml[^>]*\?><cs:colorStyle /, 'chart color style part is not a cs:colorStyle document')
+	assert.match(contentTypes, new RegExp(`/ppt/charts/${styleRel[1]}" ContentType="application/vnd\\.ms-office\\.chartstyle\\+xml"`), 'chart style content type missing')
+	assert.match(contentTypes, new RegExp(`/ppt/charts/${colorsRel[1]}" ContentType="application/vnd\\.ms-office\\.chartcolorstyle\\+xml"`), 'chart color style content type missing')
+	assert.match(await readPart(cxZip, `ppt/charts/${styleRel[1]}`), /^<\?xml[^>]*\?><cs:chartStyle /, 'chart style part is not a cs:chartStyle document')
+	assert.match(await readPart(cxZip, `ppt/charts/${colorsRel[1]}`), /^<\?xml[^>]*\?><cs:colorStyle /, 'chart color style part is not a cs:colorStyle document')
 })
 
 test('contract: a chartex frame is offered through mc:AlternateContent with a fallback', async () => {
@@ -1742,8 +1745,9 @@ test('contract: classic charts are untouched by the chartex path', async () => {
 	assert.match(slideXml, /<a:graphicData uri="http:\/\/schemas\.openxmlformats\.org\/drawingml\/2006\/chart">/, 'classic chart graphicData uri changed')
 	const chartParts = Object.keys(barZip.files).filter(name => /^ppt\/charts\/chart\d+\.xml$/.test(name))
 	assert.equal(chartParts.length, 1, 'classic chart part missing')
-	assert.equal(barZip.file('ppt/charts/chartExStyle.xml'), null, 'the chartex sidecars must not appear without a chartex chart')
-	assert.doesNotMatch(await readPart(barZip, '[Content_Types].xml'), /chartex|chartstyle|chartcolorstyle/, 'no chartex content type may be declared without a chartex chart')
+	assert.equal(Object.keys(barZip.files).filter(name => /chartEx/.test(name)).length, 0, 'no chartex part may appear without a chartex chart')
+	// the style and colour parts belong to every chart, so only the chartex content type must be absent
+	assert.doesNotMatch(await readPart(barZip, '[Content_Types].xml'), /ms-office\.chartex/, 'no chartex content type may be declared without a chartex chart')
 })
 
 test('contract: chartex data that PowerPoint would reject is normalized, not emitted', async () => {
