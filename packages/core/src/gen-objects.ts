@@ -562,6 +562,7 @@ export function addImageDefinition(target: PresSlide | SlideLayout, opt: ImagePr
 		fillOverlay: opt.fillOverlay,
 		effectDag: opt.effectDag,
 		alphaEffects: opt.alphaEffects,
+		recolor: opt.recolor,
 		styleRef: opt.styleRef,
 		line: opt.line,
 		// non-visual props and locks are part of the object's identity, not its geometry

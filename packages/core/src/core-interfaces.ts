@@ -80,6 +80,11 @@ export interface BackgroundProps extends DataOrPathProps, ShapeFillProps {
 	 * @deprecated v3.6.0 - use `DataOrPathProps` instead - remove in v4.0.0
 	 */
 	src?: string
+	/**
+	 * Recolour and correction effects applied to a background image
+	 * @example { grayscale: true, brightness: -20 }
+	 */
+	recolor?: ImageRecolorProps
 }
 /**
  * Color in Hex format
@@ -926,6 +931,50 @@ export interface EffectDagProps {
 }
 
 /**
+ * Recolour and correction effects applied to an image's `a:blip`
+ * - these are PowerPoint's Picture Format > Color and > Corrections galleries
+ * - CT_Blip takes its effect children in any order, so they are written in a stable one
+ */
+export interface ImageRecolorProps {
+	/**
+	 * Map the image onto two colours (`a:duotone`)
+	 * - the schema requires exactly two, so anything else is dropped
+	 * @example ['000000', 'FFFFFF']
+	 */
+	duotone?: [Color, Color]
+	/** Convert to greyscale (`a:grayscl`) */
+	grayscale?: boolean
+	/**
+	 * Brightness, percent -100 to 100 (`a:lum@bright`)
+	 * @default 0
+	 */
+	brightness?: number
+	/**
+	 * Contrast, percent -100 to 100 (`a:lum@contrast`)
+	 * @default 0
+	 */
+	contrast?: number
+	/**
+	 * Reduce to two tones at this threshold, percent 0 to 100 (`a:biLevel@thresh`)
+	 * - required by the schema, so this is what turns the effect on
+	 */
+	blackWhiteThreshold?: number
+	/**
+	 * Replace one colour with another (`a:clrChange`) - PowerPoint's Set Transparent Color
+	 * - both colours are required by the schema
+	 */
+	colorChange?: {
+		from: Color
+		to: Color
+		/**
+		 * Whether the alpha channel takes part in the comparison (`@useA`)
+		 * @default true
+		 */
+		useAlpha?: boolean
+	}
+}
+
+/**
  * Alpha (transparency) effects applied to an image's `a:blip`
  * - these are image effects, not shape effects: the schema allows them on `a:blip` and inside
  *   `a:effectDag`, but not in `a:effectLst`
@@ -1219,6 +1268,11 @@ export interface ImageProps extends PositionProps, DataOrPathProps, ObjectNamePr
 	 * @example { invert: true }
 	 */
 	alphaEffects?: ImageAlphaEffectProps
+	/**
+	 * Recolour and correction effects applied to the image itself
+	 * @example { grayscale: true, brightness: 20, contrast: -10 }
+	 */
+	recolor?: ImageRecolorProps
 	/**
 	 * Theme style references (`p:style`)
 	 * - lets the image restyle when the user swaps the presentation theme in PowerPoint
@@ -3127,6 +3181,8 @@ export interface ObjectOptions extends ImageProps, PositionProps, ShapeProps, Ta
 	contentType?: string
 	/** CD audio track range (`a:audioCd`) @internal */
 	audioCd?: AudioCdProps
+	/** image recolour and correction effects (`a:blip` children) @internal */
+	recolor?: ImageRecolorProps
 	/** media referenced rather than embedded @internal */
 	isLinked?: boolean
 	/** image added without `w`/`h`: size it from the image itself during export @internal */

@@ -17,7 +17,7 @@ import {
 	SHAPE_TYPE,
 	SLIDE_OBJECT_TYPES,
 } from '../core-enums'
-import { AudioCdTimeProps, BlurProps, BorderProps, EffectDagProps, FillOverlayProps, ImageAlphaEffectProps, Color, ISlideObject, ObjectOptions, ShapeStyleProps, PresSlide, ReflectionProps, ShadowProps, SectionProps, SlideLayout, SoftEdgeProps, TableCell, TableCellProps, TableProps, TextGlowProps } from '../core-interfaces'
+import { AudioCdTimeProps, BlurProps, ImageRecolorProps, BorderProps, EffectDagProps, FillOverlayProps, ImageAlphaEffectProps, Color, ISlideObject, ObjectOptions, ShapeStyleProps, PresSlide, ReflectionProps, ShadowProps, SectionProps, SlideLayout, SoftEdgeProps, TableCell, TableCellProps, TableProps, TextGlowProps } from '../core-interfaces'
 import {
 	convertRotationDegrees,
 	createColorElement,
@@ -302,14 +302,58 @@ function genXmlShapeStyle (style?: ShapeStyleProps): string {
 }
 
 /**
+ * Recolour and correction effects for an image's `a:blip`.
+ * - CT_Blip takes its effect children in an unbounded choice, so order is free; a stable one is used
+ * - every guard below is a schema requirement, not a preference
+ * @param {ImageRecolorProps | undefined} recolor - recolour options
+ * @return {string} blip effect XML
+ */
+function genXmlBlipRecolor (recolor?: ImageRecolorProps): string {
+	if (!recolor) return ''
+	let xml = ''
+
+	// CT_DuotoneEffect requires exactly two colours
+	if (Array.isArray(recolor.duotone)) {
+		if (recolor.duotone.length === 2) xml += `<a:duotone>${recolor.duotone.map(color => createColorElement(color)).join('')}</a:duotone>`
+		else console.warn(`[pptxgenjs] image \`recolor.duotone\` needs exactly two colors - ${recolor.duotone.length} given, effect omitted`)
+	}
+	if (recolor.grayscale === true) xml += '<a:grayscl/>'
+
+	// `a:lum` carries both corrections, so they share one element. ST_FixedPercentage is signed.
+	const bright = typeof recolor.brightness === 'number' && isFinite(recolor.brightness) ? Math.round(Math.min(100, Math.max(-100, recolor.brightness)) * 1000) : undefined
+	const contrast = typeof recolor.contrast === 'number' && isFinite(recolor.contrast) ? Math.round(Math.min(100, Math.max(-100, recolor.contrast)) * 1000) : undefined
+	if (bright !== undefined || contrast !== undefined) {
+		xml += `<a:lum${bright !== undefined ? ` bright="${bright}"` : ''}${contrast !== undefined ? ` contrast="${contrast}"` : ''}/>`
+	}
+
+	// `@thresh` is required on CT_BiLevelEffect and is ST_PositiveFixedPercentage
+	if (typeof recolor.blackWhiteThreshold === 'number' && isFinite(recolor.blackWhiteThreshold)) {
+		xml += `<a:biLevel thresh="${Math.round(Math.min(100, Math.max(0, recolor.blackWhiteThreshold)) * 1000)}"/>`
+	}
+
+	// CT_ColorChangeEffect requires both `a:clrFrom` and `a:clrTo`, so a partial value is dropped
+	if (recolor.colorChange) {
+		if (recolor.colorChange.from && recolor.colorChange.to) {
+			const useA = recolor.colorChange.useAlpha === false ? ' useA="0"' : ''
+			xml += `<a:clrChange${useA}><a:clrFrom>${createColorElement(recolor.colorChange.from)}</a:clrFrom><a:clrTo>${createColorElement(recolor.colorChange.to)}</a:clrTo></a:clrChange>`
+		} else {
+			console.warn('[pptxgenjs] image `recolor.colorChange` needs both `from` and `to` - effect omitted')
+		}
+	}
+
+	return xml
+}
+
+/**
  * Alpha effects for an image's `a:blip`.
  * - CT_Blip takes its effect children in any order, so these follow the existing `a:alphaModFix`
  * @param {number | undefined} transparency - image transparency (percent)
  * @param {ImageAlphaEffectProps | undefined} alpha - alpha effect options
  * @return {string} blip effect XML
  */
-function genXmlBlipEffects (transparency?: number, alpha?: ImageAlphaEffectProps): string {
+function genXmlBlipEffects (transparency?: number, alpha?: ImageAlphaEffectProps, recolor?: ImageRecolorProps): string {
 	let xml = transparency ? `<a:alphaModFix amt="${Math.round((100 - transparency) * 1000)}"/>` : ''
+	xml += genXmlBlipRecolor(recolor)
 	if (!alpha) return xml
 	// `a:alphaRepl` requires `@a`, so a non-numeric value is dropped
 	// `@a` is ST_PositiveFixedPercentage, so the percent is clamped to 0-100 before scaling
@@ -396,7 +440,10 @@ function genXmlSlideBackground (slide: PresSlide | SlideLayout): string {
 	let strSlideXml = ''
 	// STEP 1: Add background color/image (ensure only a single `<p:bg>` tag is created, ex: when master-baskground has both `color` and `path`)
 	if (slide._bkgdImgRid) {
-		strSlideXml += `<p:bg><p:bgPr><a:blipFill dpi="0" rotWithShape="1"><a:blip r:embed="rId${slide._bkgdImgRid}"><a:lum/></a:blip><a:srcRect/><a:stretch><a:fillRect/></a:stretch></a:blipFill><a:effectLst/></p:bgPr></p:bg>`
+		// `<a:lum/>` has always been written here and specifies nothing; a background asking for real
+		// corrections replaces it, so decks that do not are unchanged
+		const bkgdEffects = genXmlBlipRecolor(slide.background?.recolor)
+		strSlideXml += `<p:bg><p:bgPr><a:blipFill dpi="0" rotWithShape="1"><a:blip r:embed="rId${slide._bkgdImgRid}">${bkgdEffects || '<a:lum/>'}</a:blip><a:srcRect/><a:stretch><a:fillRect/></a:stretch></a:blipFill><a:effectLst/></p:bgPr></p:bg>`
 	} else if (slide.background?.color || slide.background?.type === 'gradient') {
 		// NOTE: `<a:effectLst/>` is required by PowerPoint (matches image-bg path above); omitting it triggers the repair dialog
 		strSlideXml += `<p:bg><p:bgPr>${genXmlColorSelection(slide.background)}<a:effectLst/></p:bgPr></p:bg>`
@@ -862,7 +909,7 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 					(slide._relsMedia || []).filter(rel => rel.rId === slideItemObj.imageRid)[0].extn === 'svg'
 				) {
 					strSlideXml += `<a:blip r:embed="rId${(slideItemObj.imageRid ?? 0) - 1}">`
-					strSlideXml += genXmlBlipEffects(slideItemObj.options.transparency, slideItemObj.options.alphaEffects)
+					strSlideXml += genXmlBlipEffects(slideItemObj.options.transparency, slideItemObj.options.alphaEffects, slideItemObj.options.recolor)
 					strSlideXml += ' <a:extLst>'
 					strSlideXml += `  <a:ext uri="${OOXML_EXT.svgBlip.uri}">`
 					strSlideXml += `   <asvg:svgBlip xmlns:asvg="${OOXML_EXT.svgBlip.ns}" r:embed="rId${slideItemObj.imageRid}"/>`
@@ -871,7 +918,7 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 					strSlideXml += '</a:blip>'
 				} else {
 					strSlideXml += `<a:blip r:embed="rId${slideItemObj.imageRid}">`
-					strSlideXml += genXmlBlipEffects(slideItemObj.options.transparency, slideItemObj.options.alphaEffects)
+					strSlideXml += genXmlBlipEffects(slideItemObj.options.transparency, slideItemObj.options.alphaEffects, slideItemObj.options.recolor)
 					strSlideXml += '</a:blip>'
 				}
 				if (sizing?.type) {

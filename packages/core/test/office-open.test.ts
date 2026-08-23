@@ -144,6 +144,11 @@ test('office: LibreOffice opens and converts a generated presentation', { skip: 
 			{ name: 'Alpha', labels: ['x', 'y', 'z'], values: [1, 5, 9] },
 			{ name: 'Beta', labels: ['x', 'y', 'z'], values: [2, 6, 4] },
 		], { x: 5.2, y: 3.8, w: 4.5, h: 3, chartExMeanLine: true })
+		// picture recolour - the round-trip fixture for #131
+		const recolorSlide = pptx.addSlide()
+		recolorSlide.addImage({ data: PNG_4x2, x: 0.5, y: 0.5, w: 2, h: 1, recolor: { duotone: ['1F3864', 'DEEAF6'] } })
+		recolorSlide.addImage({ data: PNG_4x2, x: 3, y: 0.5, w: 2, h: 1, recolor: { grayscale: true, brightness: 20, contrast: -15 } })
+		recolorSlide.addImage({ data: PNG_4x2, x: 5.5, y: 0.5, w: 2, h: 1, recolor: { colorChange: { from: 'FFFFFF', to: 'FF0000' } } })
 		pptx.addSlide({ transition: { type: 'morph', duration: 1200 } }).addText('modern transition', { x: 0.5, y: 0.5, w: 5, h: 0.5 })
 		await writeFile(presentationPath, (await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
 
