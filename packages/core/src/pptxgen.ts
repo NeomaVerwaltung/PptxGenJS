@@ -661,7 +661,8 @@ export default class PptxGenJS implements IPresentationProps {
 	private readonly createChartMediaRels = (slide: PresSlide | SlideLayout, zip: JSZip, chartPromises: Promise<string>[]): void => {
 		slide._relsChart.forEach(rel => chartPromises.push(genCharts.createExcelWorksheet(rel, zip)))
 		slide._relsMedia.forEach(rel => {
-			if (rel.type !== 'online' && rel.type !== 'hyperlink') {
+			// linked media has no bytes in the package - its relationship points outside it
+			if (rel.type !== 'online' && rel.type !== 'hyperlink' && !rel.isLinked) {
 				// A: Loop vars
 				let data: string = rel.data && typeof rel.data === 'string' ? rel.data : ''
 

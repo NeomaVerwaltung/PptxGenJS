@@ -1764,7 +1764,29 @@ declare namespace PptxGenJS {
 	}
 
 	// image / media ==================================================================================
-	export type MediaType = 'audio' | 'online' | 'video'
+	export type MediaType = 'audio' | 'online' | 'video' | 'audioCd' | 'wav'
+
+	/**
+	 * A point on an audio CD (`a:st`/`a:end`, ECMA-376 Part 1 §20.1.3.4 CT_AudioCDTime)
+	 */
+	export interface AudioCdTimeProps {
+		/** CD track number (0-255) - required by the schema */
+		track: number
+		/**
+		 * Offset into the track, in seconds
+		 * @default 0
+		 */
+		time?: number
+	}
+
+	/**
+	 * CD audio source (`a:audioCd`, ECMA-376 Part 1 §20.1.3.3 CT_AudioCD)
+	 * - references the listener's CD drive, so it embeds nothing and needs no relationship
+	 */
+	export interface AudioCdProps {
+		start: AudioCdTimeProps
+		end: AudioCdTimeProps
+	}
 
 	export interface ImageProps extends PositionProps, DataOrPathProps, ObjectNameProps {
 		/**
@@ -1975,6 +1997,26 @@ declare namespace PptxGenJS {
 		 * @example { animation: { type: 'fadeIn', trigger: 'afterPrevious', duration: 800 } }
 		 */
 		animation?: AnimationProps
+		/**
+		 * MIME type of the referenced media (`a:audioFile@contentType`, `a:videoFile@contentType`)
+		 * @example 'video/mp4'
+		 */
+		contentType?: string
+		/**
+		 * CD audio track range - required when `type` is `audioCd`
+		 * @example { start: { track: 1 }, end: { track: 1, time: 30 } }
+		 */
+		audioCd?: AudioCdProps
+		/**
+		 * Mark the media frame as a photo (`p:nvPr@isPhoto`)
+		 * @default false
+		 */
+		isPhoto?: boolean
+		/**
+		 * Mark the media frame as author-placed rather than layout furniture (`p:nvPr@userDrawn`)
+		 * @default false
+		 */
+		userDrawn?: boolean
 	}
 
 	// shapes =========================================================================================

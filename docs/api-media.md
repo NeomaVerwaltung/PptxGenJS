@@ -59,10 +59,53 @@ Either provide a URL location or base64 data along with type to create media.
 
 | Option  | Type   | Description     | Possible Values                                                                         |
 | :------ | :----- | :-------------- | :-------------------------------------------------------------------------------------- |
-| `type`  | string | media type      | media type: `audio` or `video` (reqs: `data` or `path`) or `online` (reqs:`link`)       |
-| `cover` | string | cover image     | base64 encoded string of cover image                                                    |
-| `extn`  | string | media extension | use when the media file path does not already have an extension, ex: "/folder/SomeSong" |
-| `link`  | string | video URL       | (YouTube only): link to online video                                                    |
+| `type`        | string  | media type       | `audio`, `video`, `online`, `audioCd` or `wav` — see [Media Types](#media-types)          |
+| `cover`       | string  | cover image      | base64 encoded string of cover image                                                    |
+| `extn`        | string  | media extension  | use when the media file path does not already have an extension, ex: "/folder/SomeSong" |
+| `link`        | string  | external target  | an online video URL, or the path of a file to reference instead of embedding             |
+| `contentType` | string  | MIME type        | written on `a:audioFile`/`a:videoFile`, ex: `video/mp4`                                   |
+| `audioCd`     | object  | CD track range   | required for `type: 'audioCd'` — `{ start: { track, time? }, end: { track, time? } }`     |
+| `isPhoto`     | boolean | photo frame      | marks the frame as a photo                                                              |
+| `userDrawn`   | boolean | author-placed    | marks the frame as author-placed rather than layout furniture                             |
+
+### Media Types
+
+| Type      | Element           | Needs                | Media in the file?               |
+| :-------- | :---------------- | :------------------- | :------------------------------- |
+| `audio`   | `a:audioFile`     | `data`/`path`        | embedded                         |
+| `video`   | `a:videoFile`     | `data`/`path`        | embedded                         |
+| `audio`/`video` | `a:audioFile`/`a:videoFile` | `link` only | **linked** — referenced, not embedded |
+| `online`  | `a:videoFile`     | `link`               | linked (YouTube-style URL)       |
+| `audioCd` | `a:audioCd`       | `audioCd`            | nothing — reads the listener's CD |
+| `wav`     | `a:wavAudioFile`  | `data`/`path`        | embedded WAV                     |
+
+### Linked Media
+
+Passing `link` with **no** `data` or `path` references the file instead of embedding it — the
+relationship is written `TargetMode="External"` and no bytes go into the `.pptx`:
+
+```typescript
+slide.addMedia({ type: 'video', link: 'C:/movies/clip.mp4', x: 1, y: 1, w: 4, h: 3, contentType: 'video/mp4' });
+```
+
+The deck stays small, but it only plays where that path resolves. Give both `link` and `data`/`path`
+and the media is embedded and `link` is ignored, with a warning.
+
+### CD Audio
+
+`type: 'audioCd'` references a track range on the listener's CD drive, so nothing is embedded and no
+relationship is written. `start.track` and `end.track` are required by the OOXML schema, so
+`addMedia()` throws without them. `time` is an offset into the track in seconds.
+
+```typescript
+slide.addMedia({ type: 'audioCd', audioCd: { start: { track: 1 }, end: { track: 1, time: 30 } }, x: 1, y: 1, w: 2, h: 2 });
+```
+
+### Embedded WAV
+
+`type: 'wav'` emits `a:wavAudioFile`, the legacy element PowerPoint uses for short embedded sounds. It
+carries no `p14:media` extension — that extension describes the modern embedded-media player, which
+does not handle this element.
 
 ### Playback Props
 

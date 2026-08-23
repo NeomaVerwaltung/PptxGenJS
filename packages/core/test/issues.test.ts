@@ -890,3 +890,68 @@ test('#149: slide layout and placeholder metadata', async () => {
 		assert.ok(!xml.includes('orient=') && !xml.includes(' sz="half"') && !xml.includes('userDrawn='), `${file.name} gained placeholder metadata`)
 	}
 })
+
+test('#150: media source elements - linked media, audioCd, wavAudioFile', async () => {
+	const MP4 = 'video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDE='
+	const WAV = 'audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addMedia({ type: 'video', data: MP4, x: 0.5, y: 0.5, w: 2, h: 1.5, isPhoto: true, userDrawn: true })
+	slide.addMedia({ type: 'video', link: 'C:/movies/clip.mp4', x: 3, y: 0.5, w: 2, h: 1.5, contentType: 'video/mp4' })
+	slide.addMedia({ type: 'audio', link: '/srv/audio/theme.mp3', x: 5.5, y: 0.5, w: 2, h: 1.5 })
+	slide.addMedia({ type: 'audioCd', audioCd: { start: { track: 1 }, end: { track: 1, time: 30 } }, x: 0.5, y: 2.5, w: 2, h: 1.5 })
+	slide.addMedia({ type: 'wav', data: WAV, x: 3, y: 2.5, w: 2, h: 1.5 })
+
+	const zip = await writeZip(pptx)
+	const xml = await readPart(zip, 'ppt/slides/slide1.xml')
+	const rels = await readPart(zip, 'ppt/slides/_rels/slide1.xml.rels')
+
+	// EG_Media is a choice: every media frame carries exactly one media element
+	const frames = (xml.match(/<p:nvPr[^>]*>[\s\S]*?<\/p:nvPr>/g) ?? []).filter(frame => /a:videoFile|a:audioFile|a:audioCd|a:wavAudioFile/.test(frame))
+	assert.equal(frames.length, 5, `expected five media frames, got ${frames.length}`)
+	for (const frame of frames) {
+		const kinds = (frame.match(/<a:(videoFile|audioFile|audioCd|wavAudioFile)\b/g) ?? []).length
+		assert.equal(kinds, 1, `EG_Media is a choice, but a frame carried ${kinds} media elements: ${frame}`)
+	}
+
+	// `p:nvPr` attributes default to false, so only the "on" case is written
+	assert.ok(xml.includes('<p:nvPr isPhoto="1" userDrawn="1">'), 'isPhoto/userDrawn missing')
+	assert.equal((xml.match(/<p:nvPr isPhoto=/g) ?? []).length, 1, 'isPhoto leaked onto other frames')
+
+	// linked media: same three-relationship shape, but external and with no part in the package
+	assert.ok(xml.includes('<a:videoFile r:link="rId4" contentType="video/mp4"/>'), `linked video wrong: ${frames[1]}`)
+	assert.ok(xml.includes('<a:audioFile r:link="rId7"/>'), `linked audio wrong: ${frames[2]}`)
+	const relElements = rels.match(/<Relationship\b[^>]*\/>/g) ?? []
+	for (const target of ['C:/movies/clip.mp4', '/srv/audio/theme.mp3']) {
+		const matches = relElements.filter(rel => rel.includes(`Target="${target}"`))
+		assert.equal(matches.length, 2, `expected a video/audio and a media relationship for ${target}, got ${matches.length}`)
+		for (const rel of matches) assert.ok(rel.includes('TargetMode="External"'), `linked media relationship is not external: ${rel}`)
+	}
+	// nothing was written for the linked files, and no content type was declared for one
+	assert.ok(!Object.keys(zip.files).some(name => name.includes('clip.mp4') || name.includes('theme.mp3')), 'a part was written for linked media')
+	assert.ok(!(await readPart(zip, '[Content_Types].xml')).includes('Extension="mp3"'), 'a Default Extension was declared for a part that is never written')
+
+	// CT_AudioCD: `a:st`/`a:end` are required, `@track` is required, `@time` defaults to 0
+	assert.ok(xml.includes('<a:audioCd><a:st track="1"/><a:end track="1" time="30"/></a:audioCd>'), `audioCd wrong: ${frames[3]}`)
+	// CD audio references the drive, so it has no media relationship and no `p14:media`
+	assert.ok(!frames[3].includes('p14:media'), 'audioCd emitted a p14:media extension')
+
+	// `a:wavAudioFile` embeds via `r:embed` against an audio relationship, and has no `p14:media`
+	assert.ok(/<a:wavAudioFile r:embed="rId\d+" name="[^"]*"\/>/.test(frames[4]), `wavAudioFile wrong: ${frames[4]}`)
+	assert.ok(!frames[4].includes('p14:media'), 'wavAudioFile emitted a p14:media extension')
+	assert.ok(Object.keys(zip.files).some(name => name.endsWith('.wav')), 'the embedded WAV part is missing')
+	assert.ok((await readPart(zip, '[Content_Types].xml')).includes('Extension="wav" ContentType="audio/wav"'), 'the WAV content type is missing')
+
+	// audioCd requires both track numbers - addMedia throws rather than guessing
+	assert.throws(() => pptx.addSlide().addMedia({ type: 'audioCd', x: 1, y: 1, w: 1, h: 1 }), /audioCd\.start\.track/, 'audioCd without tracks did not throw')
+
+	// embedded media is unchanged: three relationships, an internal target, and a p14:media
+	const bare = new pptxgen()
+	bare.addSlide().addMedia({ type: 'video', data: MP4, x: 1, y: 1, w: 2, h: 1.5 })
+	const bareZip = await writeZip(bare)
+	const bareXml = await readPart(bareZip, 'ppt/slides/slide1.xml')
+	assert.ok(bareXml.includes('<p:nvPr>'), 'a default media frame gained an attribute')
+	assert.ok(bareXml.includes('<a:videoFile r:link="rId1"/>'), `default video element changed: ${bareXml.match(/<a:videoFile[^>]*>/)?.[0] ?? ''}`)
+	assert.ok(bareXml.includes('p14:media') && bareXml.includes('r:embed="rId2"'), 'the embedded media extension changed')
+	assert.ok(!(await readPart(bareZip, 'ppt/slides/_rels/slide1.xml.rels')).includes('TargetMode="External"'), 'embedded media became external')
+})

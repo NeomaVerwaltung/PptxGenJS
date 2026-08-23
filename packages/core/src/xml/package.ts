@@ -26,7 +26,7 @@ export function makeXmlContTypes (slides: PresSlide[], slideLayouts: SlideLayout
 	strXml += '<Default Extension="mp4" ContentType="video/mp4"/>' // NOTE: Hard-Code this extension as it wont be created in loop below (as extn !== type)
 	slides.forEach(slide => {
 		(slide._relsMedia || []).forEach(rel => {
-			if (rel.type !== 'image' && rel.type !== 'online' && rel.type !== 'chart' && rel.extn !== 'm4v' && !strXml.includes(rel.type)) {
+			if (rel.type !== 'image' && rel.type !== 'online' && rel.type !== 'chart' && rel.extn !== 'm4v' && !rel.isLinked && !strXml.includes(rel.type)) {
 				strXml += '<Default Extension="' + rel.extn + '" ContentType="' + rel.type + '"/>'
 			}
 		})

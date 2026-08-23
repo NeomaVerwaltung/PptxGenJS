@@ -14,7 +14,7 @@ import {
 	SHAPE_TYPE,
 	SLIDE_OBJECT_TYPES,
 } from '../core-enums'
-import { BlurProps, BorderProps, EffectDagProps, FillOverlayProps, ImageAlphaEffectProps, Color, ISlideObject, ObjectOptions, ShapeStyleProps, PresSlide, ReflectionProps, ShadowProps, SectionProps, SlideLayout, SoftEdgeProps, TableCell, TableCellProps, TableProps, TextGlowProps } from '../core-interfaces'
+import { AudioCdTimeProps, BlurProps, BorderProps, EffectDagProps, FillOverlayProps, ImageAlphaEffectProps, Color, ISlideObject, ObjectOptions, ShapeStyleProps, PresSlide, ReflectionProps, ShadowProps, SectionProps, SlideLayout, SoftEdgeProps, TableCell, TableCellProps, TableProps, TextGlowProps } from '../core-interfaces'
 import {
 	convertRotationDegrees,
 	createColorElement,
@@ -232,6 +232,29 @@ function genXmlEffectLst (opts: EffectOptions): string {
 	// `a:effect` references are not emitted (see docs/api-shapes.md)
 	if (opts.effectDag) return `<a:effectDag type="${opts.effectDag.type === 'tree' ? 'tree' : 'sib'}">${xml}</a:effectDag>`
 	return `<a:effectLst>${xml}</a:effectLst>`
+}
+
+/**
+ * `p:nvPr` attributes shared by every media frame.
+ * - both default to false in CT_ApplicationNonVisualDrawingProps, so only the "on" case is written
+ * @param {ObjectOptions} opts - media options
+ * @return {string} attribute string
+ */
+function genXmlMediaFrameAttrs (opts: ObjectOptions): string {
+	return (opts.isPhoto === true ? ' isPhoto="1"' : '') + (opts.userDrawn === true ? ' userDrawn="1"' : '')
+}
+
+/**
+ * One `a:audioCd` endpoint (`a:st` or `a:end`).
+ * - `@track` is required and is an `xsd:unsignedByte`, so it is clamped; `@time` defaults to 0
+ * @param {string} tag - `a:st` or `a:end`
+ * @param {AudioCdTimeProps | undefined} point - track and offset
+ * @return {string} XML
+ */
+function genXmlAudioCdTime (tag: string, point?: AudioCdTimeProps): string {
+	const track = Math.min(255, Math.max(0, Math.round(point?.track ?? 0)))
+	const time = typeof point?.time === 'number' && isFinite(point.time) && point.time > 0 ? ` time="${Math.round(point.time)}"` : ''
+	return `<${tag} track="${track}"${time}/>`
 }
 
 /**
@@ -881,14 +904,37 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 				break
 
 			case SLIDE_OBJECT_TYPES.media:
-				if (slideItemObj.mtype === 'online') {
+				if (slideItemObj.mtype === 'audioCd' || slideItemObj.mtype === 'wav') {
+					// EG_Media is a choice, so these carry exactly one media element and no `p14:media`:
+					// `a:audioCd` references the listener's drive and `a:wavAudioFile` is the legacy
+					// embedded-WAV element, so neither has an embedded media part to point at
+					strSlideXml += '<p:pic>'
+					strSlideXml += ' <p:nvPicPr>'
+					strSlideXml += `<p:cNvPr id="${slideItemObj._coverRid ?? 2}" name="${slideItemObj.options.objectName}"><a:hlinkClick r:id="" action="ppaction://media"/></p:cNvPr>`
+					strSlideXml += ' <p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr>'
+					strSlideXml += ` <p:nvPr${genXmlMediaFrameAttrs(slideItemObj.options)}>`
+					if (slideItemObj.mtype === 'audioCd') {
+						const cd = slideItemObj.options.audioCd
+						strSlideXml += `  <a:audioCd>${genXmlAudioCdTime('a:st', cd?.start)}${genXmlAudioCdTime('a:end', cd?.end)}</a:audioCd>`
+					} else {
+						strSlideXml += `  <a:wavAudioFile r:embed="rId${slideItemObj.mediaRid}"${slideItemObj.options.objectName ? ` name="${slideItemObj.options.objectName}"` : ''}/>`
+					}
+					strSlideXml += ' </p:nvPr>'
+					strSlideXml += ' </p:nvPicPr>'
+					strSlideXml += ` <p:blipFill><a:blip r:embed="rId${slideItemObj._coverRid}"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>`
+					strSlideXml += ' <p:spPr>'
+					strSlideXml += `  <a:xfrm${locationAttr}><a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>`
+					strSlideXml += '  <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
+					strSlideXml += ' </p:spPr>'
+					strSlideXml += '</p:pic>'
+				} else if (slideItemObj.mtype === 'online') {
 					strSlideXml += '<p:pic>'
 					strSlideXml += ' <p:nvPicPr>'
 					// IMPORTANT: <p:cNvPr id="" value is critical - if its not the same number as preview image `rId`, PowerPoint throws error!
 					strSlideXml += `<p:cNvPr id="${(slideItemObj.mediaRid ?? 0) + 2}" name="${slideItemObj.options.objectName}"/>`
 					strSlideXml += ' <p:cNvPicPr/>'
-					strSlideXml += ' <p:nvPr>'
-					strSlideXml += `  <a:videoFile r:link="rId${slideItemObj.mediaRid}"/>`
+					strSlideXml += ` <p:nvPr${genXmlMediaFrameAttrs(slideItemObj.options)}>`
+					strSlideXml += `  <a:videoFile r:link="rId${slideItemObj.mediaRid}"${slideItemObj.options.contentType ? ` contentType="${encodeXmlEntities(slideItemObj.options.contentType)}"` : ''}/>`
 					strSlideXml += ' </p:nvPr>'
 					strSlideXml += ' </p:nvPicPr>'
 					// NOTE: `blip` is diferent than videos; also there's no preview "p:extLst" above but exists in videos
@@ -905,9 +951,9 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 					strSlideXml += `<p:cNvPr id="${(slideItemObj.mediaRid ?? 0) + 2}" name="${slideItemObj.options.objectName
 					}"><a:hlinkClick r:id="" action="ppaction://media"/></p:cNvPr>`
 					strSlideXml += ' <p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr>'
-					strSlideXml += ' <p:nvPr>'
+					strSlideXml += ` <p:nvPr${genXmlMediaFrameAttrs(slideItemObj.options)}>`
 					// ECMA-376: audio references `a:audioFile`, video `a:videoFile` - the rel type already distinguishes them
-					strSlideXml += `  <${slideItemObj.mtype === 'audio' ? 'a:audioFile' : 'a:videoFile'} r:link="rId${slideItemObj.mediaRid}"/>`
+					strSlideXml += `  <${slideItemObj.mtype === 'audio' ? 'a:audioFile' : 'a:videoFile'} r:link="rId${slideItemObj.mediaRid}"${slideItemObj.options.contentType ? ` contentType="${encodeXmlEntities(slideItemObj.options.contentType)}"` : ''}/>`
 					strSlideXml += '  <p:extLst>'
 					strSlideXml += `   <p:ext uri="${OOXML_EXT.media.uri}">`
 					strSlideXml += `    <p14:media xmlns:p14="${OOXML_EXT.media.ns}" r:embed="rId${(slideItemObj.mediaRid ?? 0) + 1}"/>`
