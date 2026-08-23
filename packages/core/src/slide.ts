@@ -20,6 +20,9 @@ import {
 	MediaProps,
 	PresLayout,
 	PresSlide,
+	ConnectorProps,
+	GroupChild,
+	GroupProps,
 	ShapeProps,
 	SlideLayout,
 	SectionZoomProps,
@@ -326,6 +329,31 @@ export default class Slide {
 	 * @param {ShapeProps} options - shape options
 	 * @return {Slide} this Slide
 	 */
+	/**
+	 * Add a connector shape (`p:cxnSp`) to the Slide
+	 * - glue it to shapes with `start`/`end`, referencing their `objectName`
+	 * @param {ConnectorProps} options - connector options
+	 * @return {Slide} this Slide
+	 */
+	addConnector(options?: ConnectorProps): Slide {
+		genObj.addConnectorDefinition(this, cloneOpts(options ?? {}))
+		return this
+	}
+
+	/**
+	 * Add a shape group (`p:grpSp`) to the Slide
+	 * - children keep their own coordinates; resizing the group scales all of them together
+	 * @param {GroupChild[]} children - child objects, in z-order
+	 * @param {GroupProps} options - group options
+	 * @return {Slide} this Slide
+	 */
+	addGroup(children: GroupChild[], options?: GroupProps): Slide {
+		// `cloneOpts` spreads into an object literal, so it cannot clone the child array; and a shallow
+		// copy would share each child's nested options with the caller
+		genObj.addGroupDefinition(this, JSON.parse(JSON.stringify(children ?? [])), cloneOpts(options ?? {}))
+		return this
+	}
+
 	addShape(shapeName: SHAPE_NAME, options?: ShapeProps): Slide {
 		// NOTE: As of v3.1.0, <script> users are passing the old shape object from the shapes file (orig to the project)
 		// But React/TypeScript users are passing the shapeName from an enum, which is a simple string, so lets cast

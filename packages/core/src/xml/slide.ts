@@ -17,7 +17,7 @@ import {
 	SHAPE_TYPE,
 	SLIDE_OBJECT_TYPES,
 } from '../core-enums'
-import { AudioCdTimeProps, BlurProps, ImageRecolorProps, BorderProps, EffectDagProps, FillOverlayProps, ImageAlphaEffectProps, Color, ISlideObject, ObjectOptions, ShapeStyleProps, PresSlide, ReflectionProps, ShadowProps, SectionProps, SlideLayout, SoftEdgeProps, TableCell, TableCellProps, TableProps, TextGlowProps } from '../core-interfaces'
+import { AudioCdTimeProps, BlurProps, ConnectionProps, ImageRecolorProps, BorderProps, EffectDagProps, FillOverlayProps, ImageAlphaEffectProps, Color, ISlideObject, ObjectOptions, ShapeStyleProps, PresSlide, ReflectionProps, ShadowProps, SectionProps, SlideLayout, SoftEdgeProps, TableCell, TableCellProps, TableProps, TextGlowProps } from '../core-interfaces'
 import {
 	convertRotationDegrees,
 	createColorElement,
@@ -262,6 +262,51 @@ function genXmlAudioCdTime (tag: string, point?: AudioCdTimeProps): string {
 }
 
 /**
+ * Group children allocate `p:cNvPr@id` from this offset past their group's own id, so they cannot
+ * collide with the top-level `idx + 2` scheme.
+ */
+const GROUP_CHILD_ID_BASE = 1000
+
+/**
+ * Bounding box of a group's children, in EMU - the group's `a:chOff`/`a:chExt` child coordinate space.
+ * @param {ISlideObject[]} children - group children
+ * @param {PresSlide | SlideLayout} slide - owning slide, for layout-relative sizes
+ * @returns {object} bounding box
+ */
+function groupChildBounds (children: ISlideObject[], slide: PresSlide | SlideLayout): { x: number, y: number, cx: number, cy: number } {
+	const boxes = children.map(child => resolveSlideObjectContext(slide, { ...child, options: child.options ?? {} }))
+	if (boxes.length === 0) return { x: 0, y: 0, cx: 0, cy: 0 }
+	const left = Math.min(...boxes.map(box => box.x))
+	const top = Math.min(...boxes.map(box => box.y))
+	return {
+		x: left,
+		y: top,
+		cx: Math.max(...boxes.map(box => box.x + box.cx)) - left,
+		cy: Math.max(...boxes.map(box => box.y + box.cy)) - top,
+	}
+}
+
+/**
+ * A connector attachment (`a:stCxn`/`a:endCxn`).
+ * - `id` and `idx` are both required by CT_Connection, so an unresolvable shape name yields nothing
+ *   rather than a dangling attachment: the connector then renders as a free line
+ * @param {string} tag - `a:stCxn` or `a:endCxn`
+ * @param {ConnectionProps | undefined} connection - attachment options
+ * @param {PresSlide | SlideLayout} slide - owning slide, for resolving the target's id
+ * @returns {string} XML
+ */
+function genXmlConnection (tag: string, connection: ConnectionProps | undefined, slide: PresSlide | SlideLayout): string {
+	if (!connection?.shape) return ''
+	const targetIdx = slide._slideObjects.findIndex(obj => obj.options?.objectName === connection.shape)
+	if (targetIdx < 0) {
+		console.warn(`[pptxgenjs] connector references unknown \`objectName\` "${connection.shape}" - attachment omitted`)
+		return ''
+	}
+	const site = typeof connection.site === 'number' && isFinite(connection.site) && connection.site > 0 ? Math.round(connection.site) : 0
+	return `<${tag} id="${targetIdx + 2}" idx="${site}"/>`
+}
+
+/**
  * Theme style references for a shape (`p:style`).
  * - CT_ShapeStyle requires all four children, so a `style` set at all emits all four; a property the
  *   caller left unset references nothing (`idx="0"`, or `idx="none"` for the font)
@@ -472,11 +517,14 @@ function genXmlSlideTreeStart (): string {
  *
  * The local table counter and object index determine OOXML non-visual IDs, so callers must keep this phase contiguous.
  */
-function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionProps[]): string {
+function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionProps[], objects?: ISlideObject[], idBase = 0): string {
 	let strSlideXml = ''
 	let intTableNum = 1
 	// STEP 3: Loop over all Slide.data objects and add them to this slide
-	slide._slideObjects.forEach((slideObject: ISlideObject, idx: number) => {
+	;(objects ?? slide._slideObjects).forEach((slideObject: ISlideObject, position: number) => {
+		// Top-level ids stay `idx + 2`, unchanged. Group children allocate past the top-level range so
+		// they cannot collide with it (DEPRECATION-PLAN.md F6 owns the wider id-scheme cleanup).
+		const idx = idBase + position
 		const slideItemObj = { ...slideObject, options: slideObject.options ?? {} }
 		// XML generation has historically filled in this internal object; retain that contract for downstream renderers.
 		slideObject.options = slideItemObj.options
@@ -1019,6 +1067,46 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 					strSlideXml += ' </p:spPr>'
 					strSlideXml += '</p:pic>'
 				}
+				break
+
+			case SLIDE_OBJECT_TYPES.group: {
+				// `a:chOff`/`a:chExt` is the child coordinate space: children keep their own coordinates and
+				// are mapped from that box onto `a:off`/`a:ext`, so a group sized differently from its
+				// children's bounding box scales them.
+				const children = slideItemObj._groupObjects ?? []
+				const bbox = groupChildBounds(children, slide)
+				const groupW = slideItemObj.options.w ? cx : bbox.cx
+				const groupH = slideItemObj.options.h ? cy : bbox.cy
+				const rot = slideItemObj.options.rotate ? ` rot="${Math.round(slideItemObj.options.rotate * 60000)}"` : ''
+				const flip = (slideItemObj.options.flipH ? ' flipH="1"' : '') + (slideItemObj.options.flipV ? ' flipV="1"' : '')
+
+				strSlideXml += '<p:grpSp>'
+				strSlideXml += `<p:nvGrpSpPr>${genXmlCNvPr(idx + 2, String(slideItemObj.options.objectName ?? ''), slideItemObj.options)}<p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>`
+				strSlideXml += `<p:grpSpPr><a:xfrm${rot}${flip}><a:off x="${x}" y="${y}"/><a:ext cx="${groupW}" cy="${groupH}"/>` +
+					`<a:chOff x="${bbox.x}" y="${bbox.y}"/><a:chExt cx="${bbox.cx}" cy="${bbox.cy}"/></a:xfrm></p:grpSpPr>`
+				// children are emitted through this same switch, with ids past the top-level range
+				strSlideXml += genXmlSlideObjects(slide, sections, children, idx + GROUP_CHILD_ID_BASE)
+				strSlideXml += '</p:grpSp>'
+				break
+			}
+
+			case SLIDE_OBJECT_TYPES.connector:
+				// CT_Connector has no `p:txBody`, so a connector carries no text
+				strSlideXml += '<p:cxnSp>'
+				strSlideXml += '<p:nvCxnSpPr>'
+				strSlideXml += genXmlCNvPr(idx + 2, String(slideItemObj.options.objectName ?? ''), slideItemObj.options)
+				strSlideXml += `<p:cNvCxnSpPr>${genXmlConnection('a:stCxn', slideItemObj.options.start, slide)}${genXmlConnection('a:endCxn', slideItemObj.options.end, slide)}</p:cNvCxnSpPr>`
+				strSlideXml += '<p:nvPr/>'
+				strSlideXml += '</p:nvCxnSpPr>'
+				strSlideXml += '<p:spPr>'
+				strSlideXml += `<a:xfrm${slideItemObj.options.rotate ? ` rot="${Math.round(slideItemObj.options.rotate * 60000)}"` : ''}${slideItemObj.options.flipH ? ' flipH="1"' : ''}${slideItemObj.options.flipV ? ' flipV="1"' : ''}>` +
+					`<a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>`
+				strSlideXml += `<a:prstGeom prst="${slideItemObj.options.type ?? 'straightConnector1'}"><a:avLst/></a:prstGeom>`
+				if (slideItemObj.options.line) strSlideXml += genXmlLine(slideItemObj.options.line)
+				strSlideXml += '</p:spPr>'
+				// the `p:style` slot #185 deferred to this issue
+				strSlideXml += genXmlShapeStyle(slideItemObj.options.styleRef)
+				strSlideXml += '</p:cxnSp>'
 				break
 
 			case SLIDE_OBJECT_TYPES.contentPart:
