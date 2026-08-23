@@ -226,6 +226,48 @@ slide.addChart(pres.ChartType.line, dataChartAreaLine, { x: 1, y: 1, w: 8, h: 4 
 | `v3DRotY`               | integer |              | title rotation (degrees)                | 0-360. Ex: `{ v3DRotY:180 }`                                                                                 |
 | `valueBarColors`        | boolean | `false`      | forces chartColors on multi-data-series | `true` or `false`                                                                                            |
 
+### Chart Style and Colours
+
+PowerPoint writes two companion parts next to every chart — `ppt/charts/styleN.xml` and
+`ppt/charts/colorsN.xml`. They are what its **Chart Styles** and **Change Colors** galleries switch
+between, and what lets a theme change restyle a chart. PptxGenJS writes both for every chart.
+
+Neither part changes how a chart looks here: the explicit formatting in `chartN.xml` overrides a style
+reference, so these only populate the galleries.
+
+```typescript
+slide.addChart('bar', data, {
+    x: 1, y: 1, w: 8, h: 4,
+    chartStyle: 201,
+    chartColorStyle: { method: 'cycle', id: 10 },
+});
+```
+
+| Option            | Type   | Default | Description                                             |
+| :---------------- | :----- | :------ | :------------------------------------------------------ |
+| `chartStyle`      | number | `201`   | which Chart Styles gallery entry is selected             |
+| `chartColorStyle` | object |         | the Change Colors palette — see below                    |
+
+#### `chartColorStyle`
+
+| Option   | Type   | Default            | Description                                                    |
+| :------- | :----- | :----------------- | :------------------------------------------------------------- |
+| `method` | string | `cycle`            | `cycle`, `withinLinear`, `acrossLinear`, `withinLinearReversed`, `acrossLinearReversed` |
+| `id`     | number | `10`               | which Change Colors gallery entry is selected                   |
+| `colors` | array  | the theme accents  | the palette itself                                              |
+
+```typescript
+chartColorStyle: { method: 'withinLinear', id: 13, colors: [{ scheme: 'accent3' }, 'FF0000'] }
+```
+
+`chartColorStyle` is **not** the same as `chartColors`. `chartColors` paints the series directly in the
+chart and always wins; `chartColorStyle` only describes the palette the gallery offers.
+
+`chartStyle` selects a gallery entry. The style *definitions* written are Office's default set
+regardless of the id — reproducing all ~150 gallery entries would mean 150 definition blocks, none of
+which is published in a schema. So changing the id changes which entry PowerPoint shows as selected,
+not the formatting.
+
 ### Element Shadows
 
 | Option    | Type   | Unit    | Default  | Description  | Possible Values                            |

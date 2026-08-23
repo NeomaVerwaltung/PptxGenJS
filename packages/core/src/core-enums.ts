@@ -124,6 +124,20 @@ export const LAYOUT_IDX_SERIES_BASE = 2147483649
  * ECMA-376 20.1.6.2 CT_ColorMapping - the identity map, which is what `a:masterClrMapping` means
  * - all twelve attributes are required, so a partial `colorMapOverride` is filled from this
  */
+/**
+ * Chart style and chart colour-style parts (MS-ODRAWXML)
+ * - verified against Microsoft's own `ChartStylePart`/`ChartColorStylePart` definitions in
+ *   dotnet/Open-XML-SDK, cross-checked against LibreOffice, rubyXL and OpenXLSX
+ * - note the asymmetry: the namespace is dated 2012, the relationships 2011. That is correct.
+ */
+export const CHART_STYLE = Object.freeze({
+	ns: 'http://schemas.microsoft.com/office/drawing/2012/chartStyle',
+	styleContentType: 'application/vnd.ms-office.chartstyle+xml',
+	colorsContentType: 'application/vnd.ms-office.chartcolorstyle+xml',
+	styleRelType: 'http://schemas.microsoft.com/office/2011/relationships/chartStyle',
+	colorsRelType: 'http://schemas.microsoft.com/office/2011/relationships/chartColorStyle',
+})
+
 export const DEF_COLOR_MAP = Object.freeze({
 	bg1: 'lt1', tx1: 'dk1', bg2: 'lt2', tx2: 'dk2',
 	accent1: 'accent1', accent2: 'accent2', accent3: 'accent3',
