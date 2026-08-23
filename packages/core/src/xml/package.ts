@@ -20,9 +20,42 @@ function chartContentTypes (rel: ISlideRelChart): string {
  * OOXML package-part rendering.
  */
 
-import { CHART_STYLE, COMMENT, CRLF, DEF_COLOR_MAP, DEF_GUIDE_COLOR, EMU, LAYOUT_IDX_SERIES_BASE, OOXML_CHARTEX, OOXML_EXT, SLDNUMFLDID, SLIDE_OBJECT_TYPES, isChartexType } from '../core-enums'
-import { ColorMapOverrideProps, DocumentProps, EmbeddedFont, ISlideRelChart, TableStyleBorderProps, TableStyleProps, TableStylePartProps, GuideProps, IPresentationProps, PresSlide, SectionProps, SlideLayout, SlideShowProps } from '../core-interfaces'
-import { createColorElement, encodeXmlEntities, genXmlColorSelection, getUuid, inch2Emu } from '../gen-utils'
+import {
+	CHART_STYLE,
+	COMMENT,
+	CRLF,
+	DEF_COLOR_MAP,
+	DEF_GUIDE_COLOR,
+	EMU,
+	isChartexType,
+	LAYOUT_IDX_SERIES_BASE,
+	OOXML_CHARTEX,
+	OOXML_EXT,
+	SLDNUMFLDID,
+	SLIDE_OBJECT_TYPES,
+} from '../core-enums'
+import {
+	ColorMapOverrideProps,
+	DocumentProps,
+	EmbeddedFont,
+	GuideProps,
+	IPresentationProps,
+	ISlideRelChart,
+	PresSlide,
+	SectionProps,
+	SlideLayout,
+	SlideShowProps,
+	TableStyleBorderProps,
+	TableStylePartProps,
+	TableStyleProps,
+} from '../core-interfaces'
+import {
+	createColorElement,
+	encodeXmlEntities,
+	genXmlColorSelection,
+	getUuid,
+	inch2Emu,
+} from '../gen-utils'
 import { genXmlLine } from './line'
 import { makeXmlEmbeddedFontLst } from '../gen-fonts'
 import { genXmlSlideExtLst, slideObjectToXml } from './slide'

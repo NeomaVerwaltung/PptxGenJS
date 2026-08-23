@@ -3,7 +3,15 @@
  * PptxGenJS Interfaces
  */
 
-import { CHART_NAME, PLACEHOLDER_TYPE, SHAPE_NAME, SLIDE_OBJECT_TYPES, TEXT_HALIGN, TEXT_VALIGN, WRITE_OUTPUT_TYPE } from './core-enums'
+import {
+	CHART_NAME,
+	PLACEHOLDER_TYPE,
+	SHAPE_NAME,
+	SLIDE_OBJECT_TYPES,
+	TEXT_HALIGN,
+	TEXT_VALIGN,
+	WRITE_OUTPUT_TYPE,
+} from './core-enums'
 
 // Core Types
 // ==========

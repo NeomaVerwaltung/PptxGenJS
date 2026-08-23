@@ -44,8 +44,9 @@ Two rules keep this page truthful, both enforced by `packages/core/test/ms-pptx-
 | `p166:zmPr` | inside a zoom object | n/a | powerpoint/2016/6/main | §2.2.15 | zoom `returnToParent`/`showBg`/`transitionDur` |
 | `cx:chart` | `p:spTree` via `mc:AlternateContent` | n/a (`mc:Choice Requires="cx1"`) | drawing/2014/chartex | MS-ODRAWXML §2.1 | `addChart()` with a chartex type |
 
-Each row's package contract is asserted in `packages/core/test/contracts.test.ts` or `packages/core/test/issues.test.ts`, and the
-LibreOffice round-trip in `packages/core/test/office-open.test.ts` (`npm run test:office`) covers them end to end.
+Each row's package contract is asserted in `packages/core/test/contracts-<area>.test.ts` or `packages/core/test/issues.test.ts`,
+and the LibreOffice round-trip in `packages/core/test/office-open.test.ts` (`npm run test:office`) covers them end to end. That
+test builds its deck from `packages/core/test/office-fixtures/`, one module per feature.
 
 ## Extension parts
 
@@ -92,4 +93,5 @@ distinguishes "unsupported" from "overlooked":
    Office-math paths do.
 3. Add a semantic contract test — the emitted URI, namespace, and element, plus proof that output is
    unchanged when the feature is unused.
-4. Add a row to the table above, and extend `packages/core/test/office-open.test.ts` so the round-trip covers it.
+4. Add a row to the table above, and add a `packages/core/test/office-fixtures/` module (plus its line in that
+   directory's `index.ts`) so the LibreOffice round-trip covers it.

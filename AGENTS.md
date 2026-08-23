@@ -30,7 +30,9 @@ For PowerPoint compatibility, also consult Microsoft's [MS-OI29500 Office implem
 | `npm run build` | Rollup ESM + CJS bundles into each package's `dist/` |
 | `npm run test:office` | Opens a generated `.pptx` in LibreOffice; needs `PPTXGENJS_OFFICE_BIN` and a local LibreOffice install. CI runs it — skip locally unless installed. |
 
-**The `test` script hardcodes its file list.** A new `test/*.test.ts` will not run until it is added to both the `test` and `test:coverage` scripts in that package's `package.json`. Prefer adding cases to an existing file.
+**The `test` script discovers its files.** `scripts/run-tests.mjs` finds every `test/**/*.test.ts` recursively, so a new test file runs as soon as it exists — no `package.json` change, and subdirectories work. (It is a script rather than a shell glob because `cmd.exe` does not expand globs and Node only globs them itself from v21, while this repo supports v20.)
+
+Prefer a new test file over appending to a large one — the shared ones are where feature branches collide. `contracts-<area>.test.ts` is split by feature area, and the LibreOffice round-trip builds its deck from one module per feature under `test/office-fixtures/`, listed in that directory's `index.ts`. Adding a round-trip fixture is a new file plus one line; `office-fixtures.test.ts` fails if you forget the line, and runs every fixture so a broken one surfaces without LibreOffice installed.
 
 ## Conventions
 
@@ -57,10 +59,12 @@ For PowerPoint compatibility, also consult Microsoft's [MS-OI29500 Office implem
 | `packages/core/src/xml/` | OOXML emitters: `package.ts` (package parts), `slide.ts`, `text.ts`, `relationships.ts` |
 | `packages/core/src/charts/` | Chart XML: `xml.ts`, `axes.ts`, `title.ts`, `workbook.ts`, `utils.ts` |
 | `packages/core/test/pptx-contracts.ts` | Shared helpers that parse a generated `.pptx` and assert package semantics; typechecked via `packages/std`, not by core's own `tsc` |
+| `packages/core/test/fixtures.ts` | Sample inputs shared by the contract tests (PNG/WAV/EOT blobs, the small presentation the package contracts inspect) |
+| `packages/core/test/office-fixtures/` | One module per feature area, each adding its slides to the LibreOffice round-trip deck; `index.ts` lists them in order |
 | `packages/std/test/` | One file per category (`layout`, `charts`) plus `exports.test.ts`, which fails when a category is added without wiring its subpath |
 | `docs/` | VitePress site (`npm run docs:dev`), shared by both packages |
 | `tsconfig.base.json` | Shared compiler options; each package's `tsconfig.json` extends it |
-| `scripts/` | Repo-level tooling, not shipped in any package (`sync-version.mjs`, run by a package's `version` hook) |
+| `scripts/` | Repo-level tooling, not shipped in any package (`sync-version.mjs`, run by a package's `version` hook; `run-tests.mjs`, the test-file discovery behind `npm test`) |
 | `packages/std/` | `@neo-ma/pptxgenjs-std` — helpers composing the public API; published separately, no runtime dep on the core |
 | `packages/std/src/<category>/` | One directory per category (`layout`, `charts`), each with an `index.ts` that is its whole public surface and a matching subpath export |
 
