@@ -12,14 +12,22 @@ import { test } from 'node:test'
 import pptxgen from '../src/pptxgen'
 
 const officeBinary = process.env.PPTXGENJS_OFFICE_BIN
-if (!officeBinary) throw new Error('Set PPTXGENJS_OFFICE_BIN to the LibreOffice executable before running npm run test:office')
 
 const execFile = promisify(execFileCallback)
 
 /** 4x2 px PNG */
 const PNG_4x2 = 'image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAACCAIAAADwyuo0AAAADklEQVR4nGP4jwQYkDkANvEX6SAXxcIAAAAASUVORK5CYII='
 
-test('office: LibreOffice opens and converts a generated presentation', async () => {
+// The skip above must not turn CI green by accident: on CI the binary is always provisioned, so a
+// missing one is a workflow regression rather than a local convenience
+test('office: CI provides a LibreOffice binary', { skip: process.env.CI ? false : 'only meaningful on CI' }, () => {
+	assert.ok(officeBinary, 'PPTXGENJS_OFFICE_BIN is unset on CI - the office round-trip silently skipped')
+})
+
+// Skipped rather than failed when LibreOffice is absent, so this file can live in the normal `test`
+// script and be compiled on every `npm run check` - it used to be transformed only by the CI-only
+// `test:office` script, which is how a duplicate declaration reached CI unnoticed
+test('office: LibreOffice opens and converts a generated presentation', { skip: officeBinary ? false : 'set PPTXGENJS_OFFICE_BIN to run' }, async () => {
 	const directory = await mkdtemp(join(tmpdir(), 'pptxgenjs-office-'))
 	const presentationPath = join(directory, 'smoke.pptx')
 
@@ -106,10 +114,10 @@ test('office: LibreOffice opens and converts a generated presentation', async ()
 		pptx.addSlide({ masterName: 'SECTION HEADER' }).addText('section', { placeholder: 'secTitle' })
 		// media source elements - the round-trip fixture for #150. The linked target is external, so it
 		// need not exist: the deck only has to open.
-		const mediaSlide = pptx.addSlide()
-		mediaSlide.addMedia({ type: 'video', link: 'clip.mp4', x: 0.5, y: 0.5, w: 3, h: 2, contentType: 'video/mp4' })
-		mediaSlide.addMedia({ type: 'audioCd', audioCd: { start: { track: 1 }, end: { track: 1, time: 30 } }, x: 4.5, y: 0.5, w: 2, h: 2 })
-		mediaSlide.addMedia({ type: 'wav', data: 'audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=', x: 0.5, y: 3, w: 2, h: 1.5 })
+		const mediaSourceSlide = pptx.addSlide()
+		mediaSourceSlide.addMedia({ type: 'video', link: 'clip.mp4', x: 0.5, y: 0.5, w: 3, h: 2, contentType: 'video/mp4' })
+		mediaSourceSlide.addMedia({ type: 'audioCd', audioCd: { start: { track: 1 }, end: { track: 1, time: 30 } }, x: 4.5, y: 0.5, w: 2, h: 2 })
+		mediaSourceSlide.addMedia({ type: 'wav', data: 'audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=', x: 0.5, y: 3, w: 2, h: 1.5 })
 		pptx.addSlide({ transition: { type: 'morph', duration: 1200 } }).addText('modern transition', { x: 0.5, y: 0.5, w: 5, h: 0.5 })
 		await writeFile(presentationPath, (await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
 

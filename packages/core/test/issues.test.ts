@@ -921,8 +921,9 @@ test('#150: media source elements - linked media, audioCd, wavAudioFile', async 
 	// linked media: same three-relationship shape, but external and with no part in the package
 	assert.ok(xml.includes('<a:videoFile r:link="rId4" contentType="video/mp4"/>'), `linked video wrong: ${frames[1]}`)
 	assert.ok(xml.includes('<a:audioFile r:link="rId7"/>'), `linked audio wrong: ${frames[2]}`)
+	const relElements = rels.match(/<Relationship\b[^>]*\/>/g) ?? []
 	for (const target of ['C:/movies/clip.mp4', '/srv/audio/theme.mp3']) {
-		const matches = rels.match(new RegExp(`<Relationship[^>]*Target="${target.replace(/[/.]/g, '\\$&')}"[^>]*/>`, 'g')) ?? []
+		const matches = relElements.filter(rel => rel.includes(`Target="${target}"`))
 		assert.equal(matches.length, 2, `expected a video/audio and a media relationship for ${target}, got ${matches.length}`)
 		for (const rel of matches) assert.ok(rel.includes('TargetMode="External"'), `linked media relationship is not external: ${rel}`)
 	}
