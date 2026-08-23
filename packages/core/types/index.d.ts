@@ -979,6 +979,11 @@ declare namespace PptxGenJS {
 		 * @deprecated v3.6.0 - use `DataOrPathProps` instead - remove in v4.0.0
 		 */
 		src?: string
+		/**
+		 * Recolour and correction effects applied to a background image
+		 * @example { grayscale: true, brightness: -20 }
+		 */
+		recolor?: ImageRecolorProps
 	}
 	/**
 	 * Color in Hex format
@@ -1830,6 +1835,11 @@ declare namespace PptxGenJS {
 		 */
 		alphaEffects?: ImageAlphaEffectProps
 		/**
+		 * Recolour and correction effects applied to the image itself
+		 * @example { grayscale: true, brightness: 20, contrast: -10 }
+		 */
+		recolor?: ImageRecolorProps
+		/**
 		 * Theme style references (`p:style`)
 		 * - lets the object restyle when the user swaps the presentation theme in PowerPoint
 		 * @example { fill: 1, line: 2, effect: 0, font: 'minor' }
@@ -2587,6 +2597,49 @@ declare namespace PptxGenJS {
 		 * @default sib
 		 */
 		type?: 'sib' | 'tree'
+	}
+
+	/**
+	 * Recolour and correction effects applied to an image's `a:blip`
+	 * - PowerPoint's Picture Format > Color and > Corrections galleries
+	 */
+	export interface ImageRecolorProps {
+		/**
+		 * Map the image onto two colours (`a:duotone`)
+		 * - the schema requires exactly two, so anything else is dropped
+		 * @example ['000000', 'FFFFFF']
+		 */
+		duotone?: [Color, Color]
+		/** Convert to greyscale (`a:grayscl`) */
+		grayscale?: boolean
+		/**
+		 * Brightness, percent -100 to 100 (`a:lum@bright`)
+		 * @default 0
+		 */
+		brightness?: number
+		/**
+		 * Contrast, percent -100 to 100 (`a:lum@contrast`)
+		 * @default 0
+		 */
+		contrast?: number
+		/**
+		 * Reduce to two tones at this threshold, percent 0 to 100 (`a:biLevel@thresh`)
+		 * - required by the schema, so this is what turns the effect on
+		 */
+		blackWhiteThreshold?: number
+		/**
+		 * Replace one colour with another (`a:clrChange`) - PowerPoint's Set Transparent Color
+		 * - both colours are required by the schema
+		 */
+		colorChange?: {
+			from: Color
+			to: Color
+			/**
+			 * Whether the alpha channel takes part in the comparison (`@useA`)
+			 * @default true
+			 */
+			useAlpha?: boolean
+		}
 	}
 
 	/**

@@ -1080,3 +1080,54 @@ test('#133: custom table style definitions reach ppt/tableStyles.xml', async () 
 	assert.ok(bareXml.trimEnd().endsWith('def="{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"/>'), `default tableStyles.xml changed: ${bareXml}`)
 	assert.ok(!bareXml.includes('<a:tblStyle '), 'a default deck gained a table style')
 })
+
+test('#131: picture recolor and correction effects', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addImage({ data: PNG_4x2, x: 0.5, y: 0.5, w: 1, h: 0.5, recolor: { duotone: ['000000', { scheme: 'accent1' }], brightness: 20, contrast: -10 } })
+	slide.addImage({ data: PNG_4x2, x: 2, y: 0.5, w: 1, h: 0.5, recolor: { grayscale: true, blackWhiteThreshold: 50 } })
+	slide.addImage({ data: PNG_4x2, x: 3.5, y: 0.5, w: 1, h: 0.5, recolor: { colorChange: { from: 'FFFFFF', to: '00FF00', useAlpha: false } } })
+	slide.addImage({ data: PNG_4x2, x: 5, y: 0.5, w: 1, h: 0.5, transparency: 30, recolor: { brightness: 150 } })
+	// a duotone with one colour and a colour change missing its target: both schema-required, both dropped
+	slide.addImage({ data: PNG_4x2, x: 6.5, y: 0.5, w: 1, h: 0.5, recolor: { duotone: ['000000'] as never, colorChange: { from: 'FFFFFF' } as never } })
+
+	const xml = await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')
+	const blips = xml.match(/<a:blip [\s\S]*?<\/a:blip>/g) ?? []
+	assert.equal(blips.length, 5, `expected five blips, got ${blips.length}`)
+
+	// CT_DuotoneEffect requires exactly two colours
+	assert.ok(blips[0].includes('<a:duotone><a:srgbClr val="000000"/><a:schemeClr val="accent1"/></a:duotone>'), `duotone wrong: ${blips[0]}`)
+	// both corrections share one `a:lum`, and ST_FixedPercentage is signed
+	assert.ok(blips[0].includes('<a:lum bright="20000" contrast="-10000"/>'), `lum wrong: ${blips[0]}`)
+
+	assert.ok(blips[1].includes('<a:grayscl/>'), 'grayscl missing')
+	assert.ok(blips[1].includes('<a:biLevel thresh="50000"/>'), `biLevel wrong: ${blips[1]}`)
+
+	assert.ok(blips[2].includes('<a:clrChange useA="0"><a:clrFrom><a:srgbClr val="FFFFFF"/></a:clrFrom><a:clrTo><a:srgbClr val="00FF00"/></a:clrTo></a:clrChange>'), `clrChange wrong: ${blips[2]}`)
+
+	// recolour sits alongside the existing transparency effect, and the percent is clamped
+	assert.ok(blips[3].includes('<a:alphaModFix amt="70000"/>') && blips[3].includes('<a:lum bright="100000"/>'), `clamping or coexistence wrong: ${blips[3]}`)
+
+	// the invalid pair produced nothing at all
+	assert.ok(!blips[4].includes('duotone') && !blips[4].includes('clrChange'), `an incomplete effect was emitted: ${blips[4]}`)
+
+	// a background image takes the same effects, replacing the empty `<a:lum/>` it has always carried
+	const bg = new pptxgen()
+	const bgSlide = bg.addSlide()
+	bgSlide.background = { data: PNG_4x2, recolor: { grayscale: true, brightness: -20 } }
+	bgSlide.addText('bg', { x: 1, y: 1 })
+	const plain = bg.addSlide()
+	plain.background = { data: PNG_4x2 }
+	plain.addText('plain', { x: 1, y: 1 })
+	assert.ok((await readPart(await writeZip(bg), 'ppt/slides/slide1.xml')).includes('<a:grayscl/><a:lum bright="-20000"/></a:blip>'), 'background recolour missing')
+	// a background that asks for nothing keeps the literal, so existing decks are unchanged
+	assert.ok((await readPart(await writeZip(bg), 'ppt/slides/slide2.xml')).includes('<a:blip r:embed="rId1"><a:lum/></a:blip>'), 'the default background blip changed')
+
+	// an image asking for none of it is unchanged
+	const bare = new pptxgen()
+	bare.addSlide().addImage({ data: PNG_4x2, x: 1, y: 1, w: 1, h: 0.5 })
+	const bareXml = await readPart(await writeZip(bare), 'ppt/slides/slide1.xml')
+	for (const tag of ['<a:duotone', '<a:grayscl', '<a:lum', '<a:biLevel', '<a:clrChange']) {
+		assert.ok(!bareXml.includes(tag), `a default image gained ${tag}`)
+	}
+})

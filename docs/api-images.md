@@ -103,6 +103,51 @@ The `sizing` option provides cropping and scaling an image to a specified area. 
 Images take the same effects as shapes — `shadow`, `glow`, `softEdge`, `reflection`, `blur`,
 `fillOverlay` and `effectDag`. See [Shape Effects](./api-shapes.md#effects).
 
+### Recolour and Corrections (`recolor`)
+
+PowerPoint's **Picture Format > Color** and **> Corrections** galleries. Like `alphaEffects`, these act
+on the image's own pixels and are written onto `a:blip`.
+
+```typescript
+slide.addImage({ path: 'photo.jpg', x: 1, y: 1, w: 4, h: 3, recolor: { grayscale: true, brightness: 20, contrast: -10 } });
+```
+
+| Option                | Type    | Description                                                     |
+| :-------------------- | :------ | :-------------------------------------------------------------- |
+| `duotone`             | array   | exactly two colours to map the image onto (`a:duotone`)          |
+| `grayscale`           | boolean | convert to greyscale (`a:grayscl`)                              |
+| `brightness`          | number  | percent, -100 to 100 (`a:lum@bright`)                            |
+| `contrast`            | number  | percent, -100 to 100 (`a:lum@contrast`)                          |
+| `blackWhiteThreshold` | number  | percent, 0 to 100 — reduce to two tones (`a:biLevel@thresh`)      |
+| `colorChange`         | object  | `{ from, to, useAlpha? }` — PowerPoint's Set Transparent Color    |
+
+`brightness` and `contrast` share one `a:lum` element, and both are signed — negative darkens or
+flattens.
+
+Three of these carry schema requirements, so an incomplete value is dropped with a warning rather than
+written as something PowerPoint would refuse to open: `duotone` needs **exactly** two colours,
+`colorChange` needs both `from` and `to`, and `blackWhiteThreshold` is the required attribute that
+turns `a:biLevel` on.
+
+Slide backgrounds take the same options:
+
+```typescript
+slide.background = { path: 'photo.jpg', recolor: { grayscale: true, brightness: -20 } };
+```
+
+#### Artistic Effects
+
+Not implemented. PowerPoint's artistic effects (`a14:artisticBlur` and its ~21 siblings) need two
+things this library cannot supply:
+
+- Each effect's attribute set is defined only in MS-ODRAWXML. The element names are enumerable, but
+  which attributes each takes, in which units, is not verifiable from a published schema — and a wrong
+  attribute is a repair-dialog cause that LibreOffice will not surface.
+- `a14:imgLayer` references a **pre-rendered bitmap** of the effect, for readers that cannot compute
+  it. PptxGenJS has no raster pipeline, so it cannot produce that layer.
+
+Apply an artistic effect in an image editor and add the result with `addImage()` instead.
+
 ### Alpha Effects (`alphaEffects`)
 
 Alpha effects act on the image's own pixels rather than on the shape around it, so they are written
