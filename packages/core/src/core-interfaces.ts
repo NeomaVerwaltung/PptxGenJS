@@ -1112,6 +1112,74 @@ export interface TableStyleProps {
 	seCell?: TableStylePartProps
 }
 
+/**
+ * A shape group (`p:grpSp`, ECMA-376 Part 1 §19.3.1.22)
+ * - the group's own rect is `a:xfrm/a:off`+`a:ext`; its children keep their own coordinates and are
+ *   mapped through `a:chOff`+`a:chExt`, so resizing the group scales everything inside it
+ */
+export type GroupChild =
+	| { text: { text: string | TextProps[], options?: TextPropsOptions } }
+	| { shape: { type: SHAPE_NAME, options?: ShapeProps } }
+	| { image: ImageProps }
+	| { connector: ConnectorProps }
+	| { group: { children: GroupChild[], options?: GroupProps } }
+
+export interface GroupProps extends PositionProps, ObjectNameProps {
+	/**
+	 * Rotation in degrees
+	 * @default 0
+	 */
+	rotate?: number
+	/** flip the group horizontally */
+	flipH?: boolean
+	/** flip the group vertically */
+	flipV?: boolean
+}
+
+/**
+ * Where a connector attaches to a shape (`a:stCxn`/`a:endCxn`, ECMA-376 Part 1 §20.1.2.2.13)
+ * - both the shape and the site are required by the schema, so a partial value is not emitted
+ */
+export interface ConnectionProps {
+	/** `objectName` of the shape to glue to */
+	shape: string
+	/**
+	 * Which connection site on that shape
+	 * - site numbering is per-geometry; a rectangle has 0 (top), 1 (left), 2 (bottom), 3 (right)
+	 * @default 0
+	 */
+	site?: number
+}
+
+/**
+ * A connector shape (`p:cxnSp`, ECMA-376 Part 1 §19.3.1.19)
+ * - a line that stays attached when the shapes it joins move
+ */
+export interface ConnectorProps extends PositionProps, ObjectNameProps {
+	/**
+	 * Connector geometry
+	 * @default straightConnector1
+	 */
+	type?: 'line' | 'straightConnector1' | 'bentConnector2' | 'bentConnector3' | 'bentConnector4' | 'bentConnector5' | 'curvedConnector2' | 'curvedConnector3' | 'curvedConnector4' | 'curvedConnector5'
+	/** line formatting, including arrow heads */
+	line?: ShapeLineProps
+	/**
+	 * Rotation in degrees
+	 * @default 0
+	 */
+	rotate?: number
+	/** flip the connector horizontally */
+	flipH?: boolean
+	/** flip the connector vertically */
+	flipV?: boolean
+	/** glue the start of the connector to a shape */
+	start?: ConnectionProps
+	/** glue the end of the connector to a shape */
+	end?: ConnectionProps
+	/** theme style references (`p:style`) */
+	styleRef?: ShapeStyleProps
+}
+
 export interface SoftEdgeProps {
 	/**
 	 * Soft-edge radius (points)
@@ -2945,6 +3013,8 @@ export interface ISlideObject {
 	text?: TextProps[]
 	// table
 	arrTabRows?: TableCell[][]
+	/** children of a `p:grpSp`, in insertion order @internal */
+	_groupObjects?: ISlideObject[]
 	// chart
 	chartRid?: number
 	// image:
@@ -3183,6 +3253,12 @@ export interface ObjectOptions extends ImageProps, PositionProps, ShapeProps, Ta
 	audioCd?: AudioCdProps
 	/** image recolour and correction effects (`a:blip` children) @internal */
 	recolor?: ImageRecolorProps
+	/** connector geometry preset (`a:prstGeom@prst` on `p:cxnSp`) @internal */
+	type?: string
+	/** connector start attachment (`a:stCxn`) @internal */
+	start?: ConnectionProps
+	/** connector end attachment (`a:endCxn`) @internal */
+	end?: ConnectionProps
 	/** media referenced rather than embedded @internal */
 	isLinked?: boolean
 	/** image added without `w`/`h`: size it from the image itself during export @internal */

@@ -247,6 +247,74 @@ Passing it warns and falls back to `accent1`.
 `fontColor` defaults to `lt1` rather than following `color`, because text sharing its shape's fill
 colour renders invisible.
 
+## Shape Groups
+
+`addGroup()` wraps children in a `p:grpSp`. They move, scale and rotate together.
+
+```typescript
+slide.addGroup([
+    { shape: { type: pptx.ShapeType.ellipse, options: { x: 1, y: 1, w: 1, h: 1, fill: { color: '70AD47' } } } },
+    { shape: { type: pptx.ShapeType.rect, options: { x: 2.2, y: 1, w: 1, h: 1 } } },
+    { text: { text: 'grouped', options: { x: 1, y: 2.2, w: 2.2, h: 0.5 } } },
+], { x: 0.5, y: 4, w: 4.4, h: 3.4 });
+```
+
+Children are `{ shape }`, `{ text }`, `{ image }`, `{ connector }`, or `{ group }` for nesting — the
+same shape as `defineSlideMaster`'s `objects`.
+
+| Option       | Type    | Default          | Description                            |
+| :----------- | :------ | :--------------- | :------------------------------------- |
+| `x`/`y`      | number  | `0`              | group position (inches)                 |
+| `w`/`h`      | number  | the child bounds | group size (inches)                     |
+| `rotate`     | number  | `0`              | rotation in degrees                     |
+| `flipH`      | boolean | `false`          | flip horizontally                       |
+| `flipV`      | boolean | `false`          | flip vertically                         |
+| `objectName` | string  |                  | name, and the handle a connector glues to |
+
+### How Group Scaling Works
+
+Children keep their **own** coordinates. The group writes two boxes: `a:off`/`a:ext` is the rect you
+asked for, and `a:chOff`/`a:chExt` is the bounding box the children actually occupy. PowerPoint maps
+the second onto the first — so a group twice as wide as its children's bounding box renders them at
+double size, without any child coordinate changing.
+
+Give no `w`/`h` and the group takes its children's bounding box exactly, which renders them 1:1.
+
+## Connectors
+
+`addConnector()` emits a `p:cxnSp`. Glue it to shapes by their `objectName` and the line follows them
+when they move.
+
+```typescript
+slide.addShape(pptx.ShapeType.rect, { x: 0.5, y: 0.5, w: 2, h: 1, objectName: 'fromBox' });
+slide.addShape(pptx.ShapeType.rect, { x: 5, y: 2.5, w: 2, h: 1, objectName: 'toBox' });
+slide.addConnector({
+    x: 2.5, y: 1, w: 2.5, h: 1.5,
+    type: 'bentConnector3',
+    line: { color: '333333', width: 2, endArrowType: 'triangle' },
+    start: { shape: 'fromBox', site: 3 },
+    end: { shape: 'toBox', site: 1 },
+});
+```
+
+| Option       | Type   | Default              | Description                                     |
+| :----------- | :----- | :------------------- | :---------------------------------------------- |
+| `type`       | string | `straightConnector1` | `line`, `straightConnector1`, `bentConnector2`–`5`, `curvedConnector2`–`5` |
+| `line`       | object |                      | line formatting, including arrow heads            |
+| `start`      | object |                      | `{ shape, site? }` — glue the start               |
+| `end`        | object |                      | `{ shape, site? }` — glue the end                 |
+| `rotate`     | number | `0`                  | rotation in degrees                              |
+| `styleRef`   | object |                      | theme style references, as on shapes             |
+
+`site` is the connection point on the target, numbered per geometry — a rectangle has `0` (top), `1`
+(left), `2` (bottom), `3` (right).
+
+The OOXML schema requires both the target and the site, so a `start`/`end` naming a shape that does not
+exist is dropped with a warning; the connector then renders as a plain line rather than producing a
+package PowerPoint would refuse to open.
+
+A connector carries no text — `CT_Connector` has no text body.
+
 ## Line Properties
 
 `line` accepts the full `CT_LineProperties` model (ECMA-376 §20.1.2.1). Everything below is optional

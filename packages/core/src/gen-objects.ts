@@ -34,6 +34,9 @@ import {
 	IChartOptsLib,
 	IOptsChartData,
 	ISlideObject,
+	ConnectorProps,
+	GroupChild,
+	GroupProps,
 	ImageProps,
 	MediaProps,
 	HyperlinkProps,
@@ -466,6 +469,73 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 
 	target._slideObjects.push(resultObject)
 	return resultObject
+}
+
+/**
+ * Adds a connector shape (`p:cxnSp`) to a slide or a group.
+ * @param {PresSlide | SlideLayout} target - slide or group collector
+ * @param {ConnectorProps} opt - connector options
+ */
+export function addConnectorDefinition (target: PresSlide | SlideLayout, opt: ConnectorProps): void {
+	const objectName = opt.objectName ? encodeXmlEntities(opt.objectName) : `Connector ${target._slideObjects.filter(obj => obj._type === SLIDE_OBJECT_TYPES.connector).length + 1}`
+	target._slideObjects.push({
+		_type: SLIDE_OBJECT_TYPES.connector,
+		options: {
+			...opt,
+			x: opt.x ?? 0,
+			y: opt.y ?? 0,
+			w: opt.w ?? 1,
+			h: opt.h ?? 0,
+			objectName,
+		},
+	})
+}
+
+/**
+ * Adds a shape group (`p:grpSp`) to a slide or another group.
+ *
+ * Children are built through the same `addX` code paths as top-level objects. They collect into the
+ * group's own list, but relationships still land on the slide: a relationship belongs to the slide
+ * part no matter how deeply the shape that needs it is nested.
+ *
+ * @param {PresSlide | SlideLayout} target - slide or group collector
+ * @param {GroupChild[]} children - child objects, in z-order
+ * @param {GroupProps} opt - group options
+ */
+export function addGroupDefinition (target: PresSlide | SlideLayout, children: GroupChild[], opt: GroupProps): void {
+	const objectName = opt.objectName ? encodeXmlEntities(opt.objectName) : `Group ${target._slideObjects.filter(obj => obj._type === SLIDE_OBJECT_TYPES.group).length + 1}`
+	const groupObjects: ISlideObject[] = []
+
+	// the collector shares the slide's relationship arrays, and only redirects where objects land
+	const collector: PresSlide | SlideLayout = { ...target, _slideObjects: groupObjects }
+
+	;(children ?? []).forEach(child => {
+		if ('text' in child) {
+			const text = child.text
+			addTextDefinition(collector, typeof text.text === 'string' ? [{ text: text.text }] : text.text, text.options ?? {}, false)
+		} else if ('shape' in child) {
+			addShapeDefinition(collector, child.shape.type, child.shape.options ?? {})
+		} else if ('image' in child) {
+			addImageDefinition(collector, child.image)
+		} else if ('connector' in child) {
+			addConnectorDefinition(collector, child.connector)
+		} else if ('group' in child) {
+			addGroupDefinition(collector, child.group.children, child.group.options ?? {})
+		}
+	})
+
+	target._slideObjects.push({
+		_type: SLIDE_OBJECT_TYPES.group,
+		options: {
+			...opt,
+			x: opt.x ?? 0,
+			y: opt.y ?? 0,
+			w: opt.w ?? 0,
+			h: opt.h ?? 0,
+			objectName,
+		},
+		_groupObjects: groupObjects,
+	})
 }
 
 /**

@@ -281,6 +281,10 @@ declare namespace PptxGenJS {
 		'actionButtonSound' = 'actionButtonSound',
 		'arc' = 'arc',
 		'bentArrow' = 'bentArrow',
+		'bentConnector2' = 'bentConnector2',
+		'bentConnector3' = 'bentConnector3',
+		'bentConnector4' = 'bentConnector4',
+		'bentConnector5' = 'bentConnector5',
 		'bentUpArrow' = 'bentUpArrow',
 		'bevel' = 'bevel',
 		'blockArc' = 'blockArc',
@@ -304,6 +308,10 @@ declare namespace PptxGenJS {
 		'corner' = 'corner',
 		'cornerTabs' = 'cornerTabs',
 		'cube' = 'cube',
+		'curvedConnector2' = 'curvedConnector2',
+		'curvedConnector3' = 'curvedConnector3',
+		'curvedConnector4' = 'curvedConnector4',
+		'curvedConnector5' = 'curvedConnector5',
 		'curvedDownArrow' = 'curvedDownArrow',
 		'curvedLeftArrow' = 'curvedLeftArrow',
 		'curvedRightArrow' = 'curvedRightArrow',
@@ -423,6 +431,7 @@ declare namespace PptxGenJS {
 		'star6' = 'star6',
 		'star7' = 'star7',
 		'star8' = 'star8',
+		'straightConnector1' = 'straightConnector1',
 		'stripedRightArrow' = 'stripedRightArrow',
 		'sun' = 'sun',
 		'swooshArrow' = 'swooshArrow',
@@ -486,6 +495,10 @@ declare namespace PptxGenJS {
 		ARC = 'arc',
 		BALLOON = 'wedgeRoundRectCallout',
 		BENT_ARROW = 'bentArrow',
+		BENT_CONNECTOR_2 = 'bentConnector2',
+		BENT_CONNECTOR_3 = 'bentConnector3',
+		BENT_CONNECTOR_4 = 'bentConnector4',
+		BENT_CONNECTOR_5 = 'bentConnector5',
 		BENT_UP_ARROW = 'bentUpArrow',
 		BEVEL = 'bevel',
 		BLOCK_ARC = 'blockArc',
@@ -502,6 +515,10 @@ declare namespace PptxGenJS {
 		CORNER_TABS = 'cornerTabs',
 		CROSS = 'plus',
 		CUBE = 'cube',
+		CURVED_CONNECTOR_2 = 'curvedConnector2',
+		CURVED_CONNECTOR_3 = 'curvedConnector3',
+		CURVED_CONNECTOR_4 = 'curvedConnector4',
+		CURVED_CONNECTOR_5 = 'curvedConnector5',
 		CURVED_DOWN_ARROW = 'curvedDownArrow',
 		CURVED_DOWN_RIBBON = 'ellipseRibbon',
 		CURVED_LEFT_ARROW = 'curvedLeftArrow',
@@ -641,6 +658,7 @@ declare namespace PptxGenJS {
 		STAR_6_POINT = 'star6',
 		STAR_7_POINT = 'star7',
 		STAR_8_POINT = 'star8',
+		STRAIGHT_CONNECTOR_1 = 'straightConnector1',
 		STRIPED_RIGHT_ARROW = 'stripedRightArrow',
 		SUN = 'sun',
 		SWOOSH_ARROW = 'swooshArrow',
@@ -720,6 +738,10 @@ declare namespace PptxGenJS {
 		| 'actionButtonSound'
 		| 'arc'
 		| 'bentArrow'
+		| 'bentConnector2'
+		| 'bentConnector3'
+		| 'bentConnector4'
+		| 'bentConnector5'
 		| 'bentUpArrow'
 		| 'bevel'
 		| 'blockArc'
@@ -743,6 +765,10 @@ declare namespace PptxGenJS {
 		| 'corner'
 		| 'cornerTabs'
 		| 'cube'
+		| 'curvedConnector2'
+		| 'curvedConnector3'
+		| 'curvedConnector4'
+		| 'curvedConnector5'
 		| 'curvedDownArrow'
 		| 'curvedLeftArrow'
 		| 'curvedRightArrow'
@@ -862,6 +888,7 @@ declare namespace PptxGenJS {
 		| 'star6'
 		| 'star7'
 		| 'star8'
+		| 'straightConnector1'
 		| 'stripedRightArrow'
 		| 'sun'
 		| 'swooshArrow'
@@ -2779,6 +2806,74 @@ declare namespace PptxGenJS {
 		seCell?: TableStylePartProps
 	}
 
+	/**
+	 * A shape group (`p:grpSp`, ECMA-376 Part 1 §19.3.1.22)
+	 * - the group's own rect is `a:xfrm/a:off`+`a:ext`; its children keep their own coordinates and are
+	 *   mapped through `a:chOff`+`a:chExt`, so resizing the group scales everything inside it
+	 */
+	export interface GroupProps extends PositionProps, ObjectNameProps {
+		/**
+		 * Rotation in degrees
+		 * @default 0
+		 */
+		rotate?: number
+		/** flip the group horizontally */
+		flipH?: boolean
+		/** flip the group vertically */
+		flipV?: boolean
+	}
+
+	export type GroupChild =
+		| { text: { text: string | TextProps[], options?: TextPropsOptions } }
+		| { shape: { type: SHAPE_NAME, options?: ShapeProps } }
+		| { image: ImageProps }
+		| { connector: ConnectorProps }
+		| { group: { children: GroupChild[], options?: GroupProps } }
+
+	/**
+	 * Where a connector attaches to a shape (`a:stCxn`/`a:endCxn`, ECMA-376 Part 1 §20.1.2.2.13)
+	 * - both the shape and the site are required by the schema, so a partial value is not emitted
+	 */
+	export interface ConnectionProps {
+		/** `objectName` of the shape to glue to */
+		shape: string
+		/**
+		 * Which connection site on that shape
+		 * - site numbering is per-geometry; a rectangle has 0 (top), 1 (left), 2 (bottom), 3 (right)
+		 * @default 0
+		 */
+		site?: number
+	}
+
+	/**
+	 * A connector shape (`p:cxnSp`, ECMA-376 Part 1 §19.3.1.19)
+	 * - a line that stays attached when the shapes it joins move
+	 */
+	export interface ConnectorProps extends PositionProps, ObjectNameProps {
+		/**
+		 * Connector geometry
+		 * @default straightConnector1
+		 */
+		type?: 'line' | 'straightConnector1' | 'bentConnector2' | 'bentConnector3' | 'bentConnector4' | 'bentConnector5' | 'curvedConnector2' | 'curvedConnector3' | 'curvedConnector4' | 'curvedConnector5'
+		/** line formatting, including arrow heads */
+		line?: ShapeLineProps
+		/**
+		 * Rotation in degrees
+		 * @default 0
+		 */
+		rotate?: number
+		/** flip the connector horizontally */
+		flipH?: boolean
+		/** flip the connector vertically */
+		flipV?: boolean
+		/** glue the start of the connector to a shape */
+		start?: ConnectionProps
+		/** glue the end of the connector to a shape */
+		end?: ConnectionProps
+		/** theme style references (`p:style`) */
+		styleRef?: ShapeStyleProps
+	}
+
 	export interface SoftEdgeProps {
 		/**
 		 * Soft-edge radius (points)
@@ -4567,6 +4662,21 @@ declare namespace PptxGenJS {
 		 * @param {ShapeProps} options - shape options
 		 * @return {Slide} this Slide
 		 */
+		/**
+		 * Add a connector shape (`p:cxnSp`) to the Slide
+		 * - glue it to shapes with `start`/`end`, referencing their `objectName`
+		 * @param {ConnectorProps} options - connector options
+		 * @return {Slide} this Slide
+		 */
+		addConnector(options?: ConnectorProps): Slide
+		/**
+		 * Add a shape group (`p:grpSp`) to the Slide
+		 * - children keep their own coordinates; resizing the group scales all of them together
+		 * @param {GroupChild[]} children - child objects, in z-order
+		 * @param {GroupProps} options - group options
+		 * @return {Slide} this Slide
+		 */
+		addGroup(children: GroupChild[], options?: GroupProps): Slide
 		addShape(shapeName: SHAPE_NAME, options?: ShapeProps): Slide
 		/**
 		 * Add table to Slide

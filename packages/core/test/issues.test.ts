@@ -1131,3 +1131,82 @@ test('#131: picture recolor and correction effects', async () => {
 		assert.ok(!bareXml.includes(tag), `a default image gained ${tag}`)
 	}
 })
+
+test('#111: shape groups and connector shapes', async () => {
+	const pptx = new pptxgen()
+	const slide = pptx.addSlide()
+	slide.addShape('rect', { x: 1, y: 1, w: 2, h: 1, objectName: 'boxA', fill: { color: 'CCCCCC' } })
+	slide.addShape('rect', { x: 5, y: 3, w: 2, h: 1, objectName: 'boxB', fill: { color: 'DDDDDD' } })
+	slide.addConnector({ x: 3, y: 1.5, w: 2, h: 2, type: 'bentConnector3', line: { color: 'FF0000', width: 2 }, start: { shape: 'boxA', site: 3 }, end: { shape: 'boxB', site: 1 } })
+	slide.addConnector({ x: 1, y: 5, w: 3, h: 0, start: { shape: 'nope' }, end: { shape: 'boxA' } })
+	// the group rect is 4in wide against a 2in child bounding box, so children must scale 2x
+	slide.addGroup([
+		{ shape: { type: 'ellipse', options: { x: 1, y: 1, w: 1, h: 1, objectName: 'c1', fill: { color: 'FF0000' } } } },
+		{ shape: { type: 'rect', options: { x: 2, y: 1, w: 1, h: 1, objectName: 'c2' } } },
+		{ text: { text: 'in group', options: { x: 1, y: 2, w: 2, h: 0.5 } } },
+	], { x: 0.5, y: 4, w: 4, h: 3, objectName: 'grp1', rotate: 15 })
+
+	const xml = await readPart(await writeZip(pptx), 'ppt/slides/slide1.xml')
+
+	// --- connectors
+	const connectors = xml.match(/<p:cxnSp>[\s\S]*?<\/p:cxnSp>/g) ?? []
+	assert.equal(connectors.length, 2, `expected two connectors, got ${connectors.length}`)
+	// CT_Connection requires both `id` and `idx`; the id is the target shape's `p:cNvPr@id`
+	assert.ok(connectors[0].includes('<a:stCxn id="2" idx="3"/><a:endCxn id="3" idx="1"/>'), `connections wrong: ${connectors[0]}`)
+	assert.ok(connectors[0].includes('<a:prstGeom prst="bentConnector3">'), 'connector geometry wrong')
+	assert.ok(connectors[0].includes('<a:ln w="25400">'), 'connector line missing')
+	// CT_Connector has no txBody
+	for (const cxn of connectors) assert.ok(!cxn.includes('<p:txBody>'), 'a connector emitted a text body')
+	// an unresolvable target drops just that attachment - the connector still renders as a free line
+	assert.ok(!connectors[1].includes('<a:stCxn') && connectors[1].includes('<a:endCxn id="2" idx="0"/>'), `unresolved attachment wrong: ${connectors[1]}`)
+	// CT_Connector sequence: nvCxnSpPr, spPr, style
+	const cxnOrder = ['<p:nvCxnSpPr>', '<p:spPr>', '</p:spPr>'].map(tag => connectors[0].indexOf(tag))
+	assert.deepEqual(cxnOrder, [...cxnOrder].sort((a, b) => a - b), 'CT_Connector child order violated')
+
+	// --- groups
+	const group = /<p:grpSp>[\s\S]*?<\/p:grpSp>/.exec(xml)?.[0] ?? ''
+	assert.ok(group, 'no group emitted')
+	assert.ok(group.includes('<p:nvGrpSpPr>') && group.includes('<p:cNvGrpSpPr/>'), `group non-visual props wrong: ${group.slice(0, 200)}`)
+	assert.ok(group.includes('<a:xfrm rot="900000">'), 'group rotation missing')
+
+	// This is what makes a group a group: `a:chOff`/`a:chExt` is the child coordinate space, so a group
+	// sized differently from its children's bounding box scales them.
+	const xfrm = /<a:xfrm[^>]*>[\s\S]*?<\/a:xfrm>/.exec(group)?.[0] ?? ''
+	const ext = /<a:ext cx="(\d+)" cy="(\d+)"\/>/.exec(xfrm)
+	const chExt = /<a:chExt cx="(\d+)" cy="(\d+)"\/>/.exec(xfrm)
+	assert.ok(ext && chExt, `group xfrm incomplete: ${xfrm}`)
+	assert.equal(Number(ext[1]), 4 * 914400, 'group width should be the requested rect')
+	assert.equal(Number(chExt[1]), 2 * 914400, 'child extent should be the children bounding box')
+	assert.equal(Number(ext[1]) / Number(chExt[1]), 2, 'a group twice its child bbox must scale children 2x')
+	assert.ok(xfrm.includes('<a:chOff x="914400" y="914400"/>'), `chOff should be the bounding box origin: ${xfrm}`)
+	// CT_GroupTransform2D order: off, ext, chOff, chExt
+	const xfrmOrder = ['<a:off ', '<a:ext ', '<a:chOff ', '<a:chExt '].map(tag => xfrm.indexOf(tag))
+	assert.deepEqual(xfrmOrder, [...xfrmOrder].sort((a, b) => a - b), 'CT_GroupTransform2D child order violated')
+
+	// children are emitted inside the group, keeping their own coordinates, with ids clear of the
+	// top-level `idx + 2` range
+	const childShapes = group.match(/<p:sp>[\s\S]*?<\/p:sp>/g) ?? []
+	assert.equal(childShapes.length, 3, `expected three children, got ${childShapes.length}`)
+	assert.ok(childShapes[0].includes('<a:off x="914400" y="914400"/>'), 'a child lost its own coordinates')
+	const childIds = (group.match(/<p:cNvPr id="(\d+)"/g) ?? []).map(tag => Number(/\d+/.exec(tag)?.[0]))
+	const topLevelIds = ((xml.match(/<p:cNvPr id="(\d+)"/g) ?? []).map(tag => Number(/\d+/.exec(tag)?.[0]))).filter(id => !childIds.slice(1).includes(id))
+	assert.equal(new Set(childIds).size, childIds.length, `duplicate ids inside the group: ${childIds.join(',')}`)
+	for (const id of childIds.slice(1)) assert.ok(id > Math.max(...topLevelIds), `child id ${id} collides with the top-level range`)
+
+	// nested groups recurse
+	const nested = new pptxgen()
+	nested.addSlide().addGroup([
+		{ group: { children: [{ shape: { type: 'rect', options: { x: 1, y: 1, w: 1, h: 1 } } }], options: { x: 1, y: 1, w: 1, h: 1 } } },
+		{ connector: { x: 2, y: 2, w: 1, h: 0 } },
+	], { x: 1, y: 1, w: 3, h: 3 })
+	const nestedXml = await readPart(await writeZip(nested), 'ppt/slides/slide1.xml')
+	assert.equal((nestedXml.match(/<p:grpSp>/g) ?? []).length, 2, 'a nested group was not emitted')
+	assert.ok(/<p:grpSp>[\s\S]*<p:grpSp>[\s\S]*<p:cxnSp>[\s\S]*<\/p:grpSp>/.test(nestedXml), 'group children were flattened')
+
+	// a slide with neither keeps the root tree literal and gains nothing
+	const bare = new pptxgen()
+	bare.addSlide().addShape('rect', { x: 1, y: 1, w: 2, h: 1 })
+	const bareXml = await readPart(await writeZip(bare), 'ppt/slides/slide1.xml')
+	assert.ok(bareXml.includes('<p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>'), 'the root spTree literal changed')
+	assert.ok(!bareXml.includes('<p:grpSp>') && !bareXml.includes('<p:cxnSp>'), 'a default slide gained a group or connector')
+})
