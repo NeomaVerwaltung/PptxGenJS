@@ -3,21 +3,44 @@
  */
 
 import {
+	chartExRequiresNs,
 	DEF_CELL_BORDER,
 	DEF_CELL_MARGIN_IN,
 	DEF_PRES_LAYOUT_NAME,
 	DEF_TEXT_SHADOW,
 	EMU,
+	isChartexType,
 	MS_PPTX_ID_BASE,
 	OOXML_CHARTEX,
-	chartExRequiresNs,
 	OOXML_EXT,
-	isChartexType,
-	SLDNUMFLDID,
 	SHAPE_TYPE,
+	SLDNUMFLDID,
 	SLIDE_OBJECT_TYPES,
 } from '../core-enums'
-import { AudioCdTimeProps, BlurProps, ConnectionProps, ImageRecolorProps, BorderProps, EffectDagProps, FillOverlayProps, ImageAlphaEffectProps, Color, ISlideObject, ObjectOptions, ShapeStyleProps, PresSlide, ReflectionProps, ShadowProps, SectionProps, SlideLayout, SoftEdgeProps, TableCell, TableCellProps, TableProps, TextGlowProps } from '../core-interfaces'
+import {
+	AudioCdTimeProps,
+	BlurProps,
+	BorderProps,
+	Color,
+	ConnectionProps,
+	EffectDagProps,
+	FillOverlayProps,
+	ImageAlphaEffectProps,
+	ImageRecolorProps,
+	ISlideObject,
+	ObjectOptions,
+	PresSlide,
+	ReflectionProps,
+	SectionProps,
+	ShadowProps,
+	ShapeStyleProps,
+	SlideLayout,
+	SoftEdgeProps,
+	TableCell,
+	TableCellProps,
+	TableProps,
+	TextGlowProps,
+} from '../core-interfaces'
 import {
 	convertRotationDegrees,
 	createColorElement,

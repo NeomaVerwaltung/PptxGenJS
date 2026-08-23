@@ -1,7 +1,18 @@
 /** OOXML relationship-part generation. */
 
-import { COMMENT, CRLF, OOXML_CHARTEX, isChartexType } from '../core-enums'
-import { ISlideRel, ISlideRelChart, ISlideRelMedia, PresSlide, SlideLayout } from '../core-interfaces'
+import {
+	COMMENT,
+	CRLF,
+	isChartexType,
+	OOXML_CHARTEX,
+} from '../core-enums'
+import {
+	ISlideRel,
+	ISlideRelChart,
+	ISlideRelMedia,
+	PresSlide,
+	SlideLayout,
+} from '../core-interfaces'
 import { encodeXmlEntities } from '../gen-utils'
 
 type DefaultRelationship = { target: string, type: string }

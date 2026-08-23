@@ -2,12 +2,40 @@
  * OOXML text and placeholder rendering.
  */
 
-import { BULLET_TYPES, CRLF, DEF_BULLET_MARGIN, OOXML_EXT, PLACEHOLDER_TYPES, SLIDE_OBJECT_TYPES, TEXT_FIELD_TYPES } from '../core-enums'
-import { Color, ISlideObject, ObjectOptions, ParagraphProps, TableCell, TextBodyProps, TextProps, TextPropsOptions, TextRunProps } from '../core-interfaces'
+import {
+	BULLET_TYPES,
+	CRLF,
+	DEF_BULLET_MARGIN,
+	OOXML_EXT,
+	PLACEHOLDER_TYPES,
+	SLIDE_OBJECT_TYPES,
+	TEXT_FIELD_TYPES,
+} from '../core-enums'
+import {
+	Color,
+	ISlideObject,
+	ObjectOptions,
+	ParagraphProps,
+	TableCell,
+	TextBodyProps,
+	TextProps,
+	TextPropsOptions,
+	TextRunProps,
+} from '../core-interfaces'
 import { genXmlHyperlink } from './hyperlink'
 import { genXmlLine } from './line'
 import { alternateContent } from './markup-compat'
-import { convertRotationDegrees, createColorElement, createGlowElement, encodeXmlEntities, genXmlColorSelection, inch2Emu, resolveGlowOptions, valToPts, warnDeprecatedOnce } from '../gen-utils'
+import {
+	convertRotationDegrees,
+	createColorElement,
+	createGlowElement,
+	encodeXmlEntities,
+	genXmlColorSelection,
+	inch2Emu,
+	resolveGlowOptions,
+	valToPts,
+	warnDeprecatedOnce,
+} from '../gen-utils'
 
 /**
  * Build the `a:buClr` / `a:buSzPct` / `a:buSzPts` / `a:buFont` prefix shared by every bullet kind

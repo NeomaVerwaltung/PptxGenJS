@@ -1,11 +1,35 @@
 /** Chart XML rendering. */
 
-import { AXIS_ID_CATEGORY_PRIMARY, AXIS_ID_CATEGORY_SECONDARY, AXIS_ID_SERIES_PRIMARY, AXIS_ID_VALUE_PRIMARY, AXIS_ID_VALUE_SECONDARY, BARCHART_COLORS, CHART_NAME, CHART_TYPE, DEF_FONT_COLOR, DEF_FONT_SIZE, DEF_FONT_TITLE_SIZE, OOXML_EXT } from '../core-enums'
+import {
+	AXIS_ID_CATEGORY_PRIMARY,
+	AXIS_ID_CATEGORY_SECONDARY,
+	AXIS_ID_SERIES_PRIMARY,
+	AXIS_ID_VALUE_PRIMARY,
+	AXIS_ID_VALUE_SECONDARY,
+	BARCHART_COLORS,
+	CHART_NAME,
+	CHART_TYPE,
+	DEF_FONT_COLOR,
+	DEF_FONT_SIZE,
+	DEF_FONT_TITLE_SIZE,
+	OOXML_EXT,
+} from '../core-enums'
 import { IChartOptsLib, ISlideRelChart, IOptsChartData } from '../core-interfaces'
-import { createColorElement, genXmlColorSelection, encodeXmlEntities, getUuid, valToPts } from '../gen-utils'
+import {
+	createColorElement,
+	encodeXmlEntities,
+	genXmlColorSelection,
+	getUuid,
+	valToPts,
+} from '../gen-utils'
 import { makeCatAxis, makeSerAxis, makeValAxis } from './axes'
 import { genXmlTitle } from './title'
-import { createLineCap, createShadowElement, getExcelColName, resolveShadowOptions } from './utils'
+import {
+	createLineCap,
+	createShadowElement,
+	getExcelColName,
+	resolveShadowOptions,
+} from './utils'
 
 export function makeXmlCharts (rel: ISlideRelChart): string {
 	let strXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'

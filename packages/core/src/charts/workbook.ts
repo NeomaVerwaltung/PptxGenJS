@@ -6,7 +6,12 @@ import { encodeXmlEntities } from '../gen-utils'
 import JSZip from 'jszip'
 import { makeXmlChartEx } from './chartex'
 import { makeXmlCharts } from './xml'
-import { chartColorsPartName, chartStylePartName, makeXmlChartColors, makeXmlChartStyle } from './style'
+import {
+	chartColorsPartName,
+	chartStylePartName,
+	makeXmlChartColors,
+	makeXmlChartStyle,
+} from './style'
 import { CHART_STYLE } from '../core-enums'
 import { getExcelColName } from './utils'
 
