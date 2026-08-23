@@ -1,12 +1,28 @@
 /**
+ * Content-type overrides a chart needs: the chart itself plus its style and colour-style parts.
+ * - one helper because charts appear on slides, layouts and the master, and a part with no declared
+ *   content type is a repair-dialog cause
+ * @param {ISlideRelChart} rel - chart relationship
+ * @returns {string} `Override` elements
+ */
+function chartContentTypes (rel: ISlideRelChart): string {
+	return (
+		`<Override PartName="${rel.Target}" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>` +
+		`<Override PartName="/${chartColorsPartName(rel.globalId)}" ContentType="${CHART_STYLE.colorsContentType}"/>` +
+		`<Override PartName="/${chartStylePartName(rel.globalId)}" ContentType="${CHART_STYLE.styleContentType}"/>`
+	)
+}
+
+/**
  * OOXML package-part rendering.
  */
 
-import { COMMENT, CRLF, DEF_COLOR_MAP, DEF_GUIDE_COLOR, EMU, LAYOUT_IDX_SERIES_BASE, OOXML_EXT, SLDNUMFLDID, SLIDE_OBJECT_TYPES } from '../core-enums'
-import { ColorMapOverrideProps, DocumentProps, EmbeddedFont, GuideProps, IPresentationProps, PresSlide, SectionProps, SlideLayout, SlideShowProps } from '../core-interfaces'
+import { CHART_STYLE, COMMENT, CRLF, DEF_COLOR_MAP, DEF_GUIDE_COLOR, EMU, LAYOUT_IDX_SERIES_BASE, OOXML_EXT, SLDNUMFLDID, SLIDE_OBJECT_TYPES } from '../core-enums'
+import { ColorMapOverrideProps, DocumentProps, EmbeddedFont, ISlideRelChart, GuideProps, IPresentationProps, PresSlide, SectionProps, SlideLayout, SlideShowProps } from '../core-interfaces'
 import { createColorElement, encodeXmlEntities, getUuid, inch2Emu } from '../gen-utils'
 import { makeXmlEmbeddedFontLst } from '../gen-fonts'
 import { genXmlSlideExtLst, slideObjectToXml } from './slide'
+import { chartColorsPartName, chartStylePartName } from '../charts/style'
 import { genXmlTiming } from './animation'
 import { genXmlTransition } from './transition'
 
@@ -59,7 +75,7 @@ export function makeXmlContTypes (slides: PresSlide[], slideLayouts: SlideLayout
 		strXml += `<Override PartName="/ppt/slides/slide${idx + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`
 		// Add charts if any
 		slide._relsChart.forEach(rel => {
-			strXml += `<Override PartName="${rel.Target}" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>`
+			strXml += chartContentTypes(rel)
 		})
 	})
 
@@ -73,7 +89,7 @@ export function makeXmlContTypes (slides: PresSlide[], slideLayouts: SlideLayout
 	slideLayouts.forEach((layout, idx) => {
 		strXml += `<Override PartName="/ppt/slideLayouts/slideLayout${idx + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>`
 		; (layout._relsChart || []).forEach(rel => {
-			strXml += ' <Override PartName="' + rel.Target + '" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>'
+			strXml += chartContentTypes(rel)
 		})
 	})
 
@@ -84,7 +100,7 @@ export function makeXmlContTypes (slides: PresSlide[], slideLayouts: SlideLayout
 
 	// STEP 6: Add rels
 	; (masterSlide?._relsChart ?? []).forEach(rel => {
-		strXml += ' <Override PartName="' + rel.Target + '" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>'
+		strXml += chartContentTypes(rel)
 	})
 	; (masterSlide?._relsMedia ?? []).forEach(rel => {
 		if (rel.type !== 'image' && rel.type !== 'online' && rel.type !== 'chart' && rel.extn !== 'm4v' && !strXml.includes(rel.type)) { strXml += ' <Default Extension="' + rel.extn + '" ContentType="' + rel.type + '"/>' }

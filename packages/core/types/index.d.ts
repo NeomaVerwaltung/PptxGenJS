@@ -2631,6 +2631,28 @@ declare namespace PptxGenJS {
 		fontColor?: Color
 	}
 
+	/**
+	 * Chart colour style (`cs:colorStyle` in `ppt/charts/colorsN.xml`)
+	 * - the palette PowerPoint's Change Colors gallery offers for the chart
+	 */
+	export interface ChartColorStyleProps {
+		/**
+		 * How the palette is walked
+		 * @default cycle
+		 */
+		method?: 'cycle' | 'withinLinear' | 'acrossLinear' | 'withinLinearReversed' | 'acrossLinearReversed'
+		/**
+		 * Which entry of the Change Colors gallery is selected
+		 * @default 10
+		 */
+		id?: number
+		/**
+		 * The palette itself
+		 * @default the theme's six accent colours
+		 */
+		colors?: Color[]
+	}
+
 	export interface SoftEdgeProps {
 		/**
 		 * Soft-edge radius (points)
@@ -3518,6 +3540,18 @@ declare namespace PptxGenJS {
 		 * - PowerPoint: [right-click on a chart] > "Edit Alt Text..."
 		 */
 		altText?: string
+		/**
+		 * Which entry of PowerPoint's Chart Styles gallery is selected (`cs:chartStyle@id`)
+		 * - the style *definitions* written are Office's defaults regardless of this id, so it selects
+		 *   the gallery entry rather than changing the formatting
+		 * @default 201
+		 */
+		chartStyle?: number
+		/**
+		 * Chart colour style (`ppt/charts/colorsN.xml`)
+		 * - distinct from `chartColors`, which sets the series colours directly on the chart
+		 */
+		chartColorStyle?: ChartColorStyleProps
 	}
 	export interface ISlideRelChart extends OptsChartData {
 		type: CHART_NAME | IChartMulti[]

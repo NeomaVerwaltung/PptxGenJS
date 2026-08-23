@@ -5,6 +5,8 @@ import { ISlideRelChart } from '../core-interfaces'
 import { encodeXmlEntities } from '../gen-utils'
 import JSZip from 'jszip'
 import { makeXmlCharts } from './xml'
+import { chartColorsPartName, chartStylePartName, makeXmlChartColors, makeXmlChartStyle } from './style'
+import { CHART_STYLE } from '../core-enums'
 import { getExcelColName } from './utils'
 
 function getDataTableStyles (chartObject: ISlideRelChart): { customFormats: string[]; dataStyleIds: number[] } {
@@ -588,14 +590,20 @@ function addWorkbookToPresentation (chartObject: ISlideRelChart, zipExcel: JSZip
 				zip.file(`ppt/embeddings/Microsoft_Excel_Worksheet${chartObject.globalId}.xlsx`, content, { base64: true })
 
 				// 2: Create the chart.xml and rel files
+				// PowerPoint finds the style and colour-style parts by relationship type, so they are
+				// declared here rather than referenced from inside `chartN.xml`
 				zip.file(
 					'ppt/charts/_rels/' + chartObject.fileName + '.rels',
 					'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
 					'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
 					`<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/package" Target="../embeddings/Microsoft_Excel_Worksheet${chartObject.globalId}.xlsx"/>` +
+					`<Relationship Id="rId2" Type="${CHART_STYLE.colorsRelType}" Target="colors${chartObject.globalId}.xml"/>` +
+					`<Relationship Id="rId3" Type="${CHART_STYLE.styleRelType}" Target="style${chartObject.globalId}.xml"/>` +
 					'</Relationships>'
 				)
 				zip.file(`ppt/charts/${chartObject.fileName}`, makeXmlCharts(chartObject))
+				zip.file(chartColorsPartName(chartObject.globalId), makeXmlChartColors(chartObject.opts?.chartColorStyle))
+				zip.file(chartStylePartName(chartObject.globalId), makeXmlChartStyle(chartObject.opts?.chartStyle))
 
 				// 3: Done
 				resolve('')

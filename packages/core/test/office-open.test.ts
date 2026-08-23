@@ -119,6 +119,8 @@ test('office: LibreOffice opens and converts a generated presentation', { skip: 
 		mediaSourceSlide.addMedia({ type: 'video', link: 'clip.mp4', x: 0.5, y: 0.5, w: 3, h: 2, contentType: 'video/mp4' })
 		mediaSourceSlide.addMedia({ type: 'audioCd', audioCd: { start: { track: 1 }, end: { track: 1, time: 30 } }, x: 4.5, y: 0.5, w: 2, h: 2 })
 		mediaSourceSlide.addMedia({ type: 'wav', data: 'audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=', x: 0.5, y: 3, w: 2, h: 1.5 })
+		// chart style parts - the round-trip fixture for #157
+		pptx.addSlide().addChart('bar', [{ name: 'Series 1', labels: ['a', 'b', 'c'], values: [4, 7, 2] }], { x: 0.5, y: 0.5, w: 6, h: 3, chartStyle: 201, chartColorStyle: { method: 'cycle', id: 10 } })
 		pptx.addSlide({ transition: { type: 'morph', duration: 1200 } }).addText('modern transition', { x: 0.5, y: 0.5, w: 5, h: 0.5 })
 		await writeFile(presentationPath, (await pptx.write({ outputType: 'nodebuffer' })) as Buffer)
 
