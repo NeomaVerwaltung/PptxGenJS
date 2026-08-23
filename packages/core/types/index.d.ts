@@ -2653,6 +2653,70 @@ declare namespace PptxGenJS {
 		colors?: Color[]
 	}
 
+	/**
+	 * Borders of one part of a table style (`a:tcBdr`, ECMA-376 Part 1 §21.1.3.11)
+	 */
+	export interface TableStyleBorderProps {
+		left?: ShapeLineProps
+		right?: ShapeLineProps
+		top?: ShapeLineProps
+		bottom?: ShapeLineProps
+		/** horizontal borders between rows */
+		insideH?: ShapeLineProps
+		/** vertical borders between columns */
+		insideV?: ShapeLineProps
+	}
+
+	/**
+	 * How one part of a table looks in a table style (`a:wholeTbl`, `a:band1H`, `a:firstRow`, ...)
+	 */
+	export interface TableStylePartProps {
+		/** bold text - omitted leaves it to the theme */
+		bold?: boolean
+		/** italic text - omitted leaves it to the theme */
+		italic?: boolean
+		/** text colour */
+		color?: Color
+		/** cell fill */
+		fill?: ShapeFillProps
+		/** cell borders */
+		borders?: TableStyleBorderProps
+	}
+
+	/**
+	 * A custom table style, written into `ppt/tableStyles.xml` (ECMA-376 Part 1 §14.2.9)
+	 * - reference it from a table with `tableStyleId: '<the same id>'`
+	 * - `id` and `name` are both required by the schema
+	 */
+	export interface TableStyleProps {
+		/** Style GUID, braced, e.g. `{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}` */
+		id: string
+		/** Name shown in PowerPoint's table-style gallery */
+		name: string
+		/** applies to every cell */
+		wholeTable?: TableStylePartProps
+		/** first banded row */
+		band1H?: TableStylePartProps
+		/** second banded row */
+		band2H?: TableStylePartProps
+		/** first banded column */
+		band1V?: TableStylePartProps
+		/** second banded column */
+		band2V?: TableStylePartProps
+		firstRow?: TableStylePartProps
+		lastRow?: TableStylePartProps
+		firstCol?: TableStylePartProps
+		lastCol?: TableStylePartProps
+		/** top-left cell */
+		nwCell?: TableStylePartProps
+		/** top-right cell */
+		neCell?: TableStylePartProps
+		/** bottom-left cell */
+		swCell?: TableStylePartProps
+		/** bottom-right cell */
+		seCell?: TableStylePartProps
+	}
+
 	export interface SoftEdgeProps {
 		/**
 		 * Soft-edge radius (points)
@@ -4296,6 +4360,11 @@ declare namespace PptxGenJS {
 		/**
 		 * View properties (`ppt/viewProps.xml`)
 		 */
+		/**
+		 * Custom table style definitions written into `ppt/tableStyles.xml`
+		 * - reference one from a table with `tableStyleId`
+		 */
+		tableStyles?: TableStyleProps[]
 		viewProps?: ViewProps
 	}
 

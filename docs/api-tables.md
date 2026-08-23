@@ -156,6 +156,67 @@ required, so setting `cell3D` at all writes one - with schema defaults when no `
 slide.addTable(rows, { x: 1, y: 1, w: 8, rtl: true });
 ```
 
+## Custom Table Styles
+
+`tableStyleId` selects a style from `ppt/tableStyles.xml`. Until now that part was an empty list, so
+the only ids that worked were PowerPoint's own built-in GUIDs — and banding or header emphasis only
+renders if the referenced style actually exists. `pptx.tableStyles` writes real definitions.
+
+```typescript
+pptx.tableStyles = [{
+    id: '{A1B2C3D4-1111-2222-3333-444455556666}',
+    name: 'NEOMA Blue',
+    wholeTable: { borders: { top: { color: '4472C4', width: 1 }, insideH: { color: 'D9D9D9', width: 0.5 } } },
+    band1H: { fill: { color: 'DEEAF6' } },
+    firstRow: { bold: true, color: 'FFFFFF', fill: { color: '4472C4' } },
+}];
+
+slide.addTable(rows, { x: 1, y: 1, w: 8, tableStyleId: '{A1B2C3D4-1111-2222-3333-444455556666}', firstRow: true, bandRow: true });
+```
+
+The style only takes effect for the parts the table switches on — `firstRow`, `bandRow`, `lastRow`,
+`firstCol`, `lastCol`, `bandCol` on `addTable`.
+
+### Style Props (`TableStyleProps`)
+
+| Option       | Type   | Description                                             |
+| :----------- | :----- | :------------------------------------------------------ |
+| `id`         | string | **required** — a braced GUID, unique in the deck         |
+| `name`       | string | **required** — shown in PowerPoint's style gallery       |
+| `wholeTable` | object | applies to every cell                                   |
+| `band1H`     | object | odd banded rows                                         |
+| `band2H`     | object | even banded rows                                        |
+| `band1V`     | object | odd banded columns                                      |
+| `band2V`     | object | even banded columns                                     |
+| `firstRow`   | object | header row                                              |
+| `lastRow`    | object | total row                                               |
+| `firstCol`   | object | first column                                            |
+| `lastCol`    | object | last column                                             |
+| `nwCell`     | object | top-left cell                                           |
+| `neCell`     | object | top-right cell                                          |
+| `swCell`     | object | bottom-left cell                                        |
+| `seCell`     | object | bottom-right cell                                       |
+
+Both `id` and `name` are required by the OOXML schema, so a style missing either — or carrying an id
+that is not a braced GUID — is dropped with a warning rather than written as something PowerPoint
+would refuse to open.
+
+### Part Props (`TableStylePartProps`)
+
+| Option    | Type    | Description                                                       |
+| :-------- | :------ | :---------------------------------------------------------------- |
+| `bold`    | boolean | bold text — omit to leave it to the theme                          |
+| `italic`  | boolean | italic text — omit to leave it to the theme                        |
+| `color`   | Color   | text colour                                                       |
+| `fill`    | object  | cell fill, same shape as `ShapeFillProps`                          |
+| `borders` | object  | `left`, `right`, `top`, `bottom`, `insideH`, `insideV`, each a line |
+
+`bold` and `italic` are three-state in OOXML: on, off, or "leave it to the theme". Omitting the
+property is the third state, which is why `bold: false` and an absent `bold` are not the same thing.
+
+`ppt/tableStyles.xml` keeps its original `@def` — the style a table with no `tableStyleId` inherits —
+so adding your own styles never restyles tables that did not ask for one.
+
 ## Table Auto-Paging
 
 Auto-paging creates new slides automatically as table rows overflow the current slide.
