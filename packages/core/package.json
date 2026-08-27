@@ -81,7 +81,6 @@
 		"version": "node ../../scripts/sync-version.mjs && git add src/pptxgen.ts types/index.d.ts"
 	},
 	"dependencies": {
-		"image-size": "^2.0.2",
 		"jszip": "^3.10.1"
 	}
 }

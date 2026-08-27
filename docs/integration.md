@@ -48,10 +48,9 @@ The error is being caused by the use of the "node:" prefix within "browser" fiel
 // @neo-ma/pptxgenjs package.json
 {
   "name": "@neo-ma/pptxgenjs",
-  "browser": {
-    "fs": false,
-    "image-size": false,
-    "node:fs": false,
+	"browser": {
+		"fs": false,
+		"node:fs": false,
     "node:https": false,
     "os": false,
     "path": false

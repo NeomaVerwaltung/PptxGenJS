@@ -1103,7 +1103,7 @@ export default class PptxGenJS implements IPresentationProps {
 	 * Reproduces an HTML table as a PowerPoint table - including column widths, style, etc. - creates 1 or more slides as needed
 	 * @param {string} eleId - table HTML element ID
 	 * @param {TableToSlidesProps} options - generation options
-	 * @deprecated vNEXT - built on the estimating auto-pager; removed in v5.0. Migrate to `tableFromHtml` from @neo-ma/pptxgenjs-std/tables (see DEPRECATION-PLAN.md F10)
+	 * @deprecated v4.3.0 - built on the estimating auto-pager; removed in v5.0. Migrate to `tableFromHtml` from @neo-ma/pptxgenjs-std/tables (see DEPRECATION-PLAN.md F10)
 	 */
 	tableToSlides(eleId: string, options: TableToSlidesProps = {}): void {
 		warnDeprecatedOnce('tableToSlides', '`tableToSlides()` is deprecated and is removed in v5.0 - it is built on the estimating auto-pager. Migrate to `tableFromHtml` from @neo-ma/pptxgenjs-std/tables before v5.0')

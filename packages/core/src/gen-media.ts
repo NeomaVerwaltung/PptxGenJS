@@ -2,7 +2,7 @@
  * PptxGenJS: Media Methods
  */
 
-import { imageSize } from 'image-size'
+import { imageDimensionsFromData } from 'image-dimensions'
 import { IMG_BROKEN, SLIDE_OBJECT_TYPES } from './core-enums'
 import { PresSlide, SlideLayout, ISlideRelMedia } from './core-interfaces'
 import { base64ToBytes, binaryStringToBase64, bytesToBase64 } from './gen-utils'
@@ -30,8 +30,8 @@ export function applyNaturalImageSizes(layout: PresSlide | SlideLayout): void {
 			const strData = layout._relsMedia.find(rel => rel.rId === obj.imageRid)?.data
 			if (!obj.options || typeof strData !== 'string' || !strData || strData === IMG_BROKEN) return
 			try {
-				const dims = imageSize(base64ToBytes(strData))
-				if (dims.width && dims.height) {
+				const dims = imageDimensionsFromData(base64ToBytes(strData))
+				if (dims) {
 					obj.options.w = dims.width / IMAGE_DPI
 					obj.options.h = dims.height / IMAGE_DPI
 				}
