@@ -117,7 +117,7 @@ import * as genTable from './gen-tables'
 import * as genXml from './xml'
 import { getUuid, warnDeprecatedOnce } from './gen-utils'
 
-const VERSION = '4.2.0'
+const VERSION = '4.3.0'
 
 export default class PptxGenJS implements IPresentationProps {
 	// Property getters/setters
