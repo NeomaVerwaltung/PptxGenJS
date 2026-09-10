@@ -344,10 +344,12 @@ export function addChartDefinition(target: PresSlide | SlideLayout, type: CHART_
 	options.v3DPerspective = v3DPerspective !== undefined && !isNaN(v3DPerspective) && v3DPerspective >= 0 && v3DPerspective <= 240 ? v3DPerspective : 30
 
 	// D: Options: chart
+	// `c:gapWidth`/`c:gapDepth` are ST_GapAmount, which caps at 500 - the guard used to accept up to
+	// 1000 and pass it through, emitting a value the schema rejects
 	const barGapWidthPct = options.barGapWidthPct
-	options.barGapWidthPct = barGapWidthPct !== undefined && !isNaN(barGapWidthPct) && barGapWidthPct >= 0 && barGapWidthPct <= 1000 ? barGapWidthPct : 150
+	options.barGapWidthPct = barGapWidthPct !== undefined && !isNaN(barGapWidthPct) && barGapWidthPct >= 0 && barGapWidthPct <= 500 ? barGapWidthPct : 150
 	const barGapDepthPct = options.barGapDepthPct
-	options.barGapDepthPct = barGapDepthPct !== undefined && !isNaN(barGapDepthPct) && barGapDepthPct >= 0 && barGapDepthPct <= 1000 ? barGapDepthPct : 150
+	options.barGapDepthPct = barGapDepthPct !== undefined && !isNaN(barGapDepthPct) && barGapDepthPct >= 0 && barGapDepthPct <= 500 ? barGapDepthPct : 150
 
 	options.chartColors = Array.isArray(options.chartColors)
 		? options.chartColors

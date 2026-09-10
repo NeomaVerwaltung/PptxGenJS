@@ -13,7 +13,7 @@
 
 import { CHARTEX_LAYOUT_ID, CHARTEX_NAME, DEF_FONT_COLOR, DEF_FONT_SIZE, DEF_FONT_TITLE_SIZE, OOXML_CHARTEX, isChartexType } from '../core-enums'
 import { IChartOptsLib, IOptsChartData, ISlideRelChart } from '../core-interfaces'
-import { createColorElement, encodeXmlEntities, getUuid } from '../gen-utils'
+import { createColorElement, encodeXmlEntities, fontSizeToSz, getUuid } from '../gen-utils'
 import { getExcelColName } from './utils'
 
 /** Sheet name written by `workbook.ts`; chartex cell references are absolute and always single-sheet */
@@ -86,7 +86,7 @@ function makeDataLabels (opts: IChartOptsLib, chartType: CHARTEX_NAME): string {
 	// `outEnd` is invalid on the layouts that draw labels inside their segments
 	const defaultPos = chartType === 'treemap' || chartType === 'sunburst' || chartType === 'funnel' ? 'ctr' : 'outEnd'
 	const pos = opts.dataLabelPosition ?? defaultPos
-	const size = Math.round((opts.dataLabelFontSize || DEF_FONT_SIZE) * 100)
+	const size = fontSizeToSz(opts.dataLabelFontSize || DEF_FONT_SIZE)
 	const txPr =
 		'<cx:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr>' +
 		`<a:defRPr sz="${size}" b="${opts.dataLabelFontBold ? 1 : 0}" i="${opts.dataLabelFontItalic ? 1 : 0}">` +
@@ -185,7 +185,7 @@ function makeAxes (rel: ISlideRelChart, chartType: CHARTEX_NAME): string {
 
 function makeTitle (opts: IChartOptsLib): string {
 	if (!opts.showTitle) return ''
-	const size = Math.round((opts.titleFontSize || DEF_FONT_TITLE_SIZE) * 100)
+	const size = fontSizeToSz(opts.titleFontSize || DEF_FONT_TITLE_SIZE)
 	const color = opts.titleColor ? `<a:solidFill>${createColorElement(opts.titleColor)}</a:solidFill>` : ''
 	const face = opts.titleFontFace ? `<a:latin typeface="${encodeXmlEntities(opts.titleFontFace)}"/>` : ''
 

@@ -7,7 +7,7 @@
 
 import { ARROW_SIZES, COMPOUND_TYPES } from '../core-enums'
 import { ShapeLineProps } from '../core-interfaces'
-import { genXmlColorSelection, valToPts } from '../gen-utils'
+import { genXmlColorSelection, valToLineWidth } from '../gen-utils'
 
 /**
  * Create a line element
@@ -23,7 +23,7 @@ export function genXmlLine (line: ShapeLineProps, tag = 'a:ln'): string {
 		console.warn(`[pptxgenjs] line \`compound\` must be one of ${[...COMPOUND_TYPES].join(', ')} - "${String(line.compound)}" ignored`)
 	}
 
-	let xml = line.width ? `<${tag} w="${valToPts(line.width)}"${compound}>` : `<${tag}${compound}>`
+	let xml = line.width ? `<${tag} w="${valToLineWidth(line.width)}"${compound}>` : `<${tag}${compound}>`
 	if (line.color || line.type === 'gradient') xml += genXmlColorSelection(line)
 
 	// CT_LineProperties sequence: fill, dash, join, headEnd, tailEnd. A custom pattern replaces

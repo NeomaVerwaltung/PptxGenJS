@@ -2,7 +2,7 @@
 
 import { AXIS_ID_CATEGORY_PRIMARY, AXIS_ID_CATEGORY_SECONDARY, AXIS_ID_VALUE_PRIMARY, AXIS_ID_VALUE_SECONDARY, CHART_TYPE, DEF_CHART_GRIDLINE, DEF_FONT_COLOR, DEF_FONT_SIZE, ONEPT } from '../core-enums'
 import { IChartOptsLib } from '../core-interfaces'
-import { convertRotationDegrees, createColorElement, encodeXmlEntities, valToPts } from '../gen-utils'
+import { convertRotationDegrees, createColorElement, encodeXmlEntities, fontSizeToSz, valToLineWidth } from '../gen-utils'
 import { genXmlTitle } from './title'
 import { createGridLineElement } from './utils'
 
@@ -53,7 +53,7 @@ export function makeCatAxis (opts: IChartOptsLib, axisId: string, valAxisId: str
 		strXml += '  <c:tickLblPos val="' + (opts.catAxisLabelPos || (opts.barDir === 'col' ? 'low' : 'nextTo')) + '"/>'
 	}
 	strXml += '  <c:spPr>'
-	strXml += `    <a:ln w="${opts.catAxisLineSize ? valToPts(opts.catAxisLineSize) : ONEPT}" cap="flat">`
+	strXml += `    <a:ln w="${opts.catAxisLineSize ? valToLineWidth(opts.catAxisLineSize) : ONEPT}" cap="flat">`
 	strXml += !opts.catAxisLineShow ? '<a:noFill/>' : '<a:solidFill>' + createColorElement(opts.catAxisLineColor || DEF_CHART_GRIDLINE.color) + '</a:solidFill>'
 	strXml += '      <a:prstDash val="' + (opts.catAxisLineStyle || 'solid') + '"/>'
 	strXml += '      <a:round/>'
@@ -69,7 +69,7 @@ export function makeCatAxis (opts: IChartOptsLib, axisId: string, valAxisId: str
 	strXml += '    <a:lstStyle/>'
 	strXml += '    <a:p>'
 	strXml += '    <a:pPr>'
-	strXml += `      <a:defRPr sz="${Math.round((opts.catAxisLabelFontSize || DEF_FONT_SIZE) * 100)}" b="${opts.catAxisLabelFontBold ? 1 : 0}" i="${opts.catAxisLabelFontItalic ? 1 : 0}" u="none" strike="noStrike">`
+	strXml += `      <a:defRPr sz="${fontSizeToSz(opts.catAxisLabelFontSize || DEF_FONT_SIZE)}" b="${opts.catAxisLabelFontBold ? 1 : 0}" i="${opts.catAxisLabelFontItalic ? 1 : 0}" u="none" strike="noStrike">`
 	strXml += '      <a:solidFill>' + createColorElement(opts.catAxisLabelColor || DEF_FONT_COLOR) + '</a:solidFill>'
 	strXml += '      <a:latin typeface="' + (opts.catAxisLabelFontFace || 'Arial') + '"/>'
 	strXml += '   </a:defRPr>'
@@ -158,7 +158,7 @@ export function makeValAxis (opts: IChartOptsLib, valAxisId: string): string {
 		strXml += ' <c:tickLblPos val="' + (opts.valAxisLabelPos || (opts.barDir === 'col' ? 'nextTo' : 'low')) + '"/>'
 	}
 	strXml += ' <c:spPr>'
-	strXml += `   <a:ln w="${opts.valAxisLineSize ? valToPts(opts.valAxisLineSize) : ONEPT}" cap="flat">`
+	strXml += `   <a:ln w="${opts.valAxisLineSize ? valToLineWidth(opts.valAxisLineSize) : ONEPT}" cap="flat">`
 	strXml += !opts.valAxisLineShow ? '<a:noFill/>' : '<a:solidFill>' + createColorElement(opts.valAxisLineColor || DEF_CHART_GRIDLINE.color) + '</a:solidFill>'
 	strXml += '     <a:prstDash val="' + (opts.valAxisLineStyle || 'solid') + '"/>'
 	strXml += '     <a:round/>'
@@ -169,7 +169,7 @@ export function makeValAxis (opts: IChartOptsLib, valAxisId: string): string {
 	strXml += '  <a:lstStyle/>'
 	strXml += '  <a:p>'
 	strXml += '    <a:pPr>'
-	strXml += `      <a:defRPr sz="${Math.round((opts.valAxisLabelFontSize || DEF_FONT_SIZE) * 100)}" b="${opts.valAxisLabelFontBold ? 1 : 0}" i="${opts.valAxisLabelFontItalic ? 1 : 0}" u="none" strike="noStrike">`
+	strXml += `      <a:defRPr sz="${fontSizeToSz(opts.valAxisLabelFontSize || DEF_FONT_SIZE)}" b="${opts.valAxisLabelFontBold ? 1 : 0}" i="${opts.valAxisLabelFontItalic ? 1 : 0}" u="none" strike="noStrike">`
 	strXml += '        <a:solidFill>' + createColorElement(opts.valAxisLabelColor || DEF_FONT_COLOR) + '</a:solidFill>'
 	strXml += '        <a:latin typeface="' + (opts.valAxisLabelFontFace || 'Arial') + '"/>'
 	strXml += '      </a:defRPr>'
@@ -242,7 +242,7 @@ export function makeSerAxis (opts: IChartOptsLib, axisId: string, valAxisId: str
 	strXml += '    <a:lstStyle/>'
 	strXml += '    <a:p>'
 	strXml += '    <a:pPr>'
-	strXml += `    <a:defRPr sz="${Math.round((opts.serAxisLabelFontSize || DEF_FONT_SIZE) * 100)}" b="${opts.serAxisLabelFontBold ? '1' : '0'}" i="${opts.serAxisLabelFontItalic ? '1' : '0'}" u="none" strike="noStrike">`
+	strXml += `    <a:defRPr sz="${fontSizeToSz(opts.serAxisLabelFontSize || DEF_FONT_SIZE)}" b="${opts.serAxisLabelFontBold ? '1' : '0'}" i="${opts.serAxisLabelFontItalic ? '1' : '0'}" u="none" strike="noStrike">`
 	strXml += `      <a:solidFill>${createColorElement(opts.serAxisLabelColor || DEF_FONT_COLOR)}</a:solidFill>`
 	strXml += `      <a:latin typeface="${opts.serAxisLabelFontFace || 'Arial'}"/>`
 	strXml += '   </a:defRPr>'

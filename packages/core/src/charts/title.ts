@@ -2,12 +2,12 @@
 
 import { DEF_FONT_COLOR } from '../core-enums'
 import { IChartPropsTitle } from '../core-interfaces'
-import { convertRotationDegrees, createColorElement, encodeXmlEntities } from '../gen-utils'
+import { convertRotationDegrees, createColorElement, encodeXmlEntities, fontSizeToSz } from '../gen-utils'
 
 export function genXmlTitle (opts: IChartPropsTitle, chartX?: number, chartY?: number): string {
 	const align = opts.titleAlign === 'left' || opts.titleAlign === 'right' ? `<a:pPr algn="${opts.titleAlign.substring(0, 1)}">` : '<a:pPr>'
 	const rotate = opts.titleRotate ? `<a:bodyPr rot="${convertRotationDegrees(opts.titleRotate)}"/>` : '<a:bodyPr/>' // don't specify rotation to get default (ex. vertical for cat axis)
-	const sizeAttr = opts.fontSize ? `sz="${Math.round(opts.fontSize * 100)}"` : '' // only set the font size if specified.  Powerpoint will handle the default size
+	const sizeAttr = opts.fontSize ? `sz="${fontSizeToSz(opts.fontSize)}"` : '' // only set the font size if specified.  Powerpoint will handle the default size
 	const titleBold = opts.titleBold ? 1 : 0
 	const titleItalic = opts.titleItalic ? 1 : 0
 
