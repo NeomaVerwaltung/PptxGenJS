@@ -46,6 +46,7 @@ import {
 	createColorElement,
 	createGlowElement,
 	encodeXmlEntities,
+	fontSizeToSz,
 	genXmlColorSelection,
 	getSmartParseNumber,
 	inch2Emu,
@@ -446,6 +447,18 @@ interface SlideObjectContext {
 }
 
 /**
+ * `a:ext` is `ST_PositiveCoordinate` (minInclusive 0), so a negative or non-finite extent - the usual
+ * product of a computed layout going slightly negative - would emit a package PowerPoint offers to
+ * repair. A zero extent is legal (it is how a hairline rule is drawn), so that is the floor.
+ * `a:off` is `ST_Coordinate` and needs no such clamp: an off-slide negative offset is legitimate.
+ * @param {number} emu - extent in EMU
+ * @returns {number} the same extent, or 0
+ */
+function positiveExtent (emu: number): number {
+	return Number.isFinite(emu) && emu > 0 ? emu : 0
+}
+
+/**
  * Resolve an object's exported geometry once, before its type-specific XML is rendered.
  * Placeholder geometry deliberately overrides object geometry; image dimensions are captured first
  * because image sizing is based on the source image dimensions, not its placeholder frame.
@@ -463,9 +476,10 @@ function resolveSlideObjectContext (slide: PresSlide | SlideLayout, slideItemObj
 	let cx = typeof options.w !== 'undefined' ? getSmartParseNumber(options.w, 'X', slide._presLayout) : getSmartParseNumber('75%', 'X', slide._presLayout)
 	let cy = typeof options.h !== 'undefined' ? getSmartParseNumber(options.h, 'Y', slide._presLayout) : 0
 
-	// Image sizing needs the object's own dimensions even when the image is positioned through a placeholder.
-	const imgWidth = cx
-	const imgHeight = cy
+	// Image sizing needs the object's own dimensions even when the image is positioned through a
+	// placeholder - clamped like `cx`/`cy` below, since these land in `a:ext` too.
+	const imgWidth = positiveExtent(cx)
+	const imgHeight = positiveExtent(cy)
 
 	if (placeholderObj) {
 		if (placeholderObj.options?.x === 0 || placeholderObj.options?.x) x = getSmartParseNumber(placeholderObj.options.x, 'X', slide._presLayout)
@@ -491,6 +505,13 @@ function resolveSlideObjectContext (slide: PresSlide | SlideLayout, slideItemObj
 			flipV = !flipV
 		}
 	}
+
+	// Clamped after the line flip above, so a line still gets to spend a negative delta on its endpoints
+	if (cx < 0 || cy < 0) {
+		console.warn(`[pptxgenjs] negative size on ${slideItemObj._type}${options.objectName ? ` "${options.objectName}"` : ''} - w/h cannot be negative, clamped to 0`)
+	}
+	cx = positiveExtent(cx)
+	cy = positiveExtent(cy)
 
 	let locationAttr = ''
 	if (flipH) locationAttr += ' flipH="1"'
@@ -914,7 +935,11 @@ function genXmlSlideObjects (slide: PresSlide | SlideLayout, sections: SectionPr
 				} else {
 					strSlideXml += '<a:prstGeom prst="' + slideItemObj.shape + '"><a:avLst>'
 					if (slideItemObj.options.rectRadius) {
-						strSlideXml += `<a:gd name="adj" fmla="val ${Math.round((slideItemObj.options.rectRadius * EMU * 100000) / Math.min(cx, cy))}"/>`
+						// The `adj` guide of a rounded preset is a 0..50000 fraction of the shorter side, so a
+						// radius past half that side is clamped (`Math.max` maps a NaN radius to 0, and `Math.min`
+						// caps the Infinity a zero extent divides into)
+						const adj = Math.min(50000, Math.max(0, (slideItemObj.options.rectRadius * EMU * 100000) / Math.min(cx, cy)) || 0)
+						strSlideXml += `<a:gd name="adj" fmla="val ${Math.round(adj)}"/>`
 					} else if (slideItemObj.options.angleRange) {
 						for (let i = 0; i < 2; i++) {
 							const angle = slideItemObj.options.angleRange[i]
@@ -1228,7 +1253,7 @@ function genXmlSlideNumber (slide: PresSlide | SlideLayout): string {
 		strSlideXml += '/>'
 		strSlideXml += '  <a:lstStyle><a:lvl1pPr>'
 		if (slide._slideNumberProps.fontFace || slide._slideNumberProps.fontSize || slide._slideNumberProps.color) {
-			strSlideXml += `<a:defRPr sz="${Math.round((slide._slideNumberProps.fontSize || 12) * 100)}">`
+			strSlideXml += `<a:defRPr sz="${fontSizeToSz(slide._slideNumberProps.fontSize || 12)}">`
 			if (slide._slideNumberProps.color) strSlideXml += genXmlColorSelection(slide._slideNumberProps.color)
 			if (slide._slideNumberProps.fontFace) { strSlideXml += `<a:latin typeface="${slide._slideNumberProps.fontFace}"/><a:ea typeface="${slide._slideNumberProps.fontFace}"/><a:cs typeface="${slide._slideNumberProps.fontFace}"/>` }
 			strSlideXml += '</a:defRPr>'

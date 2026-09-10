@@ -30,6 +30,7 @@ import {
 	createColorElement,
 	createGlowElement,
 	encodeXmlEntities,
+	fontSizeToSz,
 	genXmlColorSelection,
 	inch2Emu,
 	resolveGlowOptions,
@@ -49,7 +50,7 @@ function genXmlBulletPrefix (bullet: { color?: Color, size?: number, sizePts?: n
 
 	// `a:buSzPct` and `a:buSzPts` are the same choice, so only one may appear
 	if (typeof bullet.sizePts === 'number' && isFinite(bullet.sizePts) && bullet.sizePts > 0) {
-		xml += `<a:buSzPts val="${Math.round(bullet.sizePts * 100)}"/>`
+		xml += `<a:buSzPts val="${fontSizeToSz(bullet.sizePts)}"/>`
 	} else {
 		const pct = typeof bullet.size === 'number' && isFinite(bullet.size) ? Math.min(400, Math.max(25, bullet.size)) : 100
 		if (typeof bullet.size === 'number' && (bullet.size < 25 || bullet.size > 400)) {
@@ -213,7 +214,7 @@ function genXmlTextRunProperties (opts: ObjectOptions | TextPropsOptions, isDefa
 
 	// BEGIN runProperties (ex: `<a:rPr lang="en-US" sz="1600" b="1" dirty="0">`)
 	runProps += '<' + runPropsTag + ' lang="' + (opts.lang ? opts.lang : 'en-US') + '"' + (opts.lang ? ' altLang="en-US"' : '')
-	runProps += opts.fontSize ? ` sz="${Math.round(opts.fontSize * 100)}"` : '' // NOTE: Use round so sizes like '7.5' wont cause corrupt presentations
+	runProps += opts.fontSize ? ` sz="${fontSizeToSz(opts.fontSize)}"` : ''
 	runProps += opts?.bold ? ` b="${opts.bold ? '1' : '0'}"` : ''
 	runProps += opts?.italic ? ` i="${opts.italic ? '1' : '0'}"` : ''
 
@@ -675,17 +676,17 @@ export function genXmlTextBody (slideObj: ISlideObject | TableCell): string {
 		 */
 		if (slideObj._type === SLIDE_OBJECT_TYPES.tablecell && (opts.fontSize || opts.fontFace)) {
 			if (opts.fontFace) {
-				strSlideXml += `<a:endParaRPr lang="${opts.lang || 'en-US'}"` + (opts.fontSize ? ` sz="${Math.round(opts.fontSize * 100)}"` : '') + ' dirty="0">'
+				strSlideXml += `<a:endParaRPr lang="${opts.lang || 'en-US'}"` + (opts.fontSize ? ` sz="${fontSizeToSz(opts.fontSize)}"` : '') + ' dirty="0">'
 				strSlideXml += `<a:latin typeface="${opts.fontFace}" charset="0"/>`
 				strSlideXml += `<a:ea typeface="${opts.fontFace}" charset="0"/>`
 				strSlideXml += `<a:cs typeface="${opts.fontFace}" charset="0"/>`
 				strSlideXml += '</a:endParaRPr>'
 			} else {
-				strSlideXml += `<a:endParaRPr lang="${opts.lang || 'en-US'}"` + (opts.fontSize ? ` sz="${Math.round(opts.fontSize * 100)}"` : '') + ' dirty="0"/>'
+				strSlideXml += `<a:endParaRPr lang="${opts.lang || 'en-US'}"` + (opts.fontSize ? ` sz="${fontSizeToSz(opts.fontSize)}"` : '') + ' dirty="0"/>'
 			}
 		} else if (reqsClosingFontSize) {
 			// Empty [lineBreak] lines should not contain runProp, however, they need to specify fontSize in `endParaRPr`
-			strSlideXml += `<a:endParaRPr lang="${opts.lang || 'en-US'}"` + (opts.fontSize ? ` sz="${Math.round(opts.fontSize * 100)}"` : '') + ' dirty="0"/>'
+			strSlideXml += `<a:endParaRPr lang="${opts.lang || 'en-US'}"` + (opts.fontSize ? ` sz="${fontSizeToSz(opts.fontSize)}"` : '') + ' dirty="0"/>'
 		} else {
 			strSlideXml += `<a:endParaRPr lang="${opts.lang || 'en-US'}" dirty="0"/>` // Added 20180101 to address PPT-2007 issues
 		}

@@ -246,6 +246,19 @@ export function valToPts (pt: number | string | undefined): number {
 }
 
 /**
+ * Convert a point size into the hundredths-of-a-point `sz` attribute value.
+ * `ST_TextFontSize` is 100..400000 (1pt..4000pt), so a negative or oversized font size is clamped
+ * into range rather than written through - out-of-range `sz` is a schema violation PowerPoint reads
+ * as damaged content.
+ * @param {number} pt - font size in points
+ * @returns {number} `sz` value (hundredths of a point)
+ */
+export function fontSizeToSz (pt: number): number {
+	// (`Math.max` also maps a NaN size to the 1pt floor)
+	return Math.round(Math.min(4000, Math.max(1, pt) || 1) * 100)
+}
+
+/**
  * Convert degrees (0..360) to PowerPoint `rot` value
  * @param {number} d degrees
  * @returns {number} calculated `rot` value
