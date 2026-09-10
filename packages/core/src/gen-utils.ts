@@ -254,8 +254,42 @@ export function valToPts (pt: number | string | undefined): number {
  * @returns {number} `sz` value (hundredths of a point)
  */
 export function fontSizeToSz (pt: number): number {
-	// (`Math.max` also maps a NaN size to the 1pt floor)
-	return Math.round(Math.min(4000, Math.max(1, pt) || 1) * 100)
+	return clampInt(pt * 100, 100, 400000)
+}
+
+/**
+ * Round a value into an inclusive integer range.
+ * Most OOXML numeric attributes are schema-constrained (`ST_TextSpacingPoint`, `ST_GapAmount`, ...) and
+ * a value outside the range is a violation PowerPoint reads as damaged content, so clamp rather than
+ * write through. A non-finite value falls back to `min`.
+ * @param {number} value - the value to clamp
+ * @param {number} min - inclusive lower bound
+ * @param {number} max - inclusive upper bound
+ * @returns {number} the clamped, rounded value
+ */
+export function clampInt (value: number, min: number, max: number): number {
+	if (!isFinite(value)) return min
+	return Math.round(Math.min(max, Math.max(min, value)))
+}
+
+/**
+ * Clamp an EMU line width into the `a:ln@w` range.
+ * `ST_LineWidth` is 0..20116800 (0..1584pt), so a negative or oversized width is clamped rather than
+ * written through - an out-of-range `w` is a schema violation PowerPoint reads as damaged content.
+ * @param {number} emu - line width already in EMU
+ * @returns {number} `w` value in EMU
+ */
+export function clampLineWidth (emu: number): number {
+	return clampInt(emu, 0, 20116800)
+}
+
+/**
+ * Convert a point width into the EMU `a:ln@w` attribute value, clamped to `ST_LineWidth`.
+ * @param {number|string|undefined} pt - line width in points
+ * @returns {number} `w` value in EMU
+ */
+export function valToLineWidth (pt: number | string | undefined): number {
+	return clampLineWidth(valToPts(pt))
 }
 
 /**
@@ -574,8 +608,10 @@ export function genXmlColorSelection (props: Color | ShapeFillProps | ShapeLineP
 			if (props.pattern) pattern = props.pattern
 			if (props.image) image = props.image
 			if (props.color) colorVal = props.color
-			if (props.alpha) internalElements += `<a:alpha val="${Math.round((100 - props.alpha) * 1000)}"/>` // DEPRECATED: @deprecated v3.3.0
-			if (props.transparency) internalElements += `<a:alpha val="${Math.round((100 - props.transparency) * 1000)}"/>`
+			// `a:alpha` is ST_PositiveFixedPercentage (0-100000), so a transparency outside 0-100 would
+			// otherwise emit a negative alpha - `clampPercent` also drops non-finite values
+			if (props.alpha) internalElements += `<a:alpha val="${Math.round((100 - clampPercent(props.alpha, 0)) * 1000)}"/>` // DEPRECATED: @deprecated v3.3.0
+			if (props.transparency) internalElements += `<a:alpha val="${Math.round((100 - clampPercent(props.transparency, 0)) * 1000)}"/>`
 		}
 
 		switch (fillType) {

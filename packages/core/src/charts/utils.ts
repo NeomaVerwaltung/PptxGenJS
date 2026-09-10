@@ -2,7 +2,7 @@
 
 import { DEF_CHART_GRIDLINE, DEF_SHAPE_SHADOW, LETTERS } from '../core-enums'
 import { ChartLineCap, OptsChartGridLine, ShadowProps } from '../core-interfaces'
-import { valToPts } from '../gen-utils'
+import { valToLineWidth, valToPts } from '../gen-utils'
 
 export function getExcelColName (colIndex: number): string {
 	let colStr = ''
@@ -83,7 +83,7 @@ export function createShadowElement (shadow: ResolvedShadowProps | undefined): s
 export function createGridLineElement (glOpts: OptsChartGridLine): string {
 	let strXml = '<c:majorGridlines>'
 	strXml += ' <c:spPr>'
-	strXml += `  <a:ln w="${valToPts(glOpts.size || DEF_CHART_GRIDLINE.size)}" cap="${createLineCap(glOpts.cap || DEF_CHART_GRIDLINE.cap)}">`
+	strXml += `  <a:ln w="${valToLineWidth(glOpts.size || DEF_CHART_GRIDLINE.size)}" cap="${createLineCap(glOpts.cap || DEF_CHART_GRIDLINE.cap)}">`
 	strXml += '  <a:solidFill><a:srgbClr val="' + (glOpts.color || DEF_CHART_GRIDLINE.color) + '"/></a:solidFill>' // should accept scheme colors as implemented in [Pull #135]
 	strXml += '   <a:prstDash val="' + (glOpts.style || DEF_CHART_GRIDLINE.style) + '"/><a:round/>'
 	strXml += '  </a:ln>'
