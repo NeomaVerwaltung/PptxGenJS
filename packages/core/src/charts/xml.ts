@@ -16,11 +16,14 @@ import {
 } from '../core-enums'
 import { IChartOptsLib, ISlideRelChart, IOptsChartData } from '../core-interfaces'
 import {
+	clampInt,
+	clampLineWidth,
 	createColorElement,
 	encodeXmlEntities,
+	fontSizeToSz,
 	genXmlColorSelection,
 	getUuid,
-	valToPts,
+	valToLineWidth,
 } from '../gen-utils'
 import { makeCatAxis, makeSerAxis, makeValAxis } from './axes'
 import { genXmlTitle } from './title'
@@ -43,7 +46,7 @@ export function makeXmlCharts (rel: ISlideRelChart): string {
 }
 
 function genXmlDataLabelRichText (text: string, opts: IChartOptsLib): string {
-	const size = Math.round((opts.dataLabelFontSize || DEF_FONT_SIZE) * 100)
+	const size = fontSizeToSz(opts.dataLabelFontSize || DEF_FONT_SIZE)
 	let xml = '<c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r>'
 	xml += `<a:rPr lang="${opts.lang || 'en-US'}" dirty="0" sz="${size}" b="${opts.dataLabelFontBold ? 1 : 0}" i="${opts.dataLabelFontItalic ? 1 : 0}">`
 	xml += `<a:solidFill>${createColorElement(opts.dataLabelColor || DEF_FONT_COLOR)}</a:solidFill><a:latin typeface="${opts.dataLabelFontFace || 'Arial'}"/></a:rPr>`
@@ -213,7 +216,7 @@ function makePlotAreaAndLegend (rel: ISlideRelChart): string {
 		strXml += '   <a:lstStyle/>'
 		strXml += '   <a:p>'
 		strXml += '     <a:pPr rtl="0">'
-		strXml += `       <a:defRPr sz="${Math.round((rel.opts.dataTableFontSize || DEF_FONT_SIZE) * 100)}" b="0" i="0" u="none" strike="noStrike" kern="1200" baseline="0">`
+		strXml += `       <a:defRPr sz="${fontSizeToSz(rel.opts.dataTableFontSize || DEF_FONT_SIZE)}" b="0" i="0" u="none" strike="noStrike" kern="1200" baseline="0">`
 		strXml += '         <a:solidFill><a:schemeClr val="tx1"><a:lumMod val="65000"/><a:lumOff val="35000"/></a:schemeClr></a:solidFill>'
 		strXml += '         <a:latin typeface="+mn-lt"/>'
 		strXml += '         <a:ea typeface="+mn-ea"/>'
@@ -229,7 +232,7 @@ function makePlotAreaAndLegend (rel: ISlideRelChart): string {
 	strXml += '  <c:spPr>'
 	strXml += rel.opts.plotArea?.fill?.color ? genXmlColorSelection(rel.opts.plotArea?.fill) : '<a:noFill/>'
 	strXml += rel.opts.plotArea?.border
-		? `<a:ln w="${valToPts(rel.opts.plotArea?.border?.pt)}" cap="flat">${genXmlColorSelection(rel.opts.plotArea?.border?.color)}</a:ln>`
+		? `<a:ln w="${valToLineWidth(rel.opts.plotArea?.border?.pt)}" cap="flat">${genXmlColorSelection(rel.opts.plotArea?.border?.color)}</a:ln>`
 		: '<a:ln><a:noFill/></a:ln>'
 	strXml += '    <a:effectLst/>'
 	strXml += '  </c:spPr>'
@@ -247,7 +250,7 @@ function makePlotAreaAndLegend (rel: ISlideRelChart): string {
 			strXml += '  <a:lstStyle/>'
 			strXml += '  <a:p>'
 			strXml += '    <a:pPr>'
-			strXml += rel.opts.legendFontSize ? `<a:defRPr sz="${Math.round(Number(rel.opts.legendFontSize) * 100)}">` : '<a:defRPr>'
+			strXml += rel.opts.legendFontSize ? `<a:defRPr sz="${fontSizeToSz(Number(rel.opts.legendFontSize))}">` : '<a:defRPr>'
 			if (rel.opts.legendColor) strXml += genXmlColorSelection(rel.opts.legendColor)
 			if (rel.opts.legendFontFace) strXml += '<a:latin typeface="' + rel.opts.legendFontFace + '"/>'
 			if (rel.opts.legendFontFace) strXml += '<a:ea    typeface="' + rel.opts.legendFontFace + '"/>'
@@ -279,7 +282,7 @@ function makeChartSpaceEnd (rel: ISlideRelChart): string {
 	strXml += '<c:spPr>'
 	strXml += rel.opts.chartArea?.fill?.color ? genXmlColorSelection(rel.opts.chartArea?.fill) : '<a:noFill/>'
 	strXml += rel.opts.chartArea?.border
-		? `<a:ln w="${valToPts(rel.opts.chartArea?.border?.pt)}" cap="flat">${genXmlColorSelection(rel.opts.chartArea?.border?.color)}</a:ln>`
+		? `<a:ln w="${valToLineWidth(rel.opts.chartArea?.border?.pt)}" cap="flat">${genXmlColorSelection(rel.opts.chartArea?.border?.color)}</a:ln>`
 		: '<a:ln><a:noFill/></a:ln>'
 	strXml += '  <a:effectLst/>'
 	strXml += '</c:spPr>'
@@ -403,11 +406,11 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 					if (opts.lineSize === 0) {
 						strXml += '<a:ln><a:noFill/></a:ln>'
 					} else {
-						strXml += `<a:ln w="${valToPts(opts.lineSize)}" cap="${createLineCap(opts.lineCap)}"><a:solidFill>${createColorElement(seriesColor)}</a:solidFill>`
+						strXml += `<a:ln w="${valToLineWidth(opts.lineSize)}" cap="${createLineCap(opts.lineCap)}"><a:solidFill>${createColorElement(seriesColor)}</a:solidFill>`
 						strXml += '<a:prstDash val="' + (opts.lineDash || 'solid') + '"/><a:round/></a:ln>'
 					}
 				} else if (opts.dataBorder) {
-					strXml += `<a:ln w="${valToPts(opts.dataBorder.pt)}" cap="${createLineCap(opts.lineCap)}"><a:solidFill>${createColorElement(opts.dataBorder.color)}</a:solidFill><a:prstDash val="solid"/><a:round/></a:ln>`
+					strXml += `<a:ln w="${valToLineWidth(opts.dataBorder.pt)}" cap="${createLineCap(opts.lineCap)}"><a:solidFill>${createColorElement(opts.dataBorder.color)}</a:solidFill><a:prstDash val="solid"/><a:round/></a:ln>`
 				}
 
 				strXml += createShadowElement(resolveShadowOptions(opts.shadow))
@@ -425,9 +428,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 					strXml += `<c:numFmt formatCode="${encodeXmlEntities(opts.dataLabelFormatCode) || 'General'}" sourceLinked="0"/>`
 					if (opts.dataLabelBkgrdColors) strXml += `<c:spPr><a:solidFill>${createColorElement(seriesColor)}</a:solidFill></c:spPr>`
 					strXml += '<c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr>'
-					strXml += `<a:defRPr b="${opts.dataLabelFontBold ? 1 : 0}" i="${opts.dataLabelFontItalic ? 1 : 0}" strike="noStrike" sz="${Math.round(
-						(opts.dataLabelFontSize || DEF_FONT_SIZE) * 100
-					)}" u="none">`
+					strXml += `<a:defRPr b="${opts.dataLabelFontBold ? 1 : 0}" i="${opts.dataLabelFontItalic ? 1 : 0}" strike="noStrike" sz="${fontSizeToSz(opts.dataLabelFontSize || DEF_FONT_SIZE)}" u="none">`
 					strXml += `<a:solidFill>${createColorElement(opts.dataLabelColor || DEF_FONT_COLOR)}</a:solidFill>`
 					strXml += `<a:latin typeface="${opts.dataLabelFontFace || 'Arial'}"/>`
 					strXml += '</a:defRPr></a:pPr></a:p></c:txPr>'
@@ -443,10 +444,10 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 				if (chartType === CHART_TYPE.LINE || chartType === CHART_TYPE.RADAR) {
 					strXml += '<c:marker>'
 					strXml += '  <c:symbol val="' + opts.lineDataSymbol + '"/>'
-					if (opts.lineDataSymbolSize) strXml += `<c:size val="${opts.lineDataSymbolSize}"/>` // Defaults to "auto" otherwise (but this is usually too small, so there is a default)
+					if (opts.lineDataSymbolSize) strXml += `<c:size val="${clampInt(opts.lineDataSymbolSize, 2, 72)}"/>` // Defaults to "auto" otherwise (but this is usually too small, so there is a default)
 					strXml += '  <c:spPr>'
 					strXml += `    <a:solidFill>${createColorElement(obj.color ?? chartColors[dataIndex + 1 > chartColors.length ? Math.floor(Math.random() * chartColors.length) : dataIndex])}</a:solidFill>`
-					strXml += `    <a:ln w="${opts.lineDataSymbolLineSize}" cap="flat"><a:solidFill>${createColorElement(opts.lineDataSymbolLineColor || seriesColor)}</a:solidFill><a:prstDash val="solid"/><a:round/></a:ln>`
+					strXml += `    <a:ln w="${clampLineWidth(opts.lineDataSymbolLineSize ?? 0)}" cap="flat"><a:solidFill>${createColorElement(opts.lineDataSymbolLineColor || seriesColor)}</a:solidFill><a:prstDash val="solid"/><a:round/></a:ln>`
 					strXml += '    <a:effectLst/>'
 					strXml += '  </c:spPr>'
 					strXml += '</c:marker>'
@@ -554,7 +555,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 				strXml += '      <a:bodyPr/>'
 				strXml += '      <a:lstStyle/>'
 				strXml += '      <a:p><a:pPr>'
-				strXml += `        <a:defRPr b="${opts.dataLabelFontBold ? 1 : 0}" i="${opts.dataLabelFontItalic ? 1 : 0}" strike="noStrike" sz="${Math.round((opts.dataLabelFontSize || DEF_FONT_SIZE) * 100)}" u="none">`
+				strXml += `        <a:defRPr b="${opts.dataLabelFontBold ? 1 : 0}" i="${opts.dataLabelFontItalic ? 1 : 0}" strike="noStrike" sz="${fontSizeToSz(opts.dataLabelFontSize || DEF_FONT_SIZE)}" u="none">`
 				strXml += '          <a:solidFill>' + createColorElement(opts.dataLabelColor || DEF_FONT_COLOR) + '</a:solidFill>'
 				strXml += '          <a:latin typeface="' + (opts.dataLabelFontFace || 'Arial') + '"/>'
 				strXml += '        </a:defRPr>'
@@ -573,11 +574,11 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 
 			// 4: Add more chart options (gapWidth, line Marker, etc.)
 			if (chartType === CHART_TYPE.BAR) {
-				strXml += `  <c:gapWidth val="${opts.barGapWidthPct}"/>`
-				strXml += `  <c:overlap val="${(opts.barGrouping || '').includes('tacked') ? 100 : opts.barOverlapPct ? opts.barOverlapPct : 0}"/>`
+				strXml += `  <c:gapWidth val="${clampInt(opts.barGapWidthPct ?? 150, 0, 500)}"/>`
+				strXml += `  <c:overlap val="${(opts.barGrouping || '').includes('tacked') ? 100 : clampInt(opts.barOverlapPct ?? 0, -100, 100)}"/>`
 			} else if (chartType === CHART_TYPE.BAR3D) {
-				strXml += `  <c:gapWidth val="${opts.barGapWidthPct}"/>`
-				strXml += `  <c:gapDepth val="${opts.barGapDepthPct}"/>`
+				strXml += `  <c:gapWidth val="${clampInt(opts.barGapWidthPct ?? 150, 0, 500)}"/>`
+				strXml += `  <c:gapDepth val="${clampInt(opts.barGapDepthPct ?? 150, 0, 500)}"/>`
 				strXml += '  <c:shape val="' + opts.bar3DShape + '"/>'
 			} else if (chartType === CHART_TYPE.LINE) {
 				strXml += '  <c:marker val="1"/>'
@@ -638,7 +639,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 					if (opts.lineSize === 0) {
 						strXml += '<a:ln><a:noFill/></a:ln>'
 					} else {
-						strXml += `<a:ln w="${valToPts(opts.lineSize)}" cap="${createLineCap(opts.lineCap)}"><a:solidFill>${createColorElement(tmpSerColor)}</a:solidFill>`
+						strXml += `<a:ln w="${valToLineWidth(opts.lineSize)}" cap="${createLineCap(opts.lineCap)}"><a:solidFill>${createColorElement(tmpSerColor)}</a:solidFill>`
 						strXml += `<a:prstDash val="${opts.lineDash || 'solid'}"/><a:round/></a:ln>`
 					}
 
@@ -653,11 +654,11 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 					strXml += '  <c:symbol val="' + opts.lineDataSymbol + '"/>'
 					if (opts.lineDataSymbolSize) {
 						// Defaults to "auto" otherwise (but this is usually too small, so there is a default)
-						strXml += `<c:size val="${opts.lineDataSymbolSize}"/>`
+						strXml += `<c:size val="${clampInt(opts.lineDataSymbolSize, 2, 72)}"/>`
 					}
 					strXml += '<c:spPr>'
 					strXml += `<a:solidFill>${createColorElement(obj.color ?? chartColors[idx + 1 > chartColors.length ? Math.floor(Math.random() * chartColors.length) : idx])}</a:solidFill>`
-					strXml += `<a:ln w="${opts.lineDataSymbolLineSize}" cap="flat"><a:solidFill>${createColorElement(opts.lineDataSymbolLineColor || obj.color || chartColors[colorIndex % chartColors.length])}</a:solidFill><a:prstDash val="solid"/><a:round/></a:ln>`
+					strXml += `<a:ln w="${clampLineWidth(opts.lineDataSymbolLineSize ?? 0)}" cap="flat"><a:solidFill>${createColorElement(opts.lineDataSymbolLineColor || obj.color || chartColors[colorIndex % chartColors.length])}</a:solidFill><a:prstDash val="solid"/><a:round/></a:ln>`
 					strXml += '<a:effectLst/>'
 					strXml += '</c:spPr>'
 					strXml += '</c:marker>'
@@ -856,7 +857,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 				strXml += '      <a:bodyPr/>'
 				strXml += '      <a:lstStyle/>'
 				strXml += '      <a:p><a:pPr>'
-				strXml += `        <a:defRPr b="${opts.dataLabelFontBold ? '1' : '0'}" i="${opts.dataLabelFontItalic ? '1' : '0'}" strike="noStrike" sz="${Math.round((opts.dataLabelFontSize || DEF_FONT_SIZE) * 100)}" u="none">`
+				strXml += `        <a:defRPr b="${opts.dataLabelFontBold ? '1' : '0'}" i="${opts.dataLabelFontItalic ? '1' : '0'}" strike="noStrike" sz="${fontSizeToSz(opts.dataLabelFontSize || DEF_FONT_SIZE)}" u="none">`
 				strXml += '          <a:solidFill>' + createColorElement(opts.dataLabelColor || DEF_FONT_COLOR) + '</a:solidFill>'
 				strXml += '          <a:latin typeface="' + (opts.dataLabelFontFace || 'Arial') + '"/>'
 				strXml += '        </a:defRPr>'
@@ -930,9 +931,9 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 					if (opts.lineSize === 0) {
 						strXml += '<a:ln><a:noFill/></a:ln>'
 					} else if (opts.dataBorder) {
-						strXml += `<a:ln w="${valToPts(opts.dataBorder.pt)}" cap="flat"><a:solidFill>${createColorElement(opts.dataBorder.color)}</a:solidFill><a:prstDash val="solid"/><a:round/></a:ln>`
+						strXml += `<a:ln w="${valToLineWidth(opts.dataBorder.pt)}" cap="flat"><a:solidFill>${createColorElement(opts.dataBorder.color)}</a:solidFill><a:prstDash val="solid"/><a:round/></a:ln>`
 					} else {
-						strXml += `<a:ln w="${valToPts(opts.lineSize)}" cap="flat"><a:solidFill>${createColorElement(tmpSerColor)}</a:solidFill>`
+						strXml += `<a:ln w="${valToLineWidth(opts.lineSize)}" cap="flat"><a:solidFill>${createColorElement(tmpSerColor)}</a:solidFill>`
 						strXml += `<a:prstDash val="${opts.lineDash || 'solid'}"/><a:round/></a:ln>`
 					}
 
@@ -1003,9 +1004,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 				strXml += '<c:dLbls>'
 				strXml += `<c:numFmt formatCode="${encodeXmlEntities(opts.dataLabelFormatCode) || 'General'}" sourceLinked="0"/>`
 				strXml += '<c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr>'
-				strXml += `<a:defRPr b="${opts.dataLabelFontBold ? 1 : 0}" i="${opts.dataLabelFontItalic ? 1 : 0}" strike="noStrike" sz="${Math.round(
-					Math.round(opts.dataLabelFontSize || DEF_FONT_SIZE) * 100
-				)}" u="none">`
+				strXml += `<a:defRPr b="${opts.dataLabelFontBold ? 1 : 0}" i="${opts.dataLabelFontItalic ? 1 : 0}" strike="noStrike" sz="${fontSizeToSz(opts.dataLabelFontSize || DEF_FONT_SIZE)}" u="none">`
 				strXml += `<a:solidFill>${createColorElement(opts.dataLabelColor || DEF_FONT_COLOR)}</a:solidFill>`
 				strXml += `<a:latin typeface="${opts.dataLabelFontFace || 'Arial'}"/>`
 				strXml += '</a:defRPr></a:pPr></a:p></c:txPr>'
@@ -1089,7 +1088,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 					chartColors[idx + 1 > chartColors.length ? Math.floor(Math.random() * chartColors.length) : idx]
 				)}</a:solidFill>`
 				if (opts.dataBorder) {
-					strXml += `<a:ln w="${valToPts(opts.dataBorder.pt)}" cap="flat"><a:solidFill>${createColorElement(
+					strXml += `<a:ln w="${valToLineWidth(opts.dataBorder.pt)}" cap="flat"><a:solidFill>${createColorElement(
 						opts.dataBorder.color
 					)}</a:solidFill><a:prstDash val="solid"/><a:round/></a:ln>`
 				}
@@ -1110,7 +1109,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 				strXml += '  <c:spPr/><c:txPr>'
 				strXml += '   <a:bodyPr/><a:lstStyle/>'
 				strXml += '   <a:p><a:pPr>'
-				strXml += `   <a:defRPr sz="${Math.round((opts.dataLabelFontSize || DEF_FONT_SIZE) * 100)}" b="${opts.dataLabelFontBold ? 1 : 0}" i="${opts.dataLabelFontItalic ? 1 : 0
+				strXml += `   <a:defRPr sz="${fontSizeToSz(opts.dataLabelFontSize || DEF_FONT_SIZE)}" b="${opts.dataLabelFontBold ? 1 : 0}" i="${opts.dataLabelFontItalic ? 1 : 0
 				}" u="none" strike="noStrike">`
 				strXml += '    <a:solidFill>' + createColorElement(opts.dataLabelColor || DEF_FONT_COLOR) + '</a:solidFill>'
 				strXml += `    <a:latin typeface="${opts.dataLabelFontFace || 'Arial'}"/>`
@@ -1132,7 +1131,7 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 			strXml += '      <a:lstStyle/>'
 			strXml += '      <a:p>'
 			strXml += '        <a:pPr>'
-			strXml += `          <a:defRPr sz="${Math.round((opts.dataLabelFontSize || DEF_FONT_SIZE) * 100)}" b="${opts.dataLabelFontBold ? '1' : '0'}" i="${opts.dataLabelFontItalic ? '1' : '0'}" u="none" strike="noStrike">`
+			strXml += `          <a:defRPr sz="${fontSizeToSz(opts.dataLabelFontSize || DEF_FONT_SIZE)}" b="${opts.dataLabelFontBold ? '1' : '0'}" i="${opts.dataLabelFontItalic ? '1' : '0'}" u="none" strike="noStrike">`
 			strXml += `            <a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:latin typeface="${opts.dataLabelFontFace || 'Arial'}"/>`
 			strXml += '          </a:defRPr>'
 			strXml += '        </a:pPr>'
@@ -1176,8 +1175,8 @@ function makeChartType (chartType: CHART_NAME, data: IOptsChartData[], opts: ICh
 
 			// 4: Close "SERIES"
 			strXml += '  </c:ser>'
-			strXml += `  <c:firstSliceAng val="${opts.firstSliceAng ? Math.round(opts.firstSliceAng) : 0}"/>`
-			if (chartType === CHART_TYPE.DOUGHNUT) strXml += `<c:holeSize val="${typeof opts.holeSize === 'number' ? opts.holeSize : '50'}"/>`
+			strXml += `  <c:firstSliceAng val="${clampInt(opts.firstSliceAng ?? 0, 0, 360)}"/>`
+			if (chartType === CHART_TYPE.DOUGHNUT) strXml += `<c:holeSize val="${clampInt(typeof opts.holeSize === 'number' ? opts.holeSize : 50, 1, 90)}"/>`
 			strXml += '</c:' + chartType + 'Chart>'
 
 			// Done with Doughnut/Pie

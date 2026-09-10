@@ -26,6 +26,7 @@ import { genXmlHyperlink } from './hyperlink'
 import { genXmlLine } from './line'
 import { alternateContent } from './markup-compat'
 import {
+	clampInt,
 	convertRotationDegrees,
 	createColorElement,
 	createGlowElement,
@@ -34,6 +35,7 @@ import {
 	genXmlColorSelection,
 	inch2Emu,
 	resolveGlowOptions,
+	valToLineWidth,
 	valToPts,
 	warnDeprecatedOnce,
 } from '../gen-utils'
@@ -97,10 +99,12 @@ function genXmlParagraphProperties (textObj: ISlideObject | TextProps, isDefault
 			}
 		}
 
+		// `a:spcPts` is ST_TextSpacingPoint (0..158400, i.e. 0..1584pt) and `a:spcPct` is
+		// ST_TextSpacingPercent (0..13200000) - a negative spacing is a schema violation, so both clamp
 		if (options.lineSpacing) {
-			strXmlLnSpc = `<a:lnSpc><a:spcPts val="${Math.round(options.lineSpacing * 100)}"/></a:lnSpc>`
+			strXmlLnSpc = `<a:lnSpc><a:spcPts val="${clampInt(options.lineSpacing * 100, 0, 158400)}"/></a:lnSpc>`
 		} else if (options.lineSpacingMultiple) {
-			strXmlLnSpc = `<a:lnSpc><a:spcPct val="${Math.round(options.lineSpacingMultiple * 100000)}"/></a:lnSpc>`
+			strXmlLnSpc = `<a:lnSpc><a:spcPct val="${clampInt(options.lineSpacingMultiple * 100000, 0, 13200000)}"/></a:lnSpc>`
 		}
 
 		// OPTION: indent
@@ -120,10 +124,10 @@ function genXmlParagraphProperties (textObj: ISlideObject | TextProps, isDefault
 
 		// OPTION: Paragraph Spacing: Before/After
 		if (options.paraSpaceBefore && !isNaN(Number(options.paraSpaceBefore)) && options.paraSpaceBefore > 0) {
-			strXmlParaSpc += `<a:spcBef><a:spcPts val="${Math.round(options.paraSpaceBefore * 100)}"/></a:spcBef>`
+			strXmlParaSpc += `<a:spcBef><a:spcPts val="${clampInt(options.paraSpaceBefore * 100, 0, 158400)}"/></a:spcBef>`
 		}
 		if (options.paraSpaceAfter && !isNaN(Number(options.paraSpaceAfter)) && options.paraSpaceAfter > 0) {
-			strXmlParaSpc += `<a:spcAft><a:spcPts val="${Math.round(options.paraSpaceAfter * 100)}"/></a:spcAft>`
+			strXmlParaSpc += `<a:spcAft><a:spcPts val="${clampInt(options.paraSpaceAfter * 100, 0, 158400)}"/></a:spcAft>`
 		}
 
 		// OPTION: bullet
@@ -144,8 +148,9 @@ function genXmlParagraphProperties (textObj: ISlideObject | TextProps, isDefault
 				paragraphPropXml += ` marL="${options.indentLevel && options.indentLevel > 0 ? bulletMarL + bulletMarL * options.indentLevel : bulletMarL
 				}" indent="-${bulletMarL}"`
 				// auto-numbered bullets fall back to the major latin face when none is given
-				strXmlBullet = `${buPrefix}${options.bullet.fontFace ? '' : '<a:buFont typeface="+mj-lt"/>'}<a:buAutoNum type="${options.bullet.style || 'arabicPeriod'}" startAt="${options.bullet.numberStartAt || options.bullet.startAt || '1'
-				}"/>`
+				strXmlBullet = `${buPrefix}${options.bullet.fontFace ? '' : '<a:buFont typeface="+mj-lt"/>'}<a:buAutoNum type="${options.bullet.style || 'arabicPeriod'}" startAt="${
+					// ST_TextBulletStartAtNum is 1..32767
+					clampInt(options.bullet.numberStartAt ?? options.bullet.startAt ?? 1, 1, 32767)}"/>`
 			} else if (options.bullet.characterCode) {
 				let bulletCode = `&#x${options.bullet.characterCode};`
 
@@ -248,7 +253,7 @@ function genXmlTextRunProperties (opts: ObjectOptions | TextPropsOptions, isDefa
 	const perScript = run.latinFontFace ?? run.eastAsianFontFace ?? run.complexScriptFontFace
 	if (opts.color || opts.fontFace || opts.outline || perScript || run.underlineLine || run.symbolFontFace || (typeof opts.underline === 'object' && opts.underline.color)) {
 		if (opts.outline && typeof opts.outline === 'object') {
-			runProps += `<a:ln w="${valToPts(opts.outline.size || 0.75)}">${genXmlColorSelection(opts.outline.color || 'FFFFFF')}</a:ln>`
+			runProps += `<a:ln w="${valToLineWidth(opts.outline.size || 0.75)}">${genXmlColorSelection(opts.outline.color || 'FFFFFF')}</a:ln>`
 		}
 		if (opts.color) runProps += genXmlColorSelection({ color: opts.color, transparency: opts.transparency })
 		/* CT_TextCharacterProperties fixes the child order: ln, fill, effect, highlight, uLn, uFill,
