@@ -83,6 +83,14 @@ PowerPoint shape definitions and portions of the XML generation are derived from
 
 ## License
 
+**Primary licence, pending legal review:** [LICENSE](./LICENSE)
+
 Copyright &copy; 2015-2022 [Brent Ely](https://github.com/gitbrent/), &copy; 2026-present [NEOMA GmbH](https://neo-ma.de)
 
-Licensed under the [MIT License](https://github.com/NeomaVerwaltung/PptxGenJS/blob/master/LICENSE).
+Licensed under the [MIT License](./LICENSE).
+
+A non-operative [German-law contributor-rights draft](./CONTRIBUTOR_LICENSE_AGREEMENT-DRAFT.md) is
+available for legal review.
+
+A separate [German-law liability-waiver draft](./LIABILITY-WAIVER-DRAFT.md)
+is also available for legal review.

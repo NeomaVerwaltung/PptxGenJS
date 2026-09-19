@@ -31,6 +31,14 @@
 - [ ] I have commented my code, particularly in hard-to-understand areas
 - [ ] I have included code/tests that prove my fix is effective or that my feature works
 - [ ] `npm run check` passes (lint, typecheck, tests)
+- [ ] I have identified any third-party material and its licence terms.
+
+## Contributor agreement
+
+The [Contributor License Agreement](../../CONTRIBUTOR_LICENSE_AGREEMENT-DRAFT.md)
+is pending legal review. This template does not collect agreement acceptance;
+maintainers will enable a GitHub CLA check only after the final agreement and
+signing process have been approved.
 
 ## Screenshots / Sample Code (if appropriate)
 
